@@ -27,10 +27,11 @@
   .icon-btn:hover{ opacity:1; }
   .icon-btn svg{ display:block; }
   body.stage-dark .icon-btn{ color:#EFE8DA; }
-  #settingsIcon{ left:14px; }
-  #libraryIcon{ right:14px; }
+  #settingsIcon{ right:14px; }
+  #libraryIcon{ left:14px; }
+  #homeIcon{ left:56px; }
 
-  #settings-panel{ position:fixed; top:56px; left:14px; z-index:60; width:290px; background:white; border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; right:14px; z-index:60; width:290px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -102,18 +103,19 @@
 </head>
 <body>
 <div id="app">
+  <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
+  </button>
+  <button id="homeIcon" class="icon-btn" title="Accueil">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
+  </button>
   <button id="settingsIcon" class="icon-btn" title="Réglages">
     <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
-  </button>
-  <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
   </button>
   <button class="chev" id="chevL">‹</button>
   <button class="chev" id="chevR">›</button>
   <div id="settings-panel">
     <h3>Réglages de la stimulation</h3>
-    <div class="control-group"><label>Motif</label>
-      <select id="bls-pattern"><option value="horizontal">Horizontal</option><option value="diagonal">Diagonal</option><option value="circle">Circulaire</option><option value="infinity">Infini</option></select></div>
     <div class="control-group"><label>Vitesse : <span id="speed-val">30</span> passages/min</label><input type="range" id="bls-speed" min="10" max="70" value="30"></div>
     <div class="control-group"><label>Taille du point</label><input type="range" id="bls-size" min="18" max="60" value="34"></div>
     <div class="control-group"><label>Couleur du point</label><input type="color" id="bls-color" value="#F4E3C1" style="width:100%;height:34px;padding:2px;cursor:pointer;"></div>
@@ -136,14 +138,13 @@ function loadTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_TRAUMAS))
 function saveTraumas(list){ localStorage.setItem(LS_TRAUMAS, JSON.stringify(list)); }
 let traumas = loadTraumas();
 
-let settings = { pattern:'horizontal', speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
+let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
 function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }
-$('bls-pattern').value=settings.pattern; $('bls-speed').value=settings.speed; $('speed-val').textContent=settings.speed;
+$('bls-speed').value=settings.speed; $('speed-val').textContent=settings.speed;
 $('bls-size').value=settings.size; $('bls-color').value=settings.color;
 $('bls-duration').value=settings.duration; $('duration-val').textContent=settings.duration;
 $('bls-audio').checked=settings.audio; $('bls-haptic').checked=settings.haptic;
-$('bls-pattern').addEventListener('change',e=>{settings.pattern=e.target.value;saveSettings();});
 $('bls-speed').addEventListener('input',e=>{settings.speed=+e.target.value;$('speed-val').textContent=settings.speed;saveSettings();});
 $('bls-size').addEventListener('input',e=>{settings.size=+e.target.value;saveSettings();});
 $('bls-color').addEventListener('input',e=>{settings.color=e.target.value;saveSettings();});
@@ -154,6 +155,10 @@ $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.tog
 $('libraryIcon').addEventListener('click',()=>{
   session=null; history=[]; currentPhase=null;
   goTo('library', renderLibrary);
+});
+$('homeIcon').addEventListener('click',()=>{
+  session=null; history=[]; currentPhase=null;
+  goTo('select', renderSelect);
 });
 
 /* ---------------- navigation core ---------------- */
@@ -385,13 +390,9 @@ function renderCountdown(mode){
 
 let bls = { running:false, mode:null, accumulated:0, resumeTime:0, lastSide:null, anim:null, timer:null, audioCtx:null };
 
-function computeXY(pattern,t){
-  const swing=Math.sin(t*Math.PI*2); let x=0.5,y=0.5;
-  if(pattern==='horizontal'){x=0.5+swing*0.42;y=0.5;}
-  else if(pattern==='diagonal'){x=0.5+swing*0.42;y=0.5+swing*0.28;}
-  else if(pattern==='circle'){x=0.5+Math.cos(t*Math.PI*2)*0.32;y=0.5+Math.sin(t*Math.PI*2)*0.22;}
-  else if(pattern==='infinity'){x=0.5+Math.sin(t*Math.PI*2)*0.4;y=0.5+Math.sin(t*Math.PI*4)*0.18;}
-  return {x,y};
+function computeXY(t){
+  const swing=Math.sin(t*Math.PI*2);
+  return {x:0.5+swing*0.42, y:0.5};
 }
 function playTick(side){
   if(!settings.audio) return;
@@ -438,12 +439,12 @@ function startBLS(mode){
 
 function runLoop(){
   const dot=$('bls-dot'); const bstage=$('bls-stage');
-  const pattern=settings.pattern, speed=settings.speed, periodMs=60000/speed;
+  const speed=settings.speed, periodMs=60000/speed;
   function frame(now){
     if(!bls.running) return;
     const elapsed = bls.accumulated + (now-bls.resumeTime);
     const t = (elapsed%periodMs)/periodMs;
-    const {x,y} = computeXY(pattern,t);
+    const {x,y} = computeXY(t);
     const w=bstage.clientWidth, h=bstage.clientHeight;
     dot.style.left=(x*w)+'px'; dot.style.top=(y*h)+'px';
     const side = x<0.5?'L':'R';
