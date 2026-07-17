@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoloEMDR</title>
+<style>
+  :root{
+    --bg:#EEF3F2; --bg-soft:#E3ECEA; --ink:#24313A; --ink-soft:#5B6B72;
+    --teal:#3E7371; --teal-deep:#2A5654; --clay:#C9825F; --clay-soft:#E7C3AC;
+    --line:#C9D6D3; --dusk:#0F1E27; --dusk-2:#16303B;
+    --font-display: Georgia, 'Times New Roman', serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{ background:linear-gradient(120deg,var(--bg) 0%,var(--bg-soft) 50%,var(--bg) 100%); background-size:220% 220%;
+    color:var(--ink); font-family:var(--font-body); overflow:hidden; animation:tide 40s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ body{ animation:none; } }
+  @keyframes tide{ 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
+  #app{ height:100vh; width:100vw; position:relative; display:flex; flex-direction:column; }
+
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .fs{ opacity:0; animation:fadeIn 0.9s ease forwards; }
+
+  .icon-btn{ position:fixed; top:14px; z-index:60; background:none; border:none; cursor:pointer; opacity:.55; padding:6px; }
+  .icon-btn:hover{ opacity:1; }
+  .icon-btn svg{ display:block; color:white; mix-blend-mode:difference; }
+  #settingsIcon{ left:14px; }
+  #libraryIcon{ right:14px; }
+
+  #settings-panel{ position:fixed; top:56px; left:14px; z-index:60; width:290px; background:white; border:1px solid var(--line);
+    border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
+  #settings-panel.open{ display:block; }
+  #settings-panel h3{ font-size:13px; margin:0 0 10px; }
+  .control-group{ margin-bottom:12px; }
+  .control-group label{ font-size:12.5px; color:var(--ink-soft); display:block; margin-bottom:4px; }
+  select, textarea, input[type=text]{ width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+    font-family:var(--font-body); font-size:13.5px; background:white; color:var(--ink); }
+  textarea{ resize:vertical; min-height:70px; }
+  input[type=range]{ width:100%; accent-color:var(--teal); }
+
+  .chev{ position:fixed; top:50%; transform:translateY(-50%); z-index:40; background:none; border:none;
+    font-size:28px; color:var(--ink-soft); opacity:.28; cursor:pointer; padding:14px; }
+  .chev:hover{ opacity:.7; }
+  #chevL{ left:2px; } #chevR{ right:2px; }
+  body.hide-r #chevR{ display:none; }
+  body.hide-l #chevL{ display:none; }
+
+  #stage-wrap{ flex:1; position:relative; overflow:hidden; }
+  #stage{ height:100%; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:40px; overflow-y:auto; }
+  #stage h2.instruction{ font-family:var(--font-display); font-weight:600; font-size:clamp(21px,3vw,30px); margin:0 0 6px; max-width:640px; }
+  #stage p.sub{ color:var(--ink-soft); font-size:14.5px; margin:0 0 22px; max-width:540px; }
+
+  .breathe-circle{ width:140px; height:140px; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--clay-soft), var(--teal));
+    animation:breathe 6s ease-in-out infinite; margin-bottom:26px; }
+  @keyframes breathe{ 0%,100%{transform:scale(0.85);opacity:.85;} 50%{transform:scale(1.05);opacity:1;} }
+  @media (prefers-reduced-motion: reduce){ .breathe-circle{ animation:none; } }
+
+  .free-text-wrap{ width:min(560px,90%); margin-top:6px; }
+  .free-text-wrap textarea{ min-height:90px; font-size:15px; }
+  .check-row{ display:flex; align-items:center; gap:8px; justify-content:center; margin:10px 0 4px; font-size:13.5px; color:var(--ink-soft); }
+
+  .scale-wrap{ width:min(560px,90%); margin-top:6px; }
+  .scale-label{ font-family:var(--font-display); font-size:22px; font-weight:600; color:var(--teal-deep); margin:4px 0 14px; min-height:28px; }
+  input[type=range].rating-slider{ width:100%; height:10px; }
+
+  .hint-line{ font-size:12.5px; color:var(--ink-soft); margin-top:26px; }
+
+  #bls-stage{ height:100%; width:100%; background:radial-gradient(ellipse at center, var(--dusk-2), var(--dusk)); position:relative; display:none; }
+  #bls-inner{ height:100%; width:100%; position:relative; transition:opacity .35s ease; }
+  #bls-dot{ position:absolute; width:34px; height:34px; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%);
+    border:1px solid rgba(0,0,0,0.12); }
+  #bls-instruction{ position:absolute; top:16%; left:50%; transform:translate(-50%,0); color:#EFE8DA; font-family:var(--font-display);
+    font-size:19px; text-align:center; width:80%; max-width:520px; transition:opacity .5s ease; }
+  .dark-form{ height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; }
+  .dark-form h2{ font-family:var(--font-display); color:#EFE8DA; font-size:22px; margin:0 0 18px; max-width:560px; }
+  .dark-form textarea{ background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#EFE8DA; }
+  .dark-form textarea::placeholder{ color:rgba(239,232,218,0.4); }
+  .dark-form .check-row{ color:rgba(239,232,218,0.6); }
+
+  .countdown-num{ font-family:var(--font-display); font-size:64px; color:var(--teal-deep); }
+
+  /* selection screen */
+  #stage.select-view{ align-items:center; }
+  .sel-list{ width:min(560px,92%); display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+  .sel-card{ background:white; border:1px solid var(--line); border-radius:12px; padding:12px 16px; text-align:left; cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center; }
+  .sel-card:hover{ border-color:var(--teal); }
+  .sel-card .t{ font-size:14.5px; font-weight:600; }
+  .sel-card .actions{ display:flex; gap:6px; }
+  .sel-card .actions button{ font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg-soft); cursor:pointer; }
+  .sel-alt{ margin-top:18px; font-size:13.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; background:none; border:none; }
+  .sel-add{ margin-top:6px; font-size:13px; color:var(--teal-deep); background:none; border:none; cursor:pointer; }
+
+  .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
+    font-size:12.5px; cursor:pointer; text-decoration:underline; }
+  .skip-link:hover{ color:rgba(239,232,218,0.9); }
+</style>
+</head>
+<body>
+<div id="app">
+  <button id="settingsIcon" class="icon-btn" title="Réglages">
+    <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="white" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="white"/><line x1="2" y1="10" x2="18" y2="10" stroke="white" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="white"/><line x1="2" y1="15" x2="18" y2="15" stroke="white" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="white"/></svg>
+  </button>
+  <button id="libraryIcon" class="icon-btn" title="Librairie de souvenirs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
+  </button>
+  <button class="chev" id="chevL">‹</button>
+  <button class="chev" id="chevR">›</button>
+  <div id="settings-panel">
+    <h3>Réglages de la stimulation</h3>
+    <div class="control-group"><label>Motif</label>
+      <select id="bls-pattern"><option value="horizontal">Horizontal</option><option value="diagonal">Diagonal</option><option value="circle">Circulaire</option><option value="infinity">Infini</option></select></div>
+    <div class="control-group"><label>Vitesse : <span id="speed-val">30</span> passages/min</label><input type="range" id="bls-speed" min="10" max="70" value="30"></div>
+    <div class="control-group"><label>Taille du point</label><input type="range" id="bls-size" min="18" max="60" value="34"></div>
+    <div class="control-group"><label>Couleur du point</label><input type="color" id="bls-color" value="#F4E3C1" style="width:100%;height:34px;padding:2px;cursor:pointer;"></div>
+    <div class="control-group"><label>Durée d'une série : <span id="duration-val">90</span> s</label><input type="range" id="bls-duration" min="20" max="180" value="90"></div>
+    <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
+    <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
+  </div>
+
+  <div id="stage-wrap">
+    <div id="stage"></div>
+    <div id="bls-stage"><div id="bls-inner"></div></div>
+  </div>
+</div>
+
+<script>
+const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings';
+const $ = id => document.getElementById(id);
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function loadTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_TRAUMAS))||[]; }catch(e){ return []; } }
+function saveTraumas(list){ localStorage.setItem(LS_TRAUMAS, JSON.stringify(list)); }
+let traumas = loadTraumas();
+
+let settings = { pattern:'horizontal', speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
+try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
+function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }
+$('bls-pattern').value=settings.pattern; $('bls-speed').value=settings.speed; $('speed-val').textContent=settings.speed;
+$('bls-size').value=settings.size; $('bls-color').value=settings.color;
+$('bls-duration').value=settings.duration; $('duration-val').textContent=settings.duration;
+$('bls-audio').checked=settings.audio; $('bls-haptic').checked=settings.haptic;
+$('bls-pattern').addEventListener('change',e=>{settings.pattern=e.target.value;saveSettings();});
+$('bls-speed').addEventListener('input',e=>{settings.speed=+e.target.value;$('speed-val').textContent=settings.speed;saveSettings();});
+$('bls-size').addEventListener('input',e=>{settings.size=+e.target.value;saveSettings();});
+$('bls-color').addEventListener('input',e=>{settings.color=e.target.value;saveSettings();});
+$('bls-duration').addEventListener('input',e=>{settings.duration=+e.target.value;$('duration-val').textContent=settings.duration;saveSettings();});
+$('bls-audio').addEventListener('change',e=>{settings.audio=e.target.checked;saveSettings();});
+$('bls-haptic').addEventListener('change',e=>{settings.haptic=e.target.checked;saveSettings();});
+$('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
+$('libraryIcon').addEventListener('click',()=>{
+  session=null; history=[]; currentPhase=null;
+  goTo('select', renderSelect);
+});
+
+/* ---------------- navigation core ---------------- */
+let session=null, currentPhase=null, history=[];
+let forwardAction=null, spaceAction=null;
+
+function goTo(phase, fn){
+  if(currentPhase!==null){ history.push({phase:currentPhase, snap:JSON.parse(JSON.stringify(session||{})), fn:currentFn}); }
+  currentPhase = phase; currentFn = fn;
+  document.body.classList.remove('hide-r','hide-l');
+  forwardAction=null; spaceAction=null;
+  fn();
+}
+let currentFn = null;
+function goBack(){
+  if(!history.length) return;
+  const h = history.pop();
+  session = h.snap; currentPhase = h.phase; currentFn = h.fn;
+  document.body.classList.remove('hide-r','hide-l');
+  forwardAction=null; spaceAction=null;
+  h.fn();
+}
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='ArrowLeft'){ e.preventDefault(); goBack(); }
+  else if(e.key==='ArrowRight'||e.key==='Enter'){ e.preventDefault(); if(forwardAction) forwardAction(); }
+  else if(e.code==='Space'){ if(spaceAction){ e.preventDefault(); spaceAction(); } }
+});
+$('chevL').addEventListener('click',goBack);
+$('chevR').addEventListener('click',()=>{ if(forwardAction) forwardAction(); });
+
+function stageBase(){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; const s=$('stage'); s.className=''; s.innerHTML=''; return s; }
+function fs(html, delay){ return `<div class="fs" style="animation-delay:${delay}s">${html}</div>`; }
+
+/* ---------------- boot: loading -> select ---------------- */
+function renderLoading(next){
+  const s = stageBase();
+  s.innerHTML = `<div class="breathe-circle fs"></div>`;
+  document.body.classList.add('hide-l','hide-r');
+  const t = setTimeout(()=> proceed(), 2200);
+  function proceed(){ clearTimeout(t); goTo(next.phase, next.fn); }
+  forwardAction = proceed;
+}
+
+function renderSelect(){
+  const s = stageBase();
+  s.className='select-view';
+  const untreated = traumas.filter(t=>t.status!=='traite');
+  const cards = untreated.map(t=>`
+    <div class="sel-card" data-id="${t.id}">
+      <div><div class="t">${escapeHtml(t.title)}</div></div>
+      <div class="actions"><button data-del="${t.id}">Supprimer</button></div>
+    </div>`).join('');
+  s.innerHTML = `
+    <h2 class="instruction fs">Quel souvenir souhaitez-vous travailler aujourd'hui ?</h2>
+    <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir en attente.</p>'}</div>
+    <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+    <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans souvenir précis</button>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  s.querySelectorAll('.sel-card').forEach(c=> c.addEventListener('click',(e)=>{
+    if(e.target.closest('[data-del]')) return;
+    const t = traumas.find(x=>x.id===c.dataset.id);
+    beginSession(t.id, t.title, t.description);
+  }));
+  s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); renderSelect();
+  }));
+  s.querySelector('#add-t').addEventListener('click', renderAddForm);
+  s.querySelector('#free-s').addEventListener('click', ()=> beginSession(null,'Séance libre',''));
+}
+
+function renderAddForm(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Ajouter un souvenir</h2>
+    <div class="free-text-wrap fs" style="animation-delay:.3s">
+      <input type="text" id="tf-title" placeholder="Titre court">
+    </div>
+    <div class="free-text-wrap fs" style="animation-delay:.5s">
+      <textarea id="tf-desc" placeholder="Détail (facultatif)"></textarea>
+    </div>
+    <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
+  `;
+  document.body.classList.add('hide-r');
+  forwardAction = ()=>{
+    const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
+    const description = s.querySelector('#tf-desc').value.trim();
+    traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', createdAt:Date.now()});
+    saveTraumas(traumas);
+    history.pop(); currentPhase='select'; renderSelect();
+  };
+}
+
+function beginSession(traumaId, title, description){
+  session = { traumaId, title, description, feltText:'', level1:null, level1Detail:'',
+    desiredText:'', level2:null, level2Detail:'', negSets:0, posSets:0, closureStep:0 };
+  goTo('loading1', ()=> renderLoading({phase:'connect', fn:renderConnect}));
+}
+
+/* ---------------- assessment ---------------- */
+function renderConnect(){
+  const s = stageBase();
+  const hasRecall = session.traumaId && session.description;
+  s.innerHTML = `
+    <div class="breathe-circle fs"></div>
+    <h2 class="instruction fs" style="animation-delay:.3s">Connectez-vous à ce souvenir.</h2>
+    ${hasRecall ? `<button class="sel-add fs" id="recall-btn" style="animation-delay:.5s;margin-top:14px;">Rappeler le souvenir</button>
+    <p class="sub" id="recall-text" style="display:none; max-width:480px; margin-top:10px;">${escapeHtml(session.title)} — ${escapeHtml(session.description)}</p>` : ''}
+  `;
+  if(hasRecall){
+    s.querySelector('#recall-btn').addEventListener('click', ()=>{
+      const t = s.querySelector('#recall-text');
+      t.style.display = t.style.display==='none' ? 'block' : 'none';
+    });
+  }
+  forwardAction = ()=> goTo('feel', renderFeel);
+}
+
+function renderFeel(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Exprimez votre ressenti avec vos propres mots.</h2>
+    <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.feltText||''}</textarea></div>
+  `;
+  forwardAction = ()=>{ session.feltText = s.querySelector('#ta').value; goTo('level1', renderLevel1); };
+}
+
+function bucketLabelPresence(v){
+  if(v<10) return 'Pas du tout';
+  if(v<30) return 'Un peu';
+  if(v<50) return 'Bof, moyennement';
+  if(v<70) return 'Plutôt oui';
+  if(v<90) return 'Beaucoup';
+  return 'Totalement';
+}
+function bucketLabelValence(v){
+  if(v<10) return 'Très mal';
+  if(v<30) return 'Mal';
+  if(v<50) return 'Plutôt mal';
+  if(v<70) return 'Plutôt bien';
+  if(v<90) return 'Bien';
+  return 'Très bien';
+}
+
+function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn){
+  const s = stageBase();
+  const labelFn = storeKey==='level2' ? bucketLabelPresence : bucketLabelValence;
+  s.innerHTML = `
+    <h2 class="instruction fs">${title}</h2>
+    <div class="scale-wrap fs" style="animation-delay:.9s">
+      <div class="scale-label" id="sl-label"></div>
+      <input type="range" class="rating-slider" id="sl-range" min="0" max="100" value="50">
+      <div class="free-text-wrap" style="width:100%; margin-top:16px;"><textarea id="sl-detail" placeholder="Vous pouvez préciser si vous voulez (facultatif).">${session[detailKey]||''}</textarea></div>
+    </div>
+  `;
+  let touched = session[storeKey]!=null;
+  const range = s.querySelector('#sl-range');
+  if(touched) range.value = session[storeKey];
+  if(touched) s.querySelector('#sl-label').textContent = labelFn(session[storeKey]);
+  range.addEventListener('input', e=>{ touched=true; s.querySelector('#sl-label').textContent = labelFn(+e.target.value); });
+  forwardAction = ()=>{
+    session[storeKey] = touched ? +range.value : null;
+    session[detailKey] = s.querySelector('#sl-detail').value;
+    goTo(nextPhase, nextFn);
+  };
+}
+
+function renderLevel1(){ renderScaleScreen("Vous arriveriez à déterminer l'échelle de votre ressenti ?", 'level1','level1Detail','desired',renderDesired); }
+
+function renderDesired(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Comment aimeriez-vous vous sentir à la place ?</h2>
+    <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.desiredText||''}</textarea></div>
+  `;
+  forwardAction = ()=>{ session.desiredText = s.querySelector('#ta').value; goTo('level2', renderLevel2); };
+}
+function renderLevel2(){ renderScaleScreen("À quel point vous sentez-vous déjà comme ça ?", 'level2','level2Detail','loading2neg',
+  ()=> renderLoading({phase:'reconnect_neg', fn:()=>renderReconnect('neg')})); }
+
+/* ---------------- reconnect / countdown / ball loop ---------------- */
+function renderReconnect(mode){
+  const s = stageBase();
+  const txt = mode==='neg' ? "Reconnectez-vous à cette sensation." : "Concentrez-vous sur la sensation que vous aimeriez ressentir.";
+  s.innerHTML = `<div class="breathe-circle fs"></div><h2 class="instruction fs" style="animation-delay:.3s">${txt}</h2>`;
+  forwardAction = ()=> goTo('countdown_'+mode, ()=> renderCountdown(mode));
+}
+
+function renderCountdown(mode){
+  const s = stageBase();
+  document.body.classList.add('hide-l','hide-r');
+  s.innerHTML = `<div class="countdown-num fs" id="cd">3</div>`;
+  let n=3;
+  const iv = setInterval(()=>{
+    n--;
+    if(n<=0){ clearInterval(iv); showBall(mode); return; }
+    const el=$('cd'); el.textContent=n; el.classList.remove('fs'); void el.offsetWidth; el.classList.add('fs');
+  },900);
+}
+
+let bls = { running:false, mode:null, accumulated:0, resumeTime:0, lastSide:null, anim:null, timer:null, audioCtx:null };
+
+function computeXY(pattern,t){
+  const swing=Math.sin(t*Math.PI*2); let x=0.5,y=0.5;
+  if(pattern==='horizontal'){x=0.5+swing*0.42;y=0.5;}
+  else if(pattern==='diagonal'){x=0.5+swing*0.42;y=0.5+swing*0.28;}
+  else if(pattern==='circle'){x=0.5+Math.cos(t*Math.PI*2)*0.32;y=0.5+Math.sin(t*Math.PI*2)*0.22;}
+  else if(pattern==='infinity'){x=0.5+Math.sin(t*Math.PI*2)*0.4;y=0.5+Math.sin(t*Math.PI*4)*0.18;}
+  return {x,y};
+}
+function playTick(side){
+  if(!settings.audio) return;
+  try{
+    if(!bls.audioCtx) bls.audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const ctx=bls.audioCtx, osc=ctx.createOscillator(), gain=ctx.createGain(), pan=ctx.createStereoPanner();
+    osc.type='sine'; osc.frequency.value=420; pan.pan.value=side==='L'?-1:1;
+    const now=ctx.currentTime;
+    gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(0.18,now+0.012); gain.gain.exponentialRampToValueAtTime(0.0001,now+0.11);
+    osc.connect(gain).connect(pan).connect(ctx.destination); osc.start(now); osc.stop(now+0.13);
+  }catch(e){}
+}
+
+function showBall(mode, resp){
+  document.body.classList.add('hide-l','hide-r');
+  $('stage').style.display='none'; $('bls-stage').style.display='block';
+  const inner = $('bls-inner');
+  const isFirst = resp === undefined;
+  const txt = mode==='neg' ? 'Plongez dans le souvenir.' : mode==='pos' ? 'Plongez dans le souvenir en restant sur cette fréquence.' : 'Scannez votre corps.';
+  const count = mode==='neg' ? session.negSets : mode==='pos' ? session.posSets : 1;
+  inner.innerHTML = `
+    ${isFirst ? `<div id="bls-instruction">${txt}</div>` : ''}
+    <div id="bls-dot"></div>
+    ${count>=1 && mode!=='bodyscan' ? `<button class="skip-link" id="skip-link">passer</button>` : ''}
+  `;
+  const dot = $('bls-dot');
+  dot.style.width=settings.size+'px'; dot.style.height=settings.size+'px'; dot.style.background=settings.color;
+  const skipBtn = $('skip-link');
+  if(skipBtn) skipBtn.addEventListener('click', ()=>{
+    if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos'));
+    else if(mode==='pos') goTo('bodyscan', renderBodyScan);
+  });
+  spaceAction = ()=> startBLS(mode);
+}
+
+function startBLS(mode){
+  spaceAction = ()=> requestStop();
+  bls.mode=mode; bls.running=true; bls.accumulated=0; bls.resumeTime=performance.now(); bls.lastSide=null;
+  if(mode==='neg') session.negSets++; else if(mode==='pos') session.posSets++;
+  const ins = $('bls-instruction'); if(ins) ins.style.opacity='0';
+  bls.timer = setTimeout(()=> requestStop(), settings.duration*1000);
+  runLoop();
+}
+
+function runLoop(){
+  const dot=$('bls-dot'); const bstage=$('bls-stage');
+  const pattern=settings.pattern, speed=settings.speed, periodMs=60000/speed;
+  function frame(now){
+    if(!bls.running) return;
+    const elapsed = bls.accumulated + (now-bls.resumeTime);
+    const t = (elapsed%periodMs)/periodMs;
+    const {x,y} = computeXY(pattern,t);
+    const w=bstage.clientWidth, h=bstage.clientHeight;
+    dot.style.left=(x*w)+'px'; dot.style.top=(y*h)+'px';
+    const side = x<0.5?'L':'R';
+    if(side!==bls.lastSide){
+      if(bls.lastSide!==null){ playTick(side); if(settings.haptic && navigator.vibrate) navigator.vibrate(25); }
+      bls.lastSide=side;
+    }
+    bls.anim = requestAnimationFrame(frame);
+  }
+  bls.anim = requestAnimationFrame(frame);
+}
+
+function requestStop(){
+  if(!bls.running) return;
+  bls.running=false; spaceAction=null;
+  if(bls.timer) clearTimeout(bls.timer);
+  if(bls.anim) cancelAnimationFrame(bls.anim);
+  const dot=$('bls-dot'), bstage=$('bls-stage');
+  const startLeft=parseFloat(dot.style.left)||bstage.clientWidth/2, startTop=parseFloat(dot.style.top)||bstage.clientHeight/2;
+  const cx=bstage.clientWidth/2, cy=bstage.clientHeight/2, dur=1200, t0=performance.now();
+  function decel(now){
+    let p=Math.min(1,(now-t0)/dur); const ease=1-Math.pow(1-p,3);
+    dot.style.left=(startLeft+(cx-startLeft)*ease)+'px'; dot.style.top=(startTop+(cy-startTop)*ease)+'px';
+    if(p<1) requestAnimationFrame(decel); else afterStop();
+  }
+  requestAnimationFrame(decel);
+}
+
+function afterStop(){
+  const mode = bls.mode;
+  if(mode==='bodyscan'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); renderBodyScan(); return; }
+  crossfadeToForm(mode);
+}
+
+function crossfadeToForm(mode){
+  const inner = $('bls-inner');
+  inner.style.opacity=0;
+  setTimeout(()=>{
+    inner.innerHTML = `
+      <div class="dark-form">
+        <h2 class="fs">Qu'est-ce qui vous vient maintenant ?</h2>
+        <div class="free-text-wrap fs" style="animation-delay:.7s; width:100%;"><textarea id="resp" placeholder="Écrivez ici..."></textarea></div>
+        <div class="check-row fs" style="animation-delay:.7s"><input type="checkbox" id="resp-nothing"> <label for="resp-nothing">Rien / je ne sais pas</label></div>
+      </div>`;
+    inner.style.opacity=1;
+    document.body.classList.add('hide-l','hide-r');
+    function proceedResponse(nothing){
+      const count = mode==='neg' ? session.negSets : session.posSets;
+      forwardAction=null;
+      if(count % 5 === 0){ showCheckpointDark(mode); }
+      else { showStayOn(mode, nothing); }
+    }
+    forwardAction = ()=> proceedResponse($('resp-nothing').checked);
+    $('resp-nothing').addEventListener('change', (e)=>{ if(e.target.checked) proceedResponse(true); });
+  },350);
+}
+
+function showStayOn(mode, nothing){
+  const inner=$('bls-inner');
+  inner.style.opacity=0;
+  setTimeout(()=>{
+    inner.innerHTML = `<div class="dark-form"><h2 class="fs">${nothing?'Plongez dans le souvenir.':'Restez là-dessus.'}</h2></div>`;
+    inner.style.opacity=1;
+    setTimeout(()=>{ showBall(mode, {nothing}); }, 2000);
+  },350);
+}
+
+function showCheckpointDark(mode){
+  $('bls-stage').style.display='none'; $('stage').style.display='flex';
+  document.body.classList.remove('hide-l','hide-r');
+  renderScaleScreen("Vous arriveriez à déterminer l'échelle de votre ressenti ?",
+    mode==='neg'?'level1':'level2', mode==='neg'?'level1Detail':'level2Detail',
+    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode));
+}
+
+function renderCheckpointChoice(mode){
+  const s = stageBase();
+  let note = '';
+  if(mode==='pos' && session.posSets < session.negSets){
+    note = `<p class="sub fs" style="animation-delay:.4s">On pourrait faire encore une série pour équilibrer avec le travail précédent.</p>`;
+  }
+  s.innerHTML = `
+    <h2 class="instruction fs">Souhaitez-vous...</h2>
+    ${note}
+    <div class="fs" style="animation-delay:.7s; display:flex; gap:12px; justify-content:center; margin-top:10px;">
+      <button class="sel-add" id="cc-more">Refaire une série</button>
+      <button class="sel-add" id="cc-advance">Passer à la suite</button>
+    </div>
+  `;
+  const advance = ()=>{ if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos')); else goTo('bodyscan', renderBodyScan); };
+  const more = ()=> goTo('reconnect_'+mode, ()=> renderReconnect(mode));
+  s.querySelector('#cc-more').addEventListener('click', more);
+  s.querySelector('#cc-advance').addEventListener('click', advance);
+  forwardAction = advance;
+  document.body.dataset.checkpointMode = mode;
+}
+
+/* override ArrowLeft behavior specifically for checkpoint choice via flag */
+const _goBack = goBack;
+goBack = function(){
+  if(currentPhase && currentPhase.indexOf('checkpoint_choice_')===0){
+    const mode = document.body.dataset.checkpointMode;
+    goTo('reconnect_'+mode, ()=> renderReconnect(mode));
+    return;
+  }
+  _goBack();
+};
+
+/* ---------------- body scan ---------------- */
+function renderBodyScan(){
+  goTo('bodyscan', ()=>{
+    const s = stageBase();
+    const count = 1;
+    s.innerHTML = `
+      <h2 class="instruction fs">Que ressentez-vous ? Ça peut être corporel, émotionnel...</h2>
+      <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici (facultatif)..."></textarea></div>
+      <div class="fs" style="animation-delay:1.3s; display:flex; gap:12px; justify-content:center; margin-top:18px;">
+        <button class="sel-add" id="bs-more">Ajouter une série</button>
+        <button class="sel-add" id="bs-advance">C'est bon, je suis prêt·e</button>
+      </div>
+    `;
+    s.querySelector('#bs-more').addEventListener('click', ()=> goTo('bodyscan_ball', ()=> showBall('bodyscan')));
+    s.querySelector('#bs-advance').addEventListener('click', ()=> goTo('closure0', ()=> renderClosure(0)));
+    forwardAction = ()=> goTo('closure0', ()=> renderClosure(0));
+  });
+}
+/* left arrow during bodyscan launches another BLS set instead of history-back */
+const _goBack2 = goBack;
+goBack = function(){
+  if(currentPhase==='bodyscan'){ goTo('bodyscan_ball', ()=> showBall('bodyscan')); return; }
+  _goBack2();
+};
+
+/* ---------------- closure ---------------- */
+const CLOSURE_STEPS = [
+  {title:"Concentrez-vous sur votre respiration, sans chercher à la contrôler."},
+  {title:"Appuyez légèrement vos ongles dans la pulpe de votre pouce."},
+  {title:"Remarquez 5 choses que vous voyez."},
+  {title:"Remarquez 4 choses que vous touchez."},
+  {title:"Remarquez 3 choses que vous entendez."},
+  {title:"Remarquez 2 odeurs."},
+  {title:"Remarquez 1 chose que vous goûtez."},
+  {title:"Étirez-vous, bâillez, secouez doucement votre corps."},
+  {title:"Prenez-vous dans vos bras. « Tu n'as rien à prouver. » « Tu as de la valeur comme tu es. » « Tu es en sécurité. »"}
+];
+function renderClosure(i){
+  goTo('closure'+i, ()=>{
+    const s = stageBase();
+    if(i>=CLOSURE_STEPS.length){ renderSessionEnd(); return; }
+    s.innerHTML = `<h2 class="instruction fs">${CLOSURE_STEPS[i].title}</h2>`;
+    forwardAction = ()=> renderClosure(i+1);
+  });
+}
+
+function renderSessionEnd(){
+  const s = stageBase();
+  document.body.classList.add('hide-r');
+  s.innerHTML = `
+    <h2 class="instruction fs">Séance terminée</h2>
+    <p class="sub fs" style="animation-delay:.4s">Prenez un moment avant de vous relever.</p>
+    <div class="btn-row fs" id="status-row" style="animation-delay:.7s; display:flex; gap:10px;"></div>
+  `;
+  if(session.traumaId){
+    const t = traumas.find(x=>x.id===session.traumaId);
+    if(t){
+      s.querySelector('#status-row').innerHTML = `
+        <button class="sel-add" data-status="en_cours">Marquer : en cours</button>
+        <button class="sel-add" data-status="traite">Marquer : traité</button>`;
+      s.querySelectorAll('[data-status]').forEach(b=> b.addEventListener('click',()=>{
+        t.status=b.dataset.status; saveTraumas(traumas);
+        s.querySelector('#status-row').innerHTML = '<p class="sub">Statut mis à jour.</p>';
+      }));
+    }
+  }
+  setTimeout(()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'select',fn:renderSelect})); }, 6000);
+}
+
+/* boot */
+goTo('loading0', ()=> renderLoading({phase:'select', fn:renderSelect}));
+function renderPhase(phase){ }
+</script>
+</body>
+</html>
