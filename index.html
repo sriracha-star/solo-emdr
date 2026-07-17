@@ -122,6 +122,7 @@
     <div class="control-group"><label>Durée d'une série : <span id="duration-val">90</span> s</label><input type="range" id="bls-duration" min="20" max="180" value="90"></div>
     <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
     <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
+    <button id="settings-save" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:4px;">Enregistrer</button>
   </div>
 
   <div id="stage-wrap">
@@ -151,6 +152,12 @@ $('bls-color').addEventListener('input',e=>{settings.color=e.target.value;saveSe
 $('bls-duration').addEventListener('input',e=>{settings.duration=+e.target.value;$('duration-val').textContent=settings.duration;saveSettings();});
 $('bls-audio').addEventListener('change',e=>{settings.audio=e.target.checked;saveSettings();});
 $('bls-haptic').addEventListener('change',e=>{settings.haptic=e.target.checked;saveSettings();});
+$('settings-save').addEventListener('click',()=>{
+  saveSettings();
+  const dot = $('bls-dot');
+  if(dot){ dot.style.width=settings.size+'px'; dot.style.height=settings.size+'px'; dot.style.background=settings.color; }
+  $('settings-panel').classList.remove('open');
+});
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
 $('libraryIcon').addEventListener('click',()=>{
   session=null; history=[]; currentPhase=null;
