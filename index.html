@@ -23,9 +23,10 @@
   @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
   .fs{ opacity:0; animation:fadeIn 0.9s ease forwards; }
 
-  .icon-btn{ position:fixed; top:14px; z-index:60; background:none; border:none; cursor:pointer; opacity:.55; padding:6px; }
+  .icon-btn{ position:fixed; top:14px; z-index:60; background:none; border:none; cursor:pointer; opacity:.75; padding:6px; color:var(--ink); }
   .icon-btn:hover{ opacity:1; }
-  .icon-btn svg{ display:block; color:white; mix-blend-mode:difference; }
+  .icon-btn svg{ display:block; }
+  body.stage-dark .icon-btn{ color:#EFE8DA; }
   #settingsIcon{ left:14px; }
   #libraryIcon{ right:14px; }
 
@@ -102,10 +103,10 @@
 <body>
 <div id="app">
   <button id="settingsIcon" class="icon-btn" title="Réglages">
-    <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="white" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="white"/><line x1="2" y1="10" x2="18" y2="10" stroke="white" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="white"/><line x1="2" y1="15" x2="18" y2="15" stroke="white" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="white"/></svg>
+    <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
   </button>
-  <button id="libraryIcon" class="icon-btn" title="Librairie de souvenirs">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
+  <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
   </button>
   <button class="chev" id="chevL">‹</button>
   <button class="chev" id="chevR">›</button>
@@ -152,7 +153,7 @@ $('bls-haptic').addEventListener('change',e=>{settings.haptic=e.target.checked;s
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
 $('libraryIcon').addEventListener('click',()=>{
   session=null; history=[]; currentPhase=null;
-  goTo('select', renderSelect);
+  goTo('library', renderLibrary);
 });
 
 /* ---------------- navigation core ---------------- */
@@ -183,7 +184,7 @@ document.addEventListener('keydown',(e)=>{
 $('chevL').addEventListener('click',goBack);
 $('chevR').addEventListener('click',()=>{ if(forwardAction) forwardAction(); });
 
-function stageBase(){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; const s=$('stage'); s.className=''; s.innerHTML=''; return s; }
+function stageBase(){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('stage-dark'); const s=$('stage'); s.className=''; s.innerHTML=''; return s; }
 function fs(html, delay){ return `<div class="fs" style="animation-delay:${delay}s">${html}</div>`; }
 
 /* ---------------- boot: loading -> select ---------------- */
@@ -220,19 +221,47 @@ function renderSelect(){
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); renderSelect();
   }));
-  s.querySelector('#add-t').addEventListener('click', renderAddForm);
+  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'select',renderSelect)));
   s.querySelector('#free-s').addEventListener('click', ()=> beginSession(null,'Séance libre',''));
 }
 
-function renderAddForm(){
+const STATUS_LABEL = {a_traiter:'À traiter', en_cours:'En cours', traite:'Traité'};
+
+function renderLibrary(){
   const s = stageBase();
+  s.className='select-view';
+  const cards = traumas.map(t=>`
+    <div class="sel-card" data-id="${t.id}">
+      <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}</div></div>
+      <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
+    </div>`).join('');
   s.innerHTML = `
-    <h2 class="instruction fs">Ajouter un souvenir</h2>
+    <h2 class="instruction fs">Vos souvenirs</h2>
+    <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir enregistré.</p>'}</div>
+    <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  s.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const t = traumas.find(x=>x.id===b.dataset.edit);
+    goTo('editform', ()=> renderTraumaForm(t,'library',renderLibrary));
+  }));
+  s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); renderLibrary();
+  }));
+  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
+}
+
+function renderTraumaForm(trauma, returnPhase, returnFn){
+  const s = stageBase();
+  const isEdit = !!trauma;
+  s.innerHTML = `
+    <h2 class="instruction fs">${isEdit ? 'Modifier le souvenir' : 'Ajouter un souvenir'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
-      <input type="text" id="tf-title" placeholder="Titre court">
+      <input type="text" id="tf-title" placeholder="Titre court" value="${isEdit ? escapeHtml(trauma.title) : ''}">
     </div>
     <div class="free-text-wrap fs" style="animation-delay:.5s">
-      <textarea id="tf-desc" placeholder="Détail (facultatif)"></textarea>
+      <textarea id="tf-desc" placeholder="Détail (facultatif)">${isEdit ? escapeHtml(trauma.description) : ''}</textarea>
     </div>
     <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
@@ -240,9 +269,10 @@ function renderAddForm(){
   forwardAction = ()=>{
     const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
     const description = s.querySelector('#tf-desc').value.trim();
-    traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', createdAt:Date.now()});
+    if(isEdit){ trauma.title = title; trauma.description = description; }
+    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', createdAt:Date.now()}); }
     saveTraumas(traumas);
-    history.pop(); currentPhase='select'; renderSelect();
+    history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
 }
 
@@ -376,7 +406,7 @@ function playTick(side){
 }
 
 function showBall(mode, resp){
-  document.body.classList.add('hide-l','hide-r');
+  document.body.classList.add('hide-l','hide-r','stage-dark');
   $('stage').style.display='none'; $('bls-stage').style.display='block';
   const inner = $('bls-inner');
   const isFirst = resp === undefined;
