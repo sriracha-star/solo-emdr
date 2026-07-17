@@ -9,6 +9,7 @@
     --bg:#EEF3F2; --bg-soft:#E3ECEA; --ink:#24313A; --ink-soft:#5B6B72;
     --teal:#3E7371; --teal-deep:#2A5654; --clay:#C9825F; --clay-soft:#E7C3AC;
     --line:#C9D6D3; --dusk:#0F1E27; --dusk-2:#16303B;
+    --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF;
     --font-display: Georgia, 'Times New Roman', serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
   }
@@ -16,6 +17,7 @@
   html,body{ height:100%; margin:0; }
   body{ background:linear-gradient(120deg,var(--bg) 0%,var(--bg-soft) 50%,var(--bg) 100%); background-size:220% 220%;
     color:var(--ink); font-family:var(--font-body); overflow:hidden; animation:tide 40s ease-in-out infinite; }
+  body.phase-positive{ background-image:linear-gradient(120deg,var(--bg-violet) 0%,var(--bg-soft-violet) 50%,var(--bg-violet) 100%); }
   @media (prefers-reduced-motion: reduce){ body{ animation:none; } }
   @keyframes tide{ 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
   #app{ height:100vh; width:100vw; position:relative; display:flex; flex-direction:column; }
@@ -28,8 +30,8 @@
   .icon-btn svg{ display:block; }
   body.stage-dark .icon-btn{ color:#EFE8DA; }
   #settingsIcon{ right:14px; }
-  #libraryIcon{ left:14px; }
-  #homeIcon{ left:56px; }
+  #homeIcon{ left:14px; }
+  #libraryIcon{ left:56px; }
 
   #settings-panel{ position:fixed; top:56px; right:14px; z-index:60; width:290px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
@@ -66,7 +68,11 @@
 
   .scale-wrap{ width:min(560px,90%); margin-top:6px; }
   .scale-label{ font-family:var(--font-display); font-size:22px; font-weight:600; color:var(--teal-deep); margin:4px 0 14px; min-height:28px; }
-  input[type=range].rating-slider{ width:100%; height:10px; }
+  .scale-numbers{ display:flex; gap:7px; justify-content:center; flex-wrap:wrap; }
+  .scale-num{ width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:white; color:var(--ink);
+    font-family:var(--font-body); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .scale-num:hover{ border-color:var(--teal); }
+  .scale-num.selected{ background:var(--teal); border-color:var(--teal); color:white; }
 
   .hint-line{ font-size:12.5px; color:var(--ink-soft); margin-top:26px; }
 
@@ -103,11 +109,11 @@
 </head>
 <body>
 <div id="app">
-  <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
-  </button>
   <button id="homeIcon" class="icon-btn" title="Accueil">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
+  </button>
+  <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
   </button>
   <button id="settingsIcon" class="icon-btn" title="Réglages">
     <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
@@ -165,7 +171,7 @@ $('libraryIcon').addEventListener('click',()=>{
 });
 $('homeIcon').addEventListener('click',()=>{
   session=null; history=[]; currentPhase=null;
-  goTo('select', renderSelect);
+  goTo('home', renderHome);
 });
 
 /* ---------------- navigation core ---------------- */
@@ -196,7 +202,7 @@ document.addEventListener('keydown',(e)=>{
 $('chevL').addEventListener('click',goBack);
 $('chevR').addEventListener('click',()=>{ if(forwardAction) forwardAction(); });
 
-function stageBase(){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('stage-dark'); const s=$('stage'); s.className=''; s.innerHTML=''; return s; }
+function stageBase(){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('stage-dark','phase-positive'); const s=$('stage'); s.className=''; s.innerHTML=''; return s; }
 function fs(html, delay){ return `<div class="fs" style="animation-delay:${delay}s">${html}</div>`; }
 
 /* ---------------- boot: loading -> select ---------------- */
@@ -207,6 +213,31 @@ function renderLoading(next){
   const t = setTimeout(()=> proceed(), 2200);
   function proceed(){ clearTimeout(t); goTo(next.phase, next.fn); }
   forwardAction = proceed;
+}
+
+function renderHome(){
+  const s = stageBase();
+  s.innerHTML = `
+    <div class="breathe-circle fs"></div>
+    <button class="sel-add fs" id="start-session" style="animation-delay:.5s;">Commencer une séance</button>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  s.querySelector('#start-session').addEventListener('click', ()=> goTo('modechoice', renderModeChoice));
+  forwardAction = ()=> goTo('modechoice', renderModeChoice);
+}
+
+function renderModeChoice(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Quel type de séance ?</h2>
+    <div class="fs" style="animation-delay:.4s; display:flex; gap:12px; justify-content:center; margin-top:14px;">
+      <button class="sel-add" id="mode-emdr">EMDR</button>
+      <button class="sel-add" id="mode-bls">Stimulation bilatérale</button>
+    </div>
+  `;
+  document.body.classList.add('hide-r');
+  s.querySelector('#mode-emdr').addEventListener('click', ()=> goTo('select', renderSelect));
+  s.querySelector('#mode-bls').addEventListener('click', ()=> goTo('simple_ball', ()=> showBall('simple')));
 }
 
 function renderSelect(){
@@ -316,64 +347,76 @@ function renderConnect(){
 function renderFeel(){
   const s = stageBase();
   s.innerHTML = `
-    <h2 class="instruction fs">Exprimez votre ressenti avec vos propres mots.</h2>
+    <h2 class="instruction fs">Que ressentez-vous ?</h2>
     <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.feltText||''}</textarea></div>
   `;
   forwardAction = ()=>{ session.feltText = s.querySelector('#ta').value; goTo('level1', renderLevel1); };
 }
 
 function bucketLabelPresence(v){
-  if(v<10) return 'Pas du tout';
-  if(v<30) return 'Un peu';
-  if(v<50) return 'Bof, moyennement';
-  if(v<70) return 'Plutôt oui';
-  if(v<90) return 'Beaucoup';
+  if(v<=1) return 'Pas du tout';
+  if(v<=3) return 'Un peu';
+  if(v<=5) return 'Bof, moyennement';
+  if(v<=7) return 'Plutôt oui';
+  if(v<=9) return 'Beaucoup';
   return 'Totalement';
 }
 function bucketLabelValence(v){
-  if(v<10) return 'Très mal';
-  if(v<30) return 'Mal';
-  if(v<50) return 'Plutôt mal';
-  if(v<70) return 'Plutôt bien';
-  if(v<90) return 'Bien';
+  if(v<=1) return 'Très mal';
+  if(v<=3) return 'Mal';
+  if(v<=5) return 'Plutôt mal';
+  if(v<=7) return 'Plutôt bien';
+  if(v<=9) return 'Bien';
   return 'Très bien';
 }
 
-function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn){
+function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn, showDetail){
   const s = stageBase();
   const labelFn = storeKey==='level2' ? bucketLabelPresence : bucketLabelValence;
+  const numbersHtml = Array.from({length:10},(_,i)=>i+1).map(n=>`<button class="scale-num" data-v="${n}">${n}</button>`).join('');
   s.innerHTML = `
     <h2 class="instruction fs">${title}</h2>
     <div class="scale-wrap fs" style="animation-delay:.9s">
       <div class="scale-label" id="sl-label"></div>
-      <input type="range" class="rating-slider" id="sl-range" min="0" max="100" value="50">
-      <div class="free-text-wrap" style="width:100%; margin-top:16px;"><textarea id="sl-detail" placeholder="Vous pouvez préciser si vous voulez (facultatif).">${session[detailKey]||''}</textarea></div>
+      <div class="scale-numbers" id="sl-numbers">${numbersHtml}</div>
+      ${showDetail!==false ? `<div class="free-text-wrap" style="width:100%; margin-top:16px;"><textarea id="sl-detail" placeholder="Vous pouvez préciser si vous voulez (facultatif).">${session[detailKey]||''}</textarea></div>` : ''}
     </div>
   `;
   let touched = session[storeKey]!=null;
-  const range = s.querySelector('#sl-range');
-  if(touched) range.value = session[storeKey];
-  if(touched) s.querySelector('#sl-label').textContent = labelFn(session[storeKey]);
-  range.addEventListener('input', e=>{ touched=true; s.querySelector('#sl-label').textContent = labelFn(+e.target.value); });
+  let currentValue = touched ? session[storeKey] : null;
+  const buttons = s.querySelectorAll('.scale-num');
+  function selectValue(v){
+    buttons.forEach(b=> b.classList.toggle('selected', +b.dataset.v===v));
+    s.querySelector('#sl-label').textContent = labelFn(v);
+  }
+  if(touched) selectValue(currentValue);
+  buttons.forEach(b=> b.addEventListener('click', ()=>{
+    touched = true; currentValue = +b.dataset.v;
+    selectValue(currentValue);
+  }));
   forwardAction = ()=>{
-    session[storeKey] = touched ? +range.value : null;
-    session[detailKey] = s.querySelector('#sl-detail').value;
+    session[storeKey] = touched ? currentValue : null;
+    if(showDetail!==false){ session[detailKey] = s.querySelector('#sl-detail').value; }
     goTo(nextPhase, nextFn);
   };
 }
 
-function renderLevel1(){ renderScaleScreen("Vous arriveriez à déterminer l'échelle de votre ressenti ?", 'level1','level1Detail','desired',renderDesired); }
+function renderLevel1(){ renderScaleScreen("Comment ça va ?", 'level1','level1Detail','desired',renderDesired,false); }
 
 function renderDesired(){
   const s = stageBase();
+  document.body.classList.add('phase-positive');
   s.innerHTML = `
-    <h2 class="instruction fs">Comment aimeriez-vous vous sentir à la place ?</h2>
+    <h2 class="instruction fs">Que voudriez-vous ressentir ?</h2>
     <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.desiredText||''}</textarea></div>
   `;
   forwardAction = ()=>{ session.desiredText = s.querySelector('#ta').value; goTo('level2', renderLevel2); };
 }
-function renderLevel2(){ renderScaleScreen("À quel point vous sentez-vous déjà comme ça ?", 'level2','level2Detail','loading2neg',
-  ()=> renderLoading({phase:'reconnect_neg', fn:()=>renderReconnect('neg')})); }
+function renderLevel2(){
+  renderScaleScreen("À quel point en êtes-vous proche ?", 'level2','level2Detail','loading2neg',
+    ()=> renderLoading({phase:'reconnect_neg', fn:()=>renderReconnect('neg')}));
+  document.body.classList.add('phase-positive');
+}
 
 /* ---------------- reconnect / countdown / ball loop ---------------- */
 function renderReconnect(mode){
@@ -418,12 +461,12 @@ function showBall(mode, resp){
   $('stage').style.display='none'; $('bls-stage').style.display='block';
   const inner = $('bls-inner');
   const isFirst = resp === undefined;
-  const txt = mode==='neg' ? 'Plongez dans le souvenir.' : mode==='pos' ? 'Plongez dans le souvenir en restant sur cette fréquence.' : 'Scannez votre corps.';
+  const txt = mode==='neg' ? 'Plongez dans le souvenir.' : mode==='pos' ? 'Plongez dans le souvenir en restant sur cette fréquence.' : mode==='bodyscan' ? 'Scannez votre corps.' : 'Suivez le point des yeux.';
   const count = mode==='neg' ? session.negSets : mode==='pos' ? session.posSets : 1;
   inner.innerHTML = `
     ${isFirst ? `<div id="bls-instruction">${txt}</div>` : ''}
     <div id="bls-dot"></div>
-    ${count>=1 && mode!=='bodyscan' ? `<button class="skip-link" id="skip-link">passer</button>` : ''}
+    ${count>=1 && mode!=='bodyscan' && mode!=='simple' ? `<button class="skip-link" id="skip-link">passer</button>` : ''}
   `;
   const dot = $('bls-dot');
   dot.style.width=settings.size+'px'; dot.style.height=settings.size+'px'; dot.style.background=settings.color;
@@ -483,6 +526,7 @@ function requestStop(){
 function afterStop(){
   const mode = bls.mode;
   if(mode==='bodyscan'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); renderBodyScan(); return; }
+  if(mode==='simple'){ showBall('simple'); return; }
   crossfadeToForm(mode);
 }
 
@@ -522,9 +566,10 @@ function showStayOn(mode, nothing){
 function showCheckpointDark(mode){
   $('bls-stage').style.display='none'; $('stage').style.display='flex';
   document.body.classList.remove('hide-l','hide-r');
-  renderScaleScreen("Vous arriveriez à déterminer l'échelle de votre ressenti ?",
+  renderScaleScreen(mode==='neg' ? "Comment ça va ?" : "À quel point en êtes-vous proche ?",
     mode==='neg'?'level1':'level2', mode==='neg'?'level1Detail':'level2Detail',
-    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode));
+    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), mode!=='neg');
+  if(mode==='pos') document.body.classList.add('phase-positive');
 }
 
 function renderCheckpointChoice(mode){
@@ -626,11 +671,11 @@ function renderSessionEnd(){
       }));
     }
   }
-  setTimeout(()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'select',fn:renderSelect})); }, 6000);
+  setTimeout(()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'home',fn:renderHome})); }, 6000);
 }
 
 /* boot */
-goTo('loading0', ()=> renderLoading({phase:'select', fn:renderSelect}));
+goTo('loading0', ()=> renderLoading({phase:'home', fn:renderHome}));
 function renderPhase(phase){ }
 </script>
 </body>
