@@ -104,6 +104,15 @@
   .sel-alt{ margin-top:18px; font-size:13.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; background:none; border:none; }
   .sel-add{ margin-top:6px; font-size:13px; color:var(--teal-deep); background:none; border:none; cursor:pointer; }
 
+  .sel-card.has-status{ display:flex; flex-direction:column; align-items:stretch; }
+  .sel-card-top{ display:flex; justify-content:space-between; align-items:center; width:100%; }
+  .sel-card-done{ opacity:.5; }
+  .status-picker{ display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+  .status-opt{ flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
+    color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
+  .status-opt:hover{ border-color:var(--teal); }
+  .status-opt.selected{ background:var(--teal); border-color:var(--teal); color:white; }
+
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
   .skip-link:hover{ color:rgba(239,232,218,0.9); }
@@ -168,7 +177,7 @@ $('settings-save').addEventListener('click',()=>{
 });
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
 $('libraryIcon').addEventListener('click',()=>{
-  session=null; history=[]; currentPhase=null;
+  session=null; history=[]; currentPhase=null; openStatusId=null;
   goTo('library', renderLibrary);
 });
 $('homeIcon').addEventListener('click',()=>{
@@ -273,14 +282,22 @@ function renderSelect(){
 }
 
 const STATUS_LABEL = {a_traiter:'À traiter', en_cours:'En cours', traite:'Traité'};
+let openStatusId = null;
 
 function renderLibrary(){
   const s = stageBase();
   s.className='select-view';
-  const cards = traumas.map(t=>`
-    <div class="sel-card" data-id="${t.id}">
-      <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}</div></div>
-      <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
+  const sorted = [...traumas].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  const cards = sorted.map(t=>`
+    <div class="sel-card has-status ${t.status==='traite' ? 'sel-card-done' : ''}" data-id="${t.id}">
+      <div class="sel-card-top">
+        <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}</div></div>
+        <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
+      </div>
+      ${openStatusId===t.id ? `
+      <div class="status-picker">
+        ${Object.entries(STATUS_LABEL).map(([val,label])=>`<button class="status-opt ${t.status===val?'selected':''}" data-status="${val}" data-id="${t.id}">${label}</button>`).join('')}
+      </div>` : ''}
     </div>`).join('');
   s.innerHTML = `
     <h2 class="instruction fs">Vos souvenirs</h2>
@@ -290,15 +307,30 @@ function renderLibrary(){
     </div>
   `;
   document.body.classList.add('hide-l','hide-r');
+  s.querySelectorAll('.sel-card').forEach(c=> c.addEventListener('click',(e)=>{
+    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker')) return;
+    const id = c.dataset.id;
+    openStatusId = openStatusId===id ? null : id;
+    renderLibrary();
+  }));
+  s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const t = traumas.find(x=>x.id===b.dataset.id);
+    t.status = b.dataset.status;
+    saveTraumas(traumas);
+    openStatusId = null;
+    renderLibrary();
+  }));
   s.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
+    openStatusId = null;
     const t = traumas.find(x=>x.id===b.dataset.edit);
     goTo('editform', ()=> renderTraumaForm(t,'library',renderLibrary));
   }));
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); renderLibrary();
   }));
-  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
+  s.querySelector('#add-t').addEventListener('click', ()=> { openStatusId = null; goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)); });
 }
 
 function renderTraumaForm(trauma, returnPhase, returnFn){
