@@ -91,9 +91,9 @@
   .countdown-num{ font-family:var(--font-display); font-size:64px; color:var(--teal-deep); }
 
   /* selection screen */
-  #stage.select-view{ align-items:center; }
-  #stage.select-view h2.instruction{ position:sticky; top:0; z-index:2; width:100%; background:var(--bg);
-    padding:46px 0 14px; margin:0 0 2px; border-bottom:1px solid var(--line); }
+  #stage.select-view{ align-items:center; overflow:hidden; }
+  #stage.select-view h2.instruction{ flex:0 0 auto; width:100%; margin:0 0 4px; }
+  .sel-scroll{ flex:1 1 auto; min-height:0; width:100%; overflow-y:auto; display:flex; flex-direction:column; align-items:center; padding-bottom:12px; }
   .sel-list{ width:min(560px,92%); display:flex; flex-direction:column; gap:10px; margin-top:14px; }
   .sel-card{ background:white; border:1px solid var(--line); border-radius:12px; padding:12px 16px; text-align:left; cursor:pointer;
     display:flex; justify-content:space-between; align-items:center; }
@@ -253,9 +253,11 @@ function renderSelect(){
     </div>`).join('');
   s.innerHTML = `
     <h2 class="instruction fs">Quel souvenir souhaitez-vous travailler aujourd'hui ?</h2>
-    <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir en attente.</p>'}</div>
-    <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
-    <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans souvenir précis</button>
+    <div class="sel-scroll">
+      <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir en attente.</p>'}</div>
+      <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+      <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans souvenir précis</button>
+    </div>
   `;
   document.body.classList.add('hide-l','hide-r');
   s.querySelectorAll('.sel-card').forEach(c=> c.addEventListener('click',(e)=>{
@@ -282,8 +284,10 @@ function renderLibrary(){
     </div>`).join('');
   s.innerHTML = `
     <h2 class="instruction fs">Vos souvenirs</h2>
-    <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir enregistré.</p>'}</div>
-    <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+    <div class="sel-scroll">
+      <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir enregistré.</p>'}</div>
+      <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+    </div>
   `;
   document.body.classList.add('hide-l','hide-r');
   s.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',(e)=>{
