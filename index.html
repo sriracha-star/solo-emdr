@@ -9,7 +9,7 @@
     --bg:#EEF3F2; --bg-soft:#E3ECEA; --ink:#24313A; --ink-soft:#5B6B72;
     --teal:#3E7371; --teal-deep:#2A5654; --clay:#C9825F; --clay-soft:#E7C3AC;
     --line:#C9D6D3; --dusk:#0F1E27; --dusk-2:#16303B;
-    --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF;
+    --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF; --teal-soft:#CFE3E0;
     --font-display: Georgia, 'Times New Roman', serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
   }
@@ -107,22 +107,38 @@
   .sel-card.has-status{ display:flex; flex-direction:column; align-items:stretch; }
   .sel-card-top{ display:flex; justify-content:space-between; align-items:center; width:100%; }
   .sel-card-done{ opacity:.5; }
-  .folder-card{ border-left:3px solid var(--clay); }
-  .status-picker{ display:flex; gap:8px; flex-wrap:wrap; overflow:hidden; max-height:0; opacity:0; margin-top:0; padding-top:0;
-    border-top:1px solid transparent; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .status-picker.open{ max-height:100px; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+
+  /* collapsible picker rows: grid-rows trick so height always matches content, never clips */
+  .status-picker, .folder-picker{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
+    border-top:1px solid transparent;
+    transition:grid-template-rows .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
+  .status-picker.open, .folder-picker.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .status-picker > div, .folder-picker > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
   .status-opt{ flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
   .status-opt:hover{ border-color:var(--teal); }
   .status-opt.selected{ background:var(--teal); border-color:var(--teal); color:white; }
-
-  .folder-picker{ display:flex; gap:8px; flex-wrap:wrap; overflow:hidden; max-height:0; opacity:0; margin-top:0; padding-top:0;
-    border-top:1px solid transparent; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .folder-picker.open{ max-height:220px; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
   .folder-opt{ padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
   .folder-opt:hover{ border-color:var(--clay); }
   .folder-opt.selected{ background:var(--clay); border-color:var(--clay); color:white; }
+
+  /* folder grid */
+  .lib-search-wrap{ width:min(560px,92%); flex:0 0 auto; margin:0 0 14px; }
+  .lib-search-wrap input{ font-size:14px; padding:10px 14px; }
+  .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:18px 16px; margin:0 0 22px; }
+  .folder-tile{ position:relative; cursor:pointer; padding-top:14px; }
+  .folder-tab{ width:44%; height:14px; margin-left:8%; border-radius:8px 8px 0 0; background:var(--clay-soft); }
+  .folder-body{ background:var(--clay-soft); border-radius:3px 14px 14px 14px; padding:14px 12px 12px; text-align:left;
+    min-height:64px; display:flex; flex-direction:column; justify-content:flex-end; box-shadow:0 3px 8px rgba(0,0,0,.08); }
+  .folder-tile.all-done .folder-tab, .folder-tile.all-done .folder-body{ background:var(--teal-soft); }
+  .folder-name{ font-weight:600; font-size:14px; color:var(--ink); word-break:break-word; }
+  .folder-count{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
+  .folder-actions{ position:absolute; top:-6px; right:-6px; display:flex; gap:4px; opacity:0; transition:opacity .15s ease; }
+  .folder-tile:hover .folder-actions{ opacity:1; }
+  .folder-actions button{ width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background:white;
+    cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
+  .folder-actions button:hover{ border-color:var(--clay); color:var(--ink); }
 
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
@@ -304,17 +320,18 @@ function traumaCardHtml(t){
         <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}</div></div>
         <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
       </div>
-      <div class="status-picker">
+      <div class="status-picker"><div>
         ${Object.entries(STATUS_LABEL).map(([val,label])=>`<button class="status-opt ${t.status===val?'selected':''}" data-status="${val}" data-id="${t.id}">${label}</button>`).join('')}
-      </div>
-      ${folders.length ? `<div class="folder-picker">
+      </div></div>
+      ${folders.length ? `<div class="folder-picker"><div>
         <button class="folder-opt ${!t.folderId?'selected':''}" data-folder="" data-id="${t.id}">Aucun dossier</button>
         ${folders.map(f=>`<button class="folder-opt ${t.folderId===f.id?'selected':''}" data-folder="${f.id}" data-id="${t.id}">${escapeHtml(f.name)}</button>`).join('')}
-      </div>` : ''}
+      </div></div>` : ''}
     </div>`;
 }
 
-function wireTraumaCards(s, returnPhase, returnFn){
+function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
+  const refresh = localRefresh || returnFn;
   s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
     if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker')) return;
     const picker = c.querySelector('.status-picker');
@@ -328,14 +345,14 @@ function wireTraumaCards(s, returnPhase, returnFn){
     const t = traumas.find(x=>x.id===b.dataset.id);
     t.status = b.dataset.status;
     saveTraumas(traumas);
-    returnFn();
+    refresh();
   }));
   s.querySelectorAll('.folder-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
     const t = traumas.find(x=>x.id===b.dataset.id);
     t.folderId = b.dataset.folder || null;
     saveTraumas(traumas);
-    returnFn();
+    refresh();
   }));
   s.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
@@ -343,52 +360,88 @@ function wireTraumaCards(s, returnPhase, returnFn){
     goTo('editform', ()=> renderTraumaForm(t,returnPhase,returnFn));
   }));
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
-    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); returnFn();
+    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); refresh();
+  }));
+}
+
+function deleteFolder(fid){
+  traumas.forEach(t=>{ if(t.folderId===fid) t.folderId=null; });
+  saveTraumas(traumas);
+  folders = folders.filter(f=>f.id!==fid);
+  saveFolders(folders);
+}
+
+function folderTileHtml(f){
+  const items = traumas.filter(t=>t.folderId===f.id);
+  const allDone = items.length>0 && items.every(t=>t.status==='traite');
+  return `
+    <div class="folder-tile ${allDone?'all-done':''}" data-folder-id="${f.id}">
+      <div class="folder-tab"></div>
+      <div class="folder-body">
+        <div class="folder-name">${escapeHtml(f.name)}</div>
+        <div class="folder-count">${items.length} souvenir${items.length>1?'s':''}</div>
+      </div>
+      <div class="folder-actions">
+        <button data-edit-folder="${f.id}" title="Modifier">✎</button>
+        <button data-del-folder="${f.id}" title="Supprimer">✕</button>
+      </div>
+    </div>`;
+}
+
+function wireFolderTiles(s, returnPhase, returnFn, localRefresh){
+  const refresh = localRefresh || returnFn;
+  s.querySelectorAll('.folder-tile').forEach(el=> el.addEventListener('click',(e)=>{
+    if(e.target.closest('.folder-actions')) return;
+    const fid = el.dataset.folderId;
+    goTo('folder_'+fid, ()=> renderFolderView(fid));
+  }));
+  s.querySelectorAll('[data-edit-folder]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const f = folders.find(x=>x.id===b.dataset.editFolder);
+    goTo('folderform', ()=> renderFolderForm(f,returnPhase,returnFn));
+  }));
+  s.querySelectorAll('[data-del-folder]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    deleteFolder(b.dataset.delFolder);
+    refresh();
   }));
 }
 
 function renderLibrary(){
   const s = stageBase();
   s.className='select-view';
-  const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
-  const sorted = [...ungrouped].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
-  const folderCards = folders.map(f=>{
-    const count = traumas.filter(t=>t.folderId===f.id).length;
-    return `
-    <div class="sel-card folder-card" data-folder-id="${f.id}">
-      <div class="sel-card-top">
-        <div><div class="t">📁 ${escapeHtml(f.name)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${count} souvenir${count>1?'s':''}</div></div>
-        <div class="actions"><button data-del-folder="${f.id}">Supprimer</button></div>
-      </div>
-    </div>`;
-  }).join('');
-  const cards = sorted.map(traumaCardHtml).join('');
   s.innerHTML = `
     <h2 class="instruction fs">Vos souvenirs</h2>
-    <div class="sel-scroll">
-      <div class="sel-list fs" style="animation-delay:.4s">${folderCards}${cards || (folders.length ? '' : '<p class="sub">Aucun souvenir enregistré.</p>')}</div>
-      <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
-      <button class="sel-add fs" id="add-f" style="animation-delay:.6s">+ Nouveau dossier</button>
-    </div>
+    <div class="lib-search-wrap fs" style="animation-delay:.3s"><input type="text" id="lib-search" placeholder="Rechercher un souvenir ou un dossier..."></div>
+    <div class="sel-scroll" id="lib-scroll"></div>
   `;
   document.body.classList.add('hide-l','hide-r');
-  wireTraumaCards(s, 'library', renderLibrary);
-  s.querySelectorAll('[data-folder-id]').forEach(c=> c.addEventListener('click',(e)=>{
-    if(e.target.closest('[data-del-folder]')) return;
-    const fid = c.dataset.folderId;
-    goTo('folder_'+fid, ()=> renderFolderView(fid));
-  }));
-  s.querySelectorAll('[data-del-folder]').forEach(b=> b.addEventListener('click',(e)=>{
-    e.stopPropagation();
-    const fid = b.dataset.delFolder;
-    traumas.forEach(t=>{ if(t.folderId===fid) t.folderId=null; });
-    saveTraumas(traumas);
-    folders = folders.filter(f=>f.id!==fid);
-    saveFolders(folders);
-    renderLibrary();
-  }));
-  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
-  s.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm('library',renderLibrary)));
+  const searchInput = s.querySelector('#lib-search');
+  const scrollEl = s.querySelector('#lib-scroll');
+  function update(){ renderLibraryBody(scrollEl, searchInput.value.trim().toLowerCase()); }
+  searchInput.addEventListener('input', update);
+  update();
+}
+
+function renderLibraryBody(scrollEl, query){
+  const matchFolders = folders.filter(f=> !query || f.name.toLowerCase().includes(query));
+  const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
+  const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const sorted = [...matchTraumas].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  const folderGrid = matchFolders.length ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
+  const cards = sorted.map(traumaCardHtml).join('');
+  const nothing = !matchFolders.length && !sorted.length;
+  const localRefresh = ()=> renderLibraryBody(scrollEl, query);
+  scrollEl.innerHTML = `
+    ${folderGrid}
+    <div class="sel-list fs" style="animation-delay:.5s">${cards || (nothing ? `<p class="sub">${query ? 'Aucun résultat.' : 'Aucun souvenir enregistré.'}</p>` : '')}</div>
+    <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+    <button class="sel-add fs" id="add-f" style="animation-delay:.6s">+ Nouveau dossier</button>
+  `;
+  wireFolderTiles(scrollEl, 'library', renderLibrary, localRefresh);
+  wireTraumaCards(scrollEl, 'library', renderLibrary, localRefresh);
+  scrollEl.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
+  scrollEl.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(null,'library',renderLibrary)));
 }
 
 function renderFolderView(folderId){
@@ -408,19 +461,28 @@ function renderFolderView(folderId){
   wireTraumaCards(s, 'folder_'+folderId, ()=> renderFolderView(folderId));
 }
 
-function renderFolderForm(returnPhase, returnFn){
+function renderFolderForm(folder, returnPhase, returnFn){
   const s = stageBase();
+  const isEdit = !!folder;
   s.innerHTML = `
-    <h2 class="instruction fs">Nouveau dossier</h2>
+    <h2 class="instruction fs">${isEdit ? 'Modifier le dossier' : 'Nouveau dossier'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
-      <input type="text" id="folder-name" placeholder="Nom du dossier">
+      <input type="text" id="folder-name" placeholder="Nom du dossier" value="${isEdit ? escapeHtml(folder.name) : ''}">
     </div>
-    <p class="hint-line fs" style="animation-delay:.5s">Entrée pour enregistrer, ‹ pour annuler</p>
+    ${isEdit ? `<button class="sel-alt fs" id="folder-del" style="animation-delay:.5s">Supprimer le dossier</button>` : ''}
+    <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
   document.body.classList.add('hide-r');
+  if(isEdit){
+    s.querySelector('#folder-del').addEventListener('click', ()=>{
+      deleteFolder(folder.id);
+      history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
+    });
+  }
   forwardAction = ()=>{
     const name = s.querySelector('#folder-name').value.trim();
-    if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now()}); saveFolders(folders); }
+    if(isEdit){ if(name) folder.name = name; saveFolders(folders); }
+    else if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now()}); saveFolders(folders); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
 }
