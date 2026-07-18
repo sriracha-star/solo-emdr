@@ -161,10 +161,12 @@
   .lib-sort-panel{ position:absolute; top:44px; left:0; z-index:40; width:210px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:8px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
   .lib-sort-panel.open{ display:block; }
-  .lib-sort-panel button{ display:block; width:100%; text-align:left; padding:8px 10px; border-radius:8px; border:none;
-    background:none; color:var(--ink); font-family:var(--font-body); font-size:13px; cursor:pointer; }
+  .lib-sort-panel button{ display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left;
+    padding:8px 10px; border-radius:8px; border:none; background:none; color:var(--ink); font-family:var(--font-body); font-size:13px; cursor:pointer; }
   .lib-sort-panel button:hover{ background:var(--bg-soft); }
   .lib-sort-panel button.selected{ font-weight:600; color:var(--teal-deep); }
+  .lib-sort-panel .sort-check{ opacity:0; flex:0 0 auto; }
+  .lib-sort-panel button.selected .sort-check{ opacity:1; }
 
   .lib-add-top-wrap{ width:min(560px,92%); display:flex; justify-content:space-between; align-items:center; margin:0 0 12px; }
 
@@ -745,7 +747,7 @@ function renderLibrary(){
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4v16M7 4L3 8M7 4l4 4"/><path d="M17 20V4M17 20l4-4M17 20l-4-4"/></svg>
           </button>
           <div class="lib-sort-panel" id="lib-sort-panel">
-            ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}">${o.label}</button>`).join('')}
+            ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}"><span>${o.label}</span><span class="sort-check">✓</span></button>`).join('')}
           </div>
         </div>
         <button id="add-t">+ Souvenir</button>
