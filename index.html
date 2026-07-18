@@ -96,6 +96,10 @@
     font-family:var(--font-body); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .priority-btn:hover{ border-color:var(--teal); }
   .priority-btn.selected{ background:var(--teal); border-color:var(--teal); color:white; }
+  .priority-btn:disabled{ cursor:default; opacity:.55; }
+  .priority-btn:disabled:hover{ border-color:var(--line); }
+  .t-priority-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px;
+    border-radius:999px; background:var(--teal); color:white; font-size:10.5px; font-weight:600; line-height:1; }
 
   .hint-line{ font-size:12.5px; color:var(--ink-soft); margin-top:26px; }
 
@@ -597,7 +601,9 @@ function traumaCardHtml(t){
   return `
     <div class="sel-card has-status ${t.status==='traite' ? 'sel-card-done' : ''}" data-id="${t.id}">
       <div class="sel-card-top">
-        <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}</div></div>
+        <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px; display:flex; align-items:center; gap:6px;">
+          <span>${STATUS_LABEL[t.status]||''}</span>${t.priority ? `<span class="t-priority-badge" title="Priorité ${t.priority}${t.status==='traite' ? ' (indicative)' : ''}">P${t.priority}</span>` : ''}
+        </div></div>
         <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
       </div>
       <div class="status-picker"><div>
@@ -744,6 +750,7 @@ function sortTraumas(list, mode){
   else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
   else if(mode==='status') arr.sort((a,b)=> (STATUS_ORDER[a.status]??0) - (STATUS_ORDER[b.status]??0));
+  else if(mode==='priority') arr.sort((a,b)=> (b.priority||0) - (a.priority||0) || a.title.localeCompare(b.title));
   if(mode!=='status'){ arr.sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0)); }
   return arr;
 }
@@ -950,13 +957,22 @@ function renderConfirmDelete(kind, id, returnPhase, returnFn){
   forwardAction = cancel;
 }
 
+const DEFAULT_TRAUMA_PRIORITY = 3;
 function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
   const s = stageBase();
   const isEdit = !!trauma;
+  const isDone = isEdit && trauma.status==='traite';
+  let currentPriority = (isEdit && trauma.priority) ? trauma.priority : DEFAULT_TRAUMA_PRIORITY;
   s.innerHTML = `
     <h2 class="instruction fs">${isEdit ? 'Modifier le souvenir' : 'Ajouter un souvenir'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
       <input type="text" id="tf-title" placeholder="Titre court" value="${isEdit ? escapeHtml(trauma.title) : ''}">
+    </div>
+    <div class="free-text-wrap fs" style="animation-delay:.4s; text-align:left;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Priorité${isDone ? ' (indicative — souvenir traité)' : ''}</label>
+      <div class="priority-picker" id="tf-priority-picker">
+        ${[1,2,3,4,5].map(n=>`<button type="button" class="priority-btn${n===currentPriority?' selected':''}" data-v="${n}"${isDone ? ' disabled' : ''}>${n}</button>`).join('')}
+      </div>
     </div>
     <div class="free-text-wrap fs" style="animation-delay:.5s">
       <textarea id="tf-desc" placeholder="Détail (facultatif)">${isEdit ? escapeHtml(trauma.description) : ''}</textarea>
@@ -964,11 +980,18 @@ function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
     <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
   document.body.classList.add('hide-r');
+  if(!isDone){
+    const priorityBtns = s.querySelectorAll('.priority-btn');
+    priorityBtns.forEach(b=> b.addEventListener('click', ()=>{
+      currentPriority = +b.dataset.v;
+      priorityBtns.forEach(x=> x.classList.toggle('selected', +x.dataset.v===currentPriority));
+    }));
+  }
   forwardAction = ()=>{
     const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
     const description = s.querySelector('#tf-desc').value.trim();
-    if(isEdit){ trauma.title = title; trauma.description = description; trauma.updatedAt = Date.now(); }
-    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
+    if(isEdit){ trauma.title = title; trauma.description = description; if(!isDone) trauma.priority = currentPriority; trauma.updatedAt = Date.now(); }
+    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:currentPriority, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
     saveTraumas(traumas);
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
