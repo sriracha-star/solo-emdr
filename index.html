@@ -145,7 +145,8 @@
   .folder-opt.selected{ background:var(--clay); border-color:var(--clay); color:white; }
 
   /* toolbar: search + sort + add actions */
-  .lib-toolbar{ width:min(920px,96%); flex:0 0 auto; margin:0 0 26px; display:flex; align-items:center; justify-content:space-between; gap:28px; flex-wrap:wrap; }
+  .lib-toolbar{ width:min(920px,96%); flex:0 0 auto; margin:0 0 26px; display:flex; align-items:center; justify-content:space-between; gap:28px; flex-wrap:wrap;
+    position:relative; z-index:5; }
   .lib-toolbar input[type=text]{ flex:1 1 240px; max-width:380px; width:auto; font-size:13.5px; padding:8px 16px; border-radius:20px;
     border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); }
   .lib-toolbar input::placeholder{ color:var(--ink-soft); }
