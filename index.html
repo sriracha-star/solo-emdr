@@ -636,13 +636,22 @@ function deleteFolder(fid){
   saveFolders(folders);
 }
 
+function isDarkColor(hex){
+  if(!hex) return false;
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return (0.299*r + 0.587*g + 0.114*b)/255 < 0.55;
+}
 function folderTileHtml(f){
   const items = traumas.filter(t=>t.folderId===f.id);
   const allDone = items.length>0 && items.every(t=>t.status==='traite');
+  const dark = f.color && isDarkColor(f.color);
+  const bgStyle = f.color ? ` style="background:${f.color};"` : '';
+  const textStyle = dark ? ' style="color:#F5F2E8;"' : '';
+  const countStyle = dark ? ' style="color:rgba(245,242,232,.75);"' : '';
   return `
-    <div class="folder-tile ${allDone?'all-done':''}" data-folder-id="${f.id}">
-      <div class="folder-name">${escapeHtml(f.name)}</div>
-      <div class="folder-count">${items.length} souvenir${items.length>1?'s':''}</div>
+    <div class="folder-tile ${!f.color && allDone ? 'all-done' : ''}" data-folder-id="${f.id}"${bgStyle}>
+      <div class="folder-name"${textStyle}>${escapeHtml(f.name)}</div>
+      <div class="folder-count"${countStyle}>${items.length} souvenir${items.length>1?'s':''}</div>
       <div class="folder-actions">
         <button data-edit-folder="${f.id}" title="Modifier">✎</button>
         <button data-del-folder="${f.id}" title="Supprimer">✕</button>
@@ -676,8 +685,22 @@ const SORT_OPTIONS = [
   {value:'modified', label:'Date de modification'},
   {value:'count', label:'Nombre de souvenirs'},
   {value:'status', label:'Statut'},
+  {value:'color', label:'Couleur'},
 ];
 const STATUS_ORDER = {a_traiter:0, en_cours:1, traite:2};
+
+function hexToHue(hex){
+  if(!hex) return -1;
+  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+  if(d===0) return 0;
+  let h;
+  if(max===r) h = ((g-b)/d) % 6;
+  else if(max===g) h = (b-r)/d + 2;
+  else h = (r-g)/d + 4;
+  h *= 60;
+  return h<0 ? h+360 : h;
+}
 
 function sortFolders(list, mode){
   const arr = [...list];
@@ -685,6 +708,7 @@ function sortFolders(list, mode){
   else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
   else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
+  else if(mode==='color') arr.sort((a,b)=> hexToHue(a.color) - hexToHue(b.color));
   else if(mode==='status'){
     arr.sort((a,b)=> a.name.localeCompare(b.name));
     const isDone = f=>{ const items = traumas.filter(t=>t.folderId===f.id); return items.length>0 && items.every(t=>t.status==='traite'); };
@@ -784,18 +808,32 @@ function renderFolderView(folderId){
   s.querySelector('#add-t-folder').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'folder_'+folderId, ()=> renderFolderView(folderId), folderId)));
 }
 
+const DEFAULT_FOLDER_COLOR = '#D7DEE6';
 function renderFolderForm(folder, returnPhase, returnFn){
   const s = stageBase();
   const isEdit = !!folder;
+  let useDefaultColor = !(isEdit && folder.color);
   s.innerHTML = `
     <h2 class="instruction fs">${isEdit ? 'Modifier le dossier' : 'Nouveau dossier'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
       <input type="text" id="folder-name" placeholder="Nom du dossier" value="${isEdit ? escapeHtml(folder.name) : ''}">
     </div>
+    <div class="free-text-wrap fs" style="animation-delay:.4s; text-align:left;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Couleur du dossier</label>
+      <input type="color" id="folder-color" value="${isEdit && folder.color ? folder.color : DEFAULT_FOLDER_COLOR}"
+        style="width:100%;height:34px;padding:2px;cursor:pointer;border-radius:8px;border:1px solid var(--line);">
+      <button type="button" id="folder-color-reset" class="sel-alt" style="margin-top:6px;">Couleur par défaut</button>
+    </div>
     ${isEdit ? `<button class="sel-alt fs" id="folder-del" style="animation-delay:.5s">Supprimer le dossier</button>` : ''}
     <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
   document.body.classList.add('hide-r');
+  const colorInput = s.querySelector('#folder-color');
+  colorInput.addEventListener('input', ()=>{ useDefaultColor = false; });
+  s.querySelector('#folder-color-reset').addEventListener('click', ()=>{
+    useDefaultColor = true;
+    colorInput.value = DEFAULT_FOLDER_COLOR;
+  });
   if(isEdit){
     s.querySelector('#folder-del').addEventListener('click', ()=>{
       goTo('confirmdel', ()=> renderConfirmDelete('folder', folder.id, returnPhase, returnFn));
@@ -803,8 +841,9 @@ function renderFolderForm(folder, returnPhase, returnFn){
   }
   forwardAction = ()=>{
     const name = s.querySelector('#folder-name').value.trim();
-    if(isEdit){ if(name){ folder.name = name; folder.updatedAt = Date.now(); } saveFolders(folders); }
-    else if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now(), updatedAt:Date.now()}); saveFolders(folders); }
+    const color = useDefaultColor ? null : colorInput.value;
+    if(isEdit){ if(name) folder.name = name; folder.color = color; folder.updatedAt = Date.now(); saveFolders(folders); }
+    else if(name){ folders.push({id:'f_'+Date.now(), name, color, createdAt:Date.now(), updatedAt:Date.now()}); saveFolders(folders); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
 }
