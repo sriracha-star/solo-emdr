@@ -34,13 +34,22 @@
   #homeIcon{ left:14px; }
   #libraryIcon{ left:56px; }
 
+  .account-wrap{ position:fixed; top:14px; right:56px; z-index:60; padding-bottom:30px; }
+  .account-wrap #accountIcon{ position:static; }
+  #account-panel{ position:absolute; top:34px; right:-6px; width:220px; background:white; border:1px solid var(--line);
+    border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
+  .account-wrap:hover #account-panel, #account-panel.open{ display:block; }
+  #account-panel .sub{ margin:0 0 10px; font-size:12.5px; max-width:none; }
+  #account-panel button{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:0; }
+  #account-panel button + button{ margin-top:8px; }
+
   #settings-panel{ position:fixed; top:56px; right:14px; z-index:60; width:290px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
   .control-group{ margin-bottom:12px; }
   .control-group label{ font-size:12.5px; color:var(--ink-soft); display:block; margin-bottom:4px; }
-  select, textarea, input[type=text]{ width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
+  select, textarea, input[type=text], input[type=password]{ width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
     font-family:var(--font-body); font-size:13.5px; background:white; color:var(--ink); }
   textarea{ resize:vertical; min-height:70px; }
   input[type=range]{ width:100%; accent-color:var(--teal); }
@@ -101,7 +110,7 @@
   .sel-card:hover{ border-color:var(--teal); }
   .sel-card .t{ font-size:14.5px; font-weight:600; }
   .sel-card .actions{ display:flex; gap:6px; }
-  .sel-card .actions button{ font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg-soft); cursor:pointer; }
+  .sel-card .actions button{ font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; }
   .sel-alt{ margin-top:18px; font-size:13.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; background:none; border:none; }
   .sel-add{ margin-top:6px; font-size:13px; color:var(--teal-deep); background:none; border:none; cursor:pointer; }
 
@@ -134,11 +143,11 @@
   /* folder grid */
   .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; margin:0 0 24px; }
   .folder-tile{ position:relative; cursor:pointer; min-height:104px; border-radius:14px; padding:14px; text-align:left;
-    background:var(--folder-neutral); display:flex; flex-direction:column; justify-content:flex-end; }
+    background:var(--folder-neutral); display:flex; flex-direction:column; justify-content:flex-start; }
   .folder-tile.all-done{ background:var(--teal-soft); }
   .folder-name{ font-weight:600; font-size:14px; color:var(--ink); word-break:break-word; }
   .folder-count{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
-  .folder-actions{ position:absolute; top:8px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity .15s ease; }
+  .folder-actions{ position:absolute; bottom:8px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity .15s ease; }
   .folder-tile:hover .folder-actions{ opacity:1; }
   .folder-actions button{ width:24px; height:24px; border-radius:50%; border:1px solid rgba(0,0,0,.08); background:rgba(255,255,255,.75);
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
@@ -159,6 +168,12 @@
   <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
   </button>
+  <div class="account-wrap">
+    <button id="accountIcon" class="icon-btn" title="Compte">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg>
+    </button>
+    <div id="account-panel"></div>
+  </div>
   <button id="settingsIcon" class="icon-btn" title="Réglages">
     <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
   </button>
@@ -304,6 +319,7 @@ async function ensureVaultCreated(userId, email, password){
   if(insErr) throw insErr;
   vault.dek = dek; vault.userId = userId; vault.email = email;
   localStorage.setItem(LS_SYNCED, '1');
+  renderAccountPanel();
   return {created:true, recoveryPhrase, row:newRow};
 }
 
@@ -327,6 +343,7 @@ async function vaultLogin(email, password){
   const kekPw = await deriveKekFromPassphrase(password, row.salt_pw);
   const dek = await unwrapDEK(row.iv_pw, row.wrapped_dek_pw, kekPw);
   vault.dek = dek; vault.userId = userId; vault.email = email;
+  renderAccountPanel();
   const hasLocalData = traumas.length>0 || folders.length>0;
   const syncedBefore = localStorage.getItem(LS_SYNCED);
   if(hasLocalData && !syncedBefore){ return {conflict:true, row}; }
@@ -341,6 +358,11 @@ async function vaultResolveUseCloud(row){ await vaultPull(row); localStorage.set
 function vaultLogout(){
   if(supa) supa.auth.signOut();
   vault = {dek:null, userId:null, email:null};
+  traumas = []; folders = [];
+  localStorage.removeItem(LS_TRAUMAS);
+  localStorage.removeItem(LS_FOLDERS);
+  localStorage.removeItem(LS_SYNCED);
+  renderAccountPanel();
 }
 
 async function requestPasswordReset(email){
@@ -365,6 +387,7 @@ async function completeRecovery(recoveryPhrase, newPassword){
   const {error: updRowErr} = await supa.from('vaults').update({salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64}).eq('user_id', user.id);
   if(updRowErr) throw updRowErr;
   vault.dek = dek; vault.userId = user.id; vault.email = user.email;
+  renderAccountPanel();
   await vaultPull(row);
   localStorage.setItem(LS_SYNCED, '1');
 }
@@ -406,6 +429,7 @@ $('account-btn').addEventListener('click', ()=>{
   session=null; history=[]; currentPhase=null;
   goTo('account', renderAccount);
 });
+$('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
 if(supa){
   supa.auth.onAuthStateChange((event)=>{
     if(event === 'PASSWORD_RECOVERY'){
@@ -413,6 +437,7 @@ if(supa){
     }
   });
 }
+renderAccountPanel();
 
 /* ---------------- navigation core ---------------- */
 let session=null, currentPhase=null, history=[];
@@ -1090,6 +1115,40 @@ function renderSessionEnd(){
 }
 
 /* ---------------- account / sync screens ---------------- */
+function renderAccountPanel(){
+  const panel = $('account-panel');
+  if(!supa){
+    panel.innerHTML = `<p class="sub">Synchronisation non configurée.</p>`;
+    return;
+  }
+  if(vault.userId){
+    panel.innerHTML = `
+      <p class="sub">Connecté·e : ${escapeHtml(vault.email)}</p>
+      <button id="acc-panel-logout">Se déconnecter</button>
+    `;
+    panel.querySelector('#acc-panel-logout').addEventListener('click', ()=>{
+      vaultLogout();
+      panel.classList.remove('open');
+      if(currentFn) currentFn();
+    });
+  } else {
+    panel.innerHTML = `
+      <button id="acc-panel-login">Se connecter</button>
+      <button id="acc-panel-signup">Créer un compte</button>
+    `;
+    panel.querySelector('#acc-panel-login').addEventListener('click', ()=>{
+      panel.classList.remove('open');
+      session=null; history=[]; currentPhase=null;
+      goTo('authlogin', ()=> renderAuthForm('login'));
+    });
+    panel.querySelector('#acc-panel-signup').addEventListener('click', ()=>{
+      panel.classList.remove('open');
+      session=null; history=[]; currentPhase=null;
+      goTo('authsignup', ()=> renderAuthForm('signup'));
+    });
+  }
+}
+
 function renderAccount(){
   const s = stageBase();
   const connected = !!vault.userId;
