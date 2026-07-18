@@ -451,6 +451,10 @@ document.addEventListener('click', (e)=>{
   if(!e.target.closest('#account-panel') && !e.target.closest('#accountIcon')){
     $('account-panel').classList.remove('open');
   }
+  const sortPanel = $('lib-sort-panel');
+  if(sortPanel && !e.target.closest('#lib-sort-panel') && !e.target.closest('#lib-sort-btn')){
+    sortPanel.classList.remove('open');
+  }
 });
 if(supa){
   supa.auth.onAuthStateChange((event)=>{
@@ -690,30 +694,27 @@ const SORT_OPTIONS = [
 ];
 const STATUS_ORDER = {a_traiter:0, en_cours:1, traite:2};
 
-function hexToHue(hex){
-  if(!hex) return -1;
-  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
-  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
-  if(d===0) return 0;
-  let h;
-  if(max===r) h = ((g-b)/d) % 6;
-  else if(max===g) h = (b-r)/d + 2;
-  else h = (r-g)/d + 4;
-  h *= 60;
-  return h<0 ? h+360 : h;
-}
-
 function sortFolders(list, mode){
   const arr = [...list];
   if(mode==='alpha') arr.sort((a,b)=> a.name.localeCompare(b.name));
   else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
   else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
-  else if(mode==='color') arr.sort((a,b)=>{
-    const hueDiff = hexToHue(a.color) - hexToHue(b.color);
-    if(hueDiff !== 0) return hueDiff;
-    return traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length;
-  });
+  else if(mode==='color'){
+    const countOf = f=> traumas.filter(t=>t.folderId===f.id).length;
+    const groups = new Map();
+    arr.forEach(f=>{
+      const key = f.color || 'default';
+      if(!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(f);
+    });
+    const groupList = [...groups.values()].map(items=>{
+      items.sort((a,b)=> countOf(b) - countOf(a));
+      return {items, topCount: countOf(items[0])};
+    });
+    groupList.sort((a,b)=> b.topCount - a.topCount);
+    return groupList.flatMap(g=> g.items);
+  }
   else if(mode==='status'){
     arr.sort((a,b)=> a.name.localeCompare(b.name));
     const isDone = f=>{ const items = traumas.filter(t=>t.folderId===f.id); return items.length>0 && items.every(t=>t.status==='traite'); };
