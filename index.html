@@ -91,6 +91,12 @@
   .scale-num:hover{ border-color:var(--teal); }
   .scale-num.selected{ background:var(--teal); border-color:var(--teal); color:white; }
 
+  .priority-picker{ display:flex; gap:7px; }
+  .priority-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:white; color:var(--ink);
+    font-family:var(--font-body); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .priority-btn:hover{ border-color:var(--teal); }
+  .priority-btn.selected{ background:var(--teal); border-color:var(--teal); color:white; }
+
   .hint-line{ font-size:12.5px; color:var(--ink-soft); margin-top:26px; }
 
   #bls-stage{ height:100%; width:100%; background:radial-gradient(ellipse at center, var(--dusk-2), var(--dusk)); position:relative; display:none; }
@@ -693,6 +699,7 @@ const SORT_OPTIONS = [
   {value:'count', label:'Nombre de souvenirs'},
   {value:'status', label:'Statut'},
   {value:'color', label:'Couleur'},
+  {value:'priority', label:'Priorité'},
 ];
 const STATUS_ORDER = {a_traiter:0, en_cours:1, traite:2};
 
@@ -702,6 +709,7 @@ function sortFolders(list, mode){
   else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
   else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
+  else if(mode==='priority') arr.sort((a,b)=> (b.priority||0) - (a.priority||0) || a.name.localeCompare(b.name));
   else if(mode==='color'){
     const countOf = f=> traumas.filter(t=>t.folderId===f.id).length;
     const groups = new Map();
@@ -821,14 +829,22 @@ function renderFolderView(folderId){
 }
 
 const DEFAULT_FOLDER_COLOR = '#D7DEE6';
+const DEFAULT_FOLDER_PRIORITY = 3;
 function renderFolderForm(folder, returnPhase, returnFn){
   const s = stageBase();
   const isEdit = !!folder;
   let useDefaultColor = !(isEdit && folder.color);
+  let currentPriority = (isEdit && folder.priority) ? folder.priority : DEFAULT_FOLDER_PRIORITY;
   s.innerHTML = `
     <h2 class="instruction fs">${isEdit ? 'Modifier le dossier' : 'Nouveau dossier'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
       <input type="text" id="folder-name" placeholder="Nom du dossier" value="${isEdit ? escapeHtml(folder.name) : ''}">
+    </div>
+    <div class="free-text-wrap fs" style="animation-delay:.35s; text-align:left;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Priorité</label>
+      <div class="priority-picker" id="folder-priority-picker">
+        ${[1,2,3,4,5].map(n=>`<button type="button" class="priority-btn${n===currentPriority?' selected':''}" data-v="${n}">${n}</button>`).join('')}
+      </div>
     </div>
     <div class="free-text-wrap fs" style="animation-delay:.4s; text-align:left;">
       <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Couleur du dossier</label>
@@ -845,6 +861,11 @@ function renderFolderForm(folder, returnPhase, returnFn){
     <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
   document.body.classList.add('hide-r');
+  const priorityBtns = s.querySelectorAll('.priority-btn');
+  priorityBtns.forEach(b=> b.addEventListener('click', ()=>{
+    currentPriority = +b.dataset.v;
+    priorityBtns.forEach(x=> x.classList.toggle('selected', +x.dataset.v===currentPriority));
+  }));
   const colorInput = s.querySelector('#folder-color');
   const hexDisplay = s.querySelector('#folder-color-hex');
   colorInput.addEventListener('input', ()=>{ useDefaultColor = false; hexDisplay.value = colorInput.value.toUpperCase(); });
@@ -883,8 +904,8 @@ function renderFolderForm(folder, returnPhase, returnFn){
   forwardAction = ()=>{
     const name = s.querySelector('#folder-name').value.trim();
     const color = useDefaultColor ? null : colorInput.value;
-    if(isEdit){ if(name) folder.name = name; folder.color = color; folder.updatedAt = Date.now(); saveFolders(folders); }
-    else if(name){ folders.push({id:'f_'+Date.now(), name, color, createdAt:Date.now(), updatedAt:Date.now()}); saveFolders(folders); }
+    if(isEdit){ if(name) folder.name = name; folder.color = color; folder.priority = currentPriority; folder.updatedAt = Date.now(); saveFolders(folders); }
+    else if(name){ folders.push({id:'f_'+Date.now(), name, color, priority:currentPriority, createdAt:Date.now(), updatedAt:Date.now()}); saveFolders(folders); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
 }
