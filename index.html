@@ -207,8 +207,8 @@ function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settin
    the encrypted vault ever reach the server — the DEK itself, the
    password and the recovery phrase never leave this browser.
    ================================================================== */
-const SUPABASE_URL = 'SUPABASE_URL_HERE';
-const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_HERE';
+const SUPABASE_URL = 'https://fjzvgyjezfhwpnovnrqz.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_TxdbsetLQEMxW6xr6Wxmiw_4Tlbfvlv';
 let supa = null;
 try{
   if(window.supabase && /^https?:\/\//.test(SUPABASE_URL) && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf('HERE')===-1){
