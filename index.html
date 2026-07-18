@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SoloEMDR</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#EEF3F2; --bg-soft:#E3ECEA; --ink:#24313A; --ink-soft:#5B6B72;
@@ -146,6 +147,8 @@
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
   .skip-link:hover{ color:rgba(239,232,218,0.9); }
+
+  .form-error{ color:#B3423E; font-size:12.5px; margin-top:10px; min-height:16px; max-width:420px; }
 </style>
 </head>
 <body>
@@ -170,6 +173,9 @@
     <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
     <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
     <button id="settings-save" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:4px;">Enregistrer</button>
+    <div class="control-group" style="border-top:1px solid var(--line); padding-top:12px; margin-top:12px; margin-bottom:0;">
+      <button id="account-btn" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px;">Compte &amp; synchronisation</button>
+    </div>
   </div>
 
   <div id="stage-wrap">
@@ -183,15 +189,193 @@ const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings', LS_FOLDERS
 const $ = id => document.getElementById(id);
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 function loadTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_TRAUMAS))||[]; }catch(e){ return []; } }
-function saveTraumas(list){ localStorage.setItem(LS_TRAUMAS, JSON.stringify(list)); }
+function saveTraumas(list){ localStorage.setItem(LS_TRAUMAS, JSON.stringify(list)); scheduleSync(); }
 let traumas = loadTraumas();
 function loadFolders(){ try{ return JSON.parse(localStorage.getItem(LS_FOLDERS))||[]; }catch(e){ return []; } }
-function saveFolders(list){ localStorage.setItem(LS_FOLDERS, JSON.stringify(list)); }
+function saveFolders(list){ localStorage.setItem(LS_FOLDERS, JSON.stringify(list)); scheduleSync(); }
 let folders = loadFolders();
 
 let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
-function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }
+function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); scheduleSync(); }
+
+/* ==================================================================
+   Cloud sync: zero-knowledge encrypted vault (Supabase + Web Crypto)
+   The DEK (data encryption key) is generated once per account, then
+   wrapped once with a key derived from the password and once with a
+   key derived from the recovery phrase. Only the wrapped copies and
+   the encrypted vault ever reach the server — the DEK itself, the
+   password and the recovery phrase never leave this browser.
+   ================================================================== */
+const SUPABASE_URL = 'SUPABASE_URL_HERE';
+const SUPABASE_ANON_KEY = 'SUPABASE_ANON_KEY_HERE';
+let supa = null;
+try{
+  if(window.supabase && /^https?:\/\//.test(SUPABASE_URL) && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY.indexOf('HERE')===-1){
+    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+}catch(e){}
+
+const cryptoEnc = new TextEncoder();
+const cryptoDec = new TextDecoder();
+function b64enc(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function b64dec(str){ return Uint8Array.from(atob(str), c=>c.charCodeAt(0)); }
+function randBytes(n){ return crypto.getRandomValues(new Uint8Array(n)); }
+
+async function deriveKekFromPassphrase(passphrase, saltB64){
+  const salt = b64dec(saltB64);
+  const baseKey = await crypto.subtle.importKey('raw', cryptoEnc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:250000, hash:'SHA-256'},
+    baseKey, {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']
+  );
+}
+async function generateDEK(){ return crypto.subtle.generateKey({name:'AES-GCM', length:256}, true, ['encrypt','decrypt']); }
+async function wrapDEK(dek, kek){
+  const raw = await crypto.subtle.exportKey('raw', dek);
+  const iv = randBytes(12);
+  const wrapped = await crypto.subtle.encrypt({name:'AES-GCM', iv}, kek, raw);
+  return {ivB64:b64enc(iv), wrappedB64:b64enc(wrapped)};
+}
+async function unwrapDEK(ivB64, wrappedB64, kek){
+  const raw = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64dec(ivB64)}, kek, b64dec(wrappedB64));
+  return crypto.subtle.importKey('raw', raw, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
+}
+async function encryptWithDEK(dek, plaintextStr){
+  const iv = randBytes(12);
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, dek, cryptoEnc.encode(plaintextStr));
+  return {ivB64:b64enc(iv), ctB64:b64enc(ct)};
+}
+async function decryptWithDEK(dek, ivB64, ctB64){
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64dec(ivB64)}, dek, b64dec(ctB64));
+  return cryptoDec.decode(pt);
+}
+function generateRecoveryPhrase(){
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randBytes(24);
+  let out = '';
+  for(let i=0;i<bytes.length;i++){ out += alphabet[bytes[i] % alphabet.length]; }
+  return out.match(/.{1,4}/g).join('-');
+}
+function normalizeRecoveryPhrase(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+
+let vault = { dek:null, userId:null, email:null };
+const LS_SYNCED = 'soloemdr_synced_before';
+function vaultReady(){ return !!(supa && vault.dek && vault.userId); }
+
+let syncTimer = null;
+function scheduleSync(){
+  if(!vaultReady()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(vaultPush, 1000);
+}
+async function vaultPush(){
+  if(!vaultReady()) return;
+  const payload = JSON.stringify({traumas, folders, settings});
+  const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
+  await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
+}
+async function vaultPull(row){
+  const json = await decryptWithDEK(vault.dek, row.data_iv, row.ciphertext);
+  const parsed = JSON.parse(json);
+  traumas = parsed.traumas||[]; folders = parsed.folders||[];
+  settings = Object.assign(settings, parsed.settings||{});
+  localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
+  localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+}
+
+async function ensureVaultCreated(userId, email, password){
+  const {data: row} = await supa.from('vaults').select('*').eq('user_id', userId).maybeSingle();
+  if(row) return {created:false, row};
+  const dek = await generateDEK();
+  const saltPw = b64enc(randBytes(16));
+  const saltRec = b64enc(randBytes(16));
+  const recoveryPhrase = generateRecoveryPhrase();
+  const kekPw = await deriveKekFromPassphrase(password, saltPw);
+  const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), saltRec);
+  const wrapPw = await wrapDEK(dek, kekPw);
+  const wrapRec = await wrapDEK(dek, kekRec);
+  const payload = JSON.stringify({traumas, folders, settings});
+  const {ivB64, ctB64} = await encryptWithDEK(dek, payload);
+  const newRow = { user_id:userId, salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64,
+    salt_rec:saltRec, iv_rec:wrapRec.ivB64, wrapped_dek_rec:wrapRec.wrappedB64, data_iv:ivB64, ciphertext:ctB64 };
+  const {error: insErr} = await supa.from('vaults').insert(newRow);
+  if(insErr) throw insErr;
+  vault.dek = dek; vault.userId = userId; vault.email = email;
+  localStorage.setItem(LS_SYNCED, '1');
+  return {created:true, recoveryPhrase, row:newRow};
+}
+
+async function vaultSignUp(email, password){
+  const {data, error} = await supa.auth.signUp({email, password});
+  if(error) throw error;
+  if(!data.session) return {needsConfirmation:true};
+  const result = await ensureVaultCreated(data.user.id, email, password);
+  return {needsConfirmation:false, recoveryPhrase:result.recoveryPhrase};
+}
+
+async function vaultLogin(email, password){
+  const {data, error} = await supa.auth.signInWithPassword({email, password});
+  if(error) throw error;
+  const userId = data.user.id;
+  const result = await ensureVaultCreated(userId, email, password);
+  if(result.created){
+    return {conflict:false, freshlyCreated:true, recoveryPhrase:result.recoveryPhrase};
+  }
+  const row = result.row;
+  const kekPw = await deriveKekFromPassphrase(password, row.salt_pw);
+  const dek = await unwrapDEK(row.iv_pw, row.wrapped_dek_pw, kekPw);
+  vault.dek = dek; vault.userId = userId; vault.email = email;
+  const hasLocalData = traumas.length>0 || folders.length>0;
+  const syncedBefore = localStorage.getItem(LS_SYNCED);
+  if(hasLocalData && !syncedBefore){ return {conflict:true, row}; }
+  await vaultPull(row);
+  localStorage.setItem(LS_SYNCED, '1');
+  return {conflict:false};
+}
+
+async function vaultResolveKeepLocal(){ await vaultPush(); localStorage.setItem(LS_SYNCED, '1'); }
+async function vaultResolveUseCloud(row){ await vaultPull(row); localStorage.setItem(LS_SYNCED, '1'); }
+
+function vaultLogout(){
+  if(supa) supa.auth.signOut();
+  vault = {dek:null, userId:null, email:null};
+}
+
+async function requestPasswordReset(email){
+  const {error} = await supa.auth.resetPasswordForEmail(email, {redirectTo: location.href.split('#')[0]});
+  if(error) throw error;
+}
+
+async function completeRecovery(recoveryPhrase, newPassword){
+  const {data:{user}} = await supa.auth.getUser();
+  if(!user) throw new Error('Session de récupération invalide, redemande un lien.');
+  const {data: row, error} = await supa.from('vaults').select('*').eq('user_id', user.id).single();
+  if(error) throw error;
+  const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), row.salt_rec);
+  let dek;
+  try{ dek = await unwrapDEK(row.iv_rec, row.wrapped_dek_rec, kekRec); }
+  catch(e){ throw new Error('Phrase de récupération incorrecte.'); }
+  const {error: updErr} = await supa.auth.updateUser({password:newPassword});
+  if(updErr) throw updErr;
+  const saltPw = b64enc(randBytes(16));
+  const kekPw = await deriveKekFromPassphrase(newPassword, saltPw);
+  const wrapPw = await wrapDEK(dek, kekPw);
+  const {error: updRowErr} = await supa.from('vaults').update({salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64}).eq('user_id', user.id);
+  if(updRowErr) throw updRowErr;
+  vault.dek = dek; vault.userId = user.id; vault.email = user.email;
+  await vaultPull(row);
+  localStorage.setItem(LS_SYNCED, '1');
+}
+
+function translateAuthError(e){
+  const msg = (e && e.message) || String(e);
+  if(/already registered|already exists/i.test(msg)) return 'Un compte existe déjà avec cet email.';
+  if(/invalid login credentials/i.test(msg)) return 'Email ou mot de passe incorrect.';
+  if(/password.*least/i.test(msg)) return 'Le mot de passe doit faire au moins 6 caractères.';
+  return msg;
+}
 $('bls-speed').value=settings.speed; $('speed-val').textContent=settings.speed;
 $('bls-size').value=settings.size; $('bls-color').value=settings.color;
 $('bls-duration').value=settings.duration; $('duration-val').textContent=settings.duration;
@@ -217,6 +401,18 @@ $('homeIcon').addEventListener('click',()=>{
   session=null; history=[]; currentPhase=null;
   goTo('home', renderHome);
 });
+$('account-btn').addEventListener('click', ()=>{
+  $('settings-panel').classList.remove('open');
+  session=null; history=[]; currentPhase=null;
+  goTo('account', renderAccount);
+});
+if(supa){
+  supa.auth.onAuthStateChange((event)=>{
+    if(event === 'PASSWORD_RECOVERY'){
+      goTo('setnewpw', renderSetNewPasswordAfterRecovery);
+    }
+  });
+}
 
 /* ---------------- navigation core ---------------- */
 let session=null, currentPhase=null, history=[];
@@ -891,6 +1087,176 @@ function renderSessionEnd(){
     }
   }
   setTimeout(()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'home',fn:renderHome})); }, 6000);
+}
+
+/* ---------------- account / sync screens ---------------- */
+function renderAccount(){
+  const s = stageBase();
+  const connected = !!vault.userId;
+  s.innerHTML = `
+    <h2 class="instruction fs">Compte &amp; synchronisation</h2>
+    ${!supa ? `<p class="sub fs" style="animation-delay:.3s">La synchronisation n'est pas encore configurée sur ce site.</p>` :
+      connected ? `
+      <p class="sub fs" style="animation-delay:.3s">Connecté·e en tant que ${escapeHtml(vault.email)}. Tes souvenirs se synchronisent automatiquement.</p>
+      <button class="sel-add fs" id="acc-logout" style="animation-delay:.5s;">Se déconnecter</button>
+      ` : `
+      <p class="sub fs" style="animation-delay:.3s">Connecte-toi pour retrouver tes souvenirs sur tous tes appareils.</p>
+      <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center;">
+        <button class="sel-add" id="acc-login">Se connecter</button>
+        <button class="sel-add" id="acc-signup">Créer un compte</button>
+      </div>
+      `}
+  `;
+  document.body.classList.add('hide-r');
+  if(!supa) return;
+  if(connected){
+    s.querySelector('#acc-logout').addEventListener('click', ()=>{ vaultLogout(); renderAccount(); });
+  } else {
+    s.querySelector('#acc-login').addEventListener('click', ()=> goTo('authlogin', ()=> renderAuthForm('login')));
+    s.querySelector('#acc-signup').addEventListener('click', ()=> goTo('authsignup', ()=> renderAuthForm('signup')));
+  }
+}
+
+function renderAuthForm(mode){
+  const s = stageBase();
+  const isSignup = mode==='signup';
+  s.innerHTML = `
+    <h2 class="instruction fs">${isSignup ? 'Créer un compte' : 'Se connecter'}</h2>
+    <div class="free-text-wrap fs" style="animation-delay:.3s"><input type="text" id="auth-email" placeholder="Email"></div>
+    <div class="free-text-wrap fs" style="animation-delay:.4s"><input type="password" id="auth-pw" placeholder="Mot de passe"></div>
+    <p class="form-error" id="auth-error"></p>
+    <button class="sel-add fs" id="auth-submit" style="animation-delay:.5s;">${isSignup ? 'Créer mon compte' : 'Se connecter'}</button>
+    ${!isSignup ? `<button class="sel-alt fs" id="auth-forgot" style="animation-delay:.6s;">Mot de passe oublié ?</button>` : ''}
+  `;
+  document.body.classList.add('hide-r');
+  const errEl = s.querySelector('#auth-error');
+  const submit = async ()=>{
+    const email = s.querySelector('#auth-email').value.trim();
+    const password = s.querySelector('#auth-pw').value;
+    if(!email || !password){ errEl.textContent = 'Email et mot de passe requis.'; return; }
+    errEl.textContent = 'Un instant...';
+    try{
+      if(isSignup){
+        const res = await vaultSignUp(email, password);
+        if(res.needsConfirmation){
+          s.innerHTML = `<h2 class="instruction fs">Vérifie ta boîte mail</h2><p class="sub fs" style="animation-delay:.3s">Clique sur le lien de confirmation reçu par email, puis reviens te connecter.</p>`;
+          return;
+        }
+        goTo('recoveryreveal', ()=> renderRecoveryPhraseReveal(res.recoveryPhrase, 'home', renderHome));
+      } else {
+        const res = await vaultLogin(email, password);
+        if(res.conflict){
+          goTo('syncchoice', ()=> renderSyncChoice(res.row));
+        } else if(res.freshlyCreated){
+          goTo('recoveryreveal', ()=> renderRecoveryPhraseReveal(res.recoveryPhrase, 'home', renderHome));
+        } else {
+          session=null; history=[]; currentPhase=null;
+          goTo('home', renderHome);
+        }
+      }
+    }catch(e){
+      errEl.textContent = translateAuthError(e);
+    }
+  };
+  s.querySelector('#auth-submit').addEventListener('click', submit);
+  forwardAction = submit;
+  if(!isSignup) s.querySelector('#auth-forgot').addEventListener('click', ()=> goTo('forgotpw', renderForgotPassword));
+}
+
+function renderRecoveryPhraseReveal(phrase, returnPhase, returnFn){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Ta phrase de récupération</h2>
+    <p class="sub fs" style="animation-delay:.3s">Note-la maintenant dans un endroit sûr (gestionnaire de mots de passe, papier...). Elle ne sera plus jamais affichée. Sans elle et sans ton mot de passe, tes souvenirs seraient perdus définitivement.</p>
+    <div class="fs" style="animation-delay:.4s; font-family:monospace; font-size:17px; letter-spacing:1px; background:white; border:1px solid var(--line);
+      border-radius:12px; padding:16px 20px; margin:8px auto 0; width:min(420px,90%); word-break:break-all;">${escapeHtml(phrase)}</div>
+    <div class="check-row fs" style="animation-delay:.6s"><input type="checkbox" id="phrase-ack"> <label for="phrase-ack">J'ai noté ma phrase de récupération en lieu sûr</label></div>
+    <button class="sel-add fs" id="phrase-continue" style="animation-delay:.7s; opacity:.4;">Continuer</button>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const ack = s.querySelector('#phrase-ack');
+  const btn = s.querySelector('#phrase-continue');
+  ack.addEventListener('change', ()=>{ btn.style.opacity = ack.checked ? '1' : '.4'; });
+  const proceed = ()=>{
+    if(!ack.checked) return;
+    session=null; history=[]; currentPhase=null;
+    goTo(returnPhase, returnFn);
+  };
+  btn.addEventListener('click', proceed);
+}
+
+function renderForgotPassword(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Mot de passe oublié</h2>
+    <p class="sub fs" style="animation-delay:.3s">On t'envoie un lien par email pour choisir un nouveau mot de passe. Tu auras ensuite besoin de ta phrase de récupération pour redéchiffrer tes souvenirs.</p>
+    <div class="free-text-wrap fs" style="animation-delay:.4s"><input type="text" id="forgot-email" placeholder="Email"></div>
+    <p class="form-error" id="forgot-error"></p>
+    <button class="sel-add fs" id="forgot-submit" style="animation-delay:.5s;">Envoyer le lien</button>
+  `;
+  document.body.classList.add('hide-r');
+  const errEl = s.querySelector('#forgot-error');
+  const submit = async ()=>{
+    const email = s.querySelector('#forgot-email').value.trim();
+    if(!email){ errEl.textContent = 'Email requis.'; return; }
+    errEl.textContent = 'Envoi...';
+    try{
+      await requestPasswordReset(email);
+      s.innerHTML = `<h2 class="instruction fs">Vérifie ta boîte mail</h2><p class="sub fs" style="animation-delay:.3s">Clique sur le lien reçu par email pour choisir un nouveau mot de passe.</p>`;
+    }catch(e){ errEl.textContent = translateAuthError(e); }
+  };
+  s.querySelector('#forgot-submit').addEventListener('click', submit);
+  forwardAction = submit;
+}
+
+function renderSetNewPasswordAfterRecovery(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Choisir un nouveau mot de passe</h2>
+    <p class="sub fs" style="animation-delay:.3s">Entre ta phrase de récupération pour redéchiffrer tes souvenirs, et le nouveau mot de passe que tu veux utiliser.</p>
+    <div class="free-text-wrap fs" style="animation-delay:.4s"><input type="text" id="rec-phrase" placeholder="Phrase de récupération"></div>
+    <div class="free-text-wrap fs" style="animation-delay:.5s"><input type="password" id="rec-newpw" placeholder="Nouveau mot de passe"></div>
+    <p class="form-error" id="rec-error"></p>
+    <button class="sel-add fs" id="rec-submit" style="animation-delay:.6s;">Valider</button>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const errEl = s.querySelector('#rec-error');
+  const submit = async ()=>{
+    const phrase = s.querySelector('#rec-phrase').value.trim();
+    const newPw = s.querySelector('#rec-newpw').value;
+    if(!phrase || !newPw){ errEl.textContent = 'Les deux champs sont requis.'; return; }
+    errEl.textContent = 'Un instant...';
+    try{
+      await completeRecovery(phrase, newPw);
+      session=null; history=[]; currentPhase=null;
+      goTo('home', renderHome);
+    }catch(e){ errEl.textContent = translateAuthError(e); }
+  };
+  s.querySelector('#rec-submit').addEventListener('click', submit);
+  forwardAction = submit;
+}
+
+function renderSyncChoice(row){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Des souvenirs existent aux deux endroits</h2>
+    <p class="sub fs" style="animation-delay:.3s">Cet appareil a déjà des souvenirs en local, et ton compte en a aussi. Lequel veux-tu garder ? L'autre sera remplacé.</p>
+    <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center; margin-top:10px;">
+      <button class="sel-add" id="sync-local">Garder ceux de cet appareil</button>
+      <button class="sel-add" id="sync-cloud">Garder ceux du compte</button>
+    </div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  s.querySelector('#sync-local').addEventListener('click', async ()=>{
+    await vaultResolveKeepLocal();
+    session=null; history=[]; currentPhase=null;
+    goTo('home', renderHome);
+  });
+  s.querySelector('#sync-cloud').addEventListener('click', async ()=>{
+    await vaultResolveUseCloud(row);
+    session=null; history=[]; currentPhase=null;
+    goTo('home', renderHome);
+  });
 }
 
 /* boot */

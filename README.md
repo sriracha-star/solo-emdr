@@ -6,7 +6,7 @@ Un outil web autonome de stimulation bilatérale (EMDR) pour un usage individuel
 
 Ouvrez simplement [`index.html`](index.html) dans un navigateur, ou visitez la page hébergée si GitHub Pages est activé pour ce dépôt.
 
-Aucune donnée n'est envoyée à un serveur : les souvenirs et réglages sont stockés localement dans le navigateur (`localStorage`).
+Par défaut, aucune donnée n'est envoyée à un serveur : les souvenirs et réglages sont stockés localement dans le navigateur (`localStorage`). Une synchronisation multi-appareils optionnelle, avec chiffrement de bout en bout, peut être activée — voir [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md).
 
 ## Avertissement
 
