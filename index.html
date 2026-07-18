@@ -710,11 +710,11 @@ function sortFolders(list, mode){
       if(!groups.has(key)) groups.set(key, []);
       groups.get(key).push(f);
     });
-    const groupList = [...groups.values()].map(items=>{
+    const groupList = [...groups.entries()].map(([key, items])=>{
       items.sort((a,b)=> countOf(b) - countOf(a));
-      return {items, topCount: countOf(items[0])};
+      return {items, topCount: countOf(items[0]), isDefault: key==='default'};
     });
-    groupList.sort((a,b)=> b.topCount - a.topCount);
+    groupList.sort((a,b)=> (a.isDefault?1:0) - (b.isDefault?1:0) || b.topCount - a.topCount);
     return groupList.flatMap(g=> g.items);
   }
   else if(mode==='status'){
