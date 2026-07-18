@@ -166,7 +166,7 @@
   .lib-sort-panel button:hover{ background:var(--bg-soft); }
   .lib-sort-panel button.selected{ font-weight:600; color:var(--teal-deep); }
 
-  .lib-add-top-wrap{ width:min(560px,92%); text-align:left; margin:0 0 12px; }
+  .lib-add-top-wrap{ width:min(560px,92%); display:flex; justify-content:space-between; align-items:center; margin:0 0 12px; }
 
   /* folder grid */
   .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; margin:0 0 24px; }
@@ -709,7 +709,11 @@ function sortFolders(list, mode){
   else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
   else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
-  else if(mode==='color') arr.sort((a,b)=> hexToHue(a.color) - hexToHue(b.color));
+  else if(mode==='color') arr.sort((a,b)=>{
+    const hueDiff = hexToHue(a.color) - hexToHue(b.color);
+    if(hueDiff !== 0) return hueDiff;
+    return traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length;
+  });
   else if(mode==='status'){
     arr.sort((a,b)=> a.name.localeCompare(b.name));
     const isDone = f=>{ const items = traumas.filter(t=>t.folderId===f.id); return items.length>0 && items.every(t=>t.status==='traite'); };
@@ -800,13 +804,17 @@ function renderFolderView(folderId){
   s.innerHTML = `
     <h2 class="instruction fs">${escapeHtml(folder ? folder.name : '')}</h2>
     <div class="sel-scroll">
-      <div class="lib-add-top-wrap fs" style="animation-delay:.35s"><button class="lib-add-top" id="add-t-folder">+ Souvenir</button></div>
+      <div class="lib-add-top-wrap fs" style="animation-delay:.35s">
+        <button class="lib-add-top" id="add-t-folder">+ Souvenir</button>
+        <button class="lib-add-top" id="edit-folder-btn">Modifier</button>
+      </div>
       <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Dossier vide.</p>'}</div>
     </div>
   `;
   document.body.classList.add('hide-r');
   wireTraumaCards(s, 'folder_'+folderId, ()=> renderFolderView(folderId));
   s.querySelector('#add-t-folder').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'folder_'+folderId, ()=> renderFolderView(folderId), folderId)));
+  s.querySelector('#edit-folder-btn').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(folder, 'folder_'+folderId, ()=> renderFolderView(folderId))));
 }
 
 const DEFAULT_FOLDER_COLOR = '#D7DEE6';
@@ -823,6 +831,11 @@ function renderFolderForm(folder, returnPhase, returnFn){
       <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Couleur du dossier</label>
       <input type="color" id="folder-color" value="${isEdit && folder.color ? folder.color : DEFAULT_FOLDER_COLOR}"
         style="width:100%;height:34px;padding:2px;cursor:pointer;border-radius:8px;border:1px solid var(--line);">
+      <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+        <input type="text" id="folder-color-hex" readonly value="${(isEdit && folder.color ? folder.color : DEFAULT_FOLDER_COLOR).toUpperCase()}"
+          style="flex:1; font-family:monospace; letter-spacing:.5px;">
+        <button type="button" id="folder-color-copy" class="pill-btn">Copier</button>
+      </div>
       <button type="button" id="folder-color-reset" class="sel-alt" style="margin-top:6px;">Couleur par défaut</button>
     </div>
     ${isEdit ? `<button class="sel-alt fs" id="folder-del" style="animation-delay:.5s">Supprimer le dossier</button>` : ''}
@@ -830,10 +843,23 @@ function renderFolderForm(folder, returnPhase, returnFn){
   `;
   document.body.classList.add('hide-r');
   const colorInput = s.querySelector('#folder-color');
-  colorInput.addEventListener('input', ()=>{ useDefaultColor = false; });
+  const hexDisplay = s.querySelector('#folder-color-hex');
+  colorInput.addEventListener('input', ()=>{ useDefaultColor = false; hexDisplay.value = colorInput.value.toUpperCase(); });
   s.querySelector('#folder-color-reset').addEventListener('click', ()=>{
     useDefaultColor = true;
     colorInput.value = DEFAULT_FOLDER_COLOR;
+    hexDisplay.value = DEFAULT_FOLDER_COLOR;
+  });
+  s.querySelector('#folder-color-copy').addEventListener('click', async ()=>{
+    const btn = s.querySelector('#folder-color-copy');
+    const old = btn.textContent;
+    try{
+      await navigator.clipboard.writeText(hexDisplay.value);
+      btn.textContent = 'Copié !';
+      setTimeout(()=>{ btn.textContent = old; }, 1200);
+    }catch(e){
+      hexDisplay.select();
+    }
   });
   if(isEdit){
     s.querySelector('#folder-del').addEventListener('click', ()=>{
