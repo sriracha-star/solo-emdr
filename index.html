@@ -30,20 +30,20 @@
   .icon-btn:hover{ opacity:1; }
   .icon-btn svg{ display:block; }
   body.stage-dark .icon-btn{ color:#EFE8DA; }
-  #settingsIcon{ right:14px; }
   #homeIcon{ left:14px; }
   #libraryIcon{ left:56px; }
+  #settingsIcon{ left:98px; }
 
-  .account-wrap{ position:fixed; top:14px; right:56px; z-index:60; padding-bottom:30px; }
+  .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
   #account-panel{ position:absolute; top:34px; right:-6px; width:220px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
-  .account-wrap:hover #account-panel, #account-panel.open{ display:block; }
+  #account-panel.open{ display:block; }
   #account-panel .sub{ margin:0 0 10px; font-size:12.5px; max-width:none; }
-  #account-panel button{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:0; }
+  #account-panel button{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:0; cursor:pointer; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; right:14px; z-index:60; width:290px; background:white; border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:98px; z-index:60; width:290px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -62,8 +62,12 @@
   body.hide-l #chevL{ display:none; }
 
   #stage-wrap{ flex:1; position:relative; overflow:hidden; }
-  #stage{ height:100%; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  #stage{ height:100%; width:100%; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:40px; overflow-y:auto; }
+  .home-ball{ position:absolute; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--clay-soft), var(--teal));
+    opacity:.35; filter:blur(.5px); animation:homeDrift ease-in-out infinite alternate; pointer-events:none; }
+  @keyframes homeDrift{ from{ transform:translate(0,0); } to{ transform:translate(var(--dx,20px), var(--dy,15px)); } }
+  @media (prefers-reduced-motion: reduce){ .home-ball{ animation:none; } }
   #stage h2.instruction{ font-family:var(--font-display); font-weight:600; font-size:clamp(21px,3vw,30px); margin:0 0 6px; max-width:640px; }
   #stage p.sub{ color:var(--ink-soft); font-size:14.5px; margin:0 0 22px; max-width:540px; }
 
@@ -133,12 +137,17 @@
   .folder-opt:hover{ border-color:var(--clay); }
   .folder-opt.selected{ background:var(--clay); border-color:var(--clay); color:white; }
 
-  /* search */
-  .lib-search-wrap{ width:min(420px,88%); flex:0 0 auto; margin:0 0 30px; }
-  .lib-search-wrap input{ width:100%; font-size:13.5px; padding:8px 16px; border-radius:20px; border:1px solid var(--line);
-    background:var(--bg-soft); color:var(--ink); }
-  .lib-search-wrap input::placeholder{ color:var(--ink-soft); }
-  .lib-search-wrap input:focus{ outline:none; border-color:var(--teal); background:white; }
+  /* toolbar: search + sort + add actions */
+  .lib-toolbar{ width:min(920px,96%); flex:0 0 auto; margin:0 0 26px; display:flex; align-items:center; justify-content:space-between; gap:28px; flex-wrap:wrap; }
+  .lib-toolbar input[type=text]{ flex:1 1 240px; max-width:380px; width:auto; font-size:13.5px; padding:8px 16px; border-radius:20px;
+    border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); }
+  .lib-toolbar input::placeholder{ color:var(--ink-soft); }
+  .lib-toolbar input:focus{ outline:none; border-color:var(--teal); background:white; }
+  .lib-toolbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .lib-toolbar-actions select{ width:auto; font-size:12.5px; padding:7px 10px; border-radius:8px; cursor:pointer; }
+  .lib-toolbar-actions button{ font-size:12.5px; padding:7px 14px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg-soft); color:var(--ink); cursor:pointer; white-space:nowrap; }
+  .lib-toolbar-actions button:hover{ border-color:var(--teal); }
 
   /* folder grid */
   .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; margin:0 0 24px; }
@@ -168,15 +177,15 @@
   <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
   </button>
+  <button id="settingsIcon" class="icon-btn" title="Réglages">
+    <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
+  </button>
   <div class="account-wrap">
     <button id="accountIcon" class="icon-btn" title="Compte">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg>
     </button>
     <div id="account-panel"></div>
   </div>
-  <button id="settingsIcon" class="icon-btn" title="Réglages">
-    <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
-  </button>
   <button class="chev" id="chevL">‹</button>
   <button class="chev" id="chevR">›</button>
   <div id="settings-panel">
@@ -188,9 +197,6 @@
     <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
     <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
     <button id="settings-save" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:4px;">Enregistrer</button>
-    <div class="control-group" style="border-top:1px solid var(--line); padding-top:12px; margin-top:12px; margin-bottom:0;">
-      <button id="account-btn" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px;">Compte &amp; synchronisation</button>
-    </div>
   </div>
 
   <div id="stage-wrap">
@@ -416,19 +422,8 @@ $('settings-save').addEventListener('click',()=>{
   $('settings-panel').classList.remove('open');
 });
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
-$('libraryIcon').addEventListener('click',()=>{
-  session=null; history=[]; currentPhase=null;
-  goTo('library', renderLibrary);
-});
-$('homeIcon').addEventListener('click',()=>{
-  session=null; history=[]; currentPhase=null;
-  goTo('home', renderHome);
-});
-$('account-btn').addEventListener('click', ()=>{
-  $('settings-panel').classList.remove('open');
-  session=null; history=[]; currentPhase=null;
-  goTo('account', renderAccount);
-});
+$('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
+$('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
 if(supa){
   supa.auth.onAuthStateChange((event)=>{
@@ -484,9 +479,19 @@ function renderLoading(next){
   forwardAction = proceed;
 }
 
+const HOME_BALLS = [
+  {top:'14%', left:'12%', size:26, dur:12, delay:0, dx:22, dy:16},
+  {top:'20%', left:'82%', size:16, dur:9, delay:1.1, dx:-16, dy:20},
+  {top:'72%', left:'10%', size:20, dur:13, delay:2, dx:18, dy:-16},
+  {top:'80%', left:'80%', size:24, dur:10.5, delay:.6, dx:-20, dy:-14},
+  {top:'48%', left:'92%', size:14, dur:8.5, delay:1.8, dx:-14, dy:16},
+  {top:'46%', left:'5%', size:18, dur:11.5, delay:.4, dx:16, dy:12},
+];
 function renderHome(){
   const s = stageBase();
+  const ballsHtml = HOME_BALLS.map(b=> `<div class="home-ball" style="top:${b.top};left:${b.left};width:${b.size}px;height:${b.size}px;animation-duration:${b.dur}s;animation-delay:${b.delay}s;--dx:${b.dx}px;--dy:${b.dy}px;"></div>`).join('');
   s.innerHTML = `
+    ${ballsHtml}
     <div class="breathe-circle fs"></div>
     <button class="sel-add fs" id="start-session" style="animation-delay:.5s;">Commencer une séance</button>
   `;
@@ -573,6 +578,7 @@ function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
     e.stopPropagation();
     const t = traumas.find(x=>x.id===b.dataset.id);
     t.status = b.dataset.status;
+    t.updatedAt = Date.now();
     saveTraumas(traumas);
     refresh();
   }));
@@ -580,6 +586,7 @@ function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
     e.stopPropagation();
     const t = traumas.find(x=>x.id===b.dataset.id);
     t.folderId = b.dataset.folder || null;
+    t.updatedAt = Date.now();
     saveTraumas(traumas);
     refresh();
   }));
@@ -633,27 +640,61 @@ function wireFolderTiles(s, returnPhase, returnFn, localRefresh){
   }));
 }
 
+const LS_LIBSORT = 'soloemdr_libsort';
+let libSortMode = localStorage.getItem(LS_LIBSORT) || 'alpha';
+
+function sortFolders(list, mode){
+  const arr = [...list];
+  if(mode==='alpha') arr.sort((a,b)=> a.name.localeCompare(b.name));
+  else if(mode==='date') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
+  else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
+  return arr;
+}
+function sortTraumas(list, mode){
+  const arr = [...list];
+  if(mode==='alpha') arr.sort((a,b)=> a.title.localeCompare(b.title));
+  else if(mode==='date') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
+  arr.sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  return arr;
+}
+
 function renderLibrary(){
   const s = stageBase();
   s.className='select-view';
   s.innerHTML = `
     <h2 class="instruction fs">Vos souvenirs</h2>
-    <div class="lib-search-wrap fs" style="animation-delay:.3s"><input type="text" id="lib-search" placeholder="Rechercher un souvenir ou un dossier..."></div>
+    <div class="lib-toolbar fs" style="animation-delay:.3s">
+      <input type="text" id="lib-search" placeholder="Rechercher un souvenir ou un dossier...">
+      <div class="lib-toolbar-actions">
+        <select id="lib-sort" title="Trier par">
+          <option value="alpha">Alphabétique</option>
+          <option value="date">Date de modification</option>
+          <option value="count">Nombre de souvenirs</option>
+        </select>
+        <button id="add-t">+ Souvenir</button>
+        <button id="add-f">+ Dossier</button>
+      </div>
+    </div>
     <div class="sel-scroll" id="lib-scroll"></div>
   `;
   document.body.classList.add('hide-l','hide-r');
   const searchInput = s.querySelector('#lib-search');
+  const sortSelect = s.querySelector('#lib-sort');
+  sortSelect.value = libSortMode;
   const scrollEl = s.querySelector('#lib-scroll');
   function update(){ renderLibraryBody(scrollEl, searchInput.value.trim().toLowerCase()); }
   searchInput.addEventListener('input', update);
+  sortSelect.addEventListener('change', ()=>{ libSortMode = sortSelect.value; localStorage.setItem(LS_LIBSORT, libSortMode); update(); });
+  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
+  s.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(null,'library',renderLibrary)));
   update();
 }
 
 function renderLibraryBody(scrollEl, query){
-  const matchFolders = folders.filter(f=> !query || f.name.toLowerCase().includes(query));
+  const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortMode);
   const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
   const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
-  const sorted = [...matchTraumas].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  const sorted = sortTraumas(matchTraumas, libSortMode);
   const folderGrid = matchFolders.length ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
   const cards = sorted.map(traumaCardHtml).join('');
   const nothing = !matchFolders.length && !sorted.length;
@@ -661,13 +702,9 @@ function renderLibraryBody(scrollEl, query){
   scrollEl.innerHTML = `
     ${folderGrid}
     <div class="sel-list fs" style="animation-delay:.5s">${cards || (nothing ? `<p class="sub">${query ? 'Aucun résultat.' : 'Aucun souvenir enregistré.'}</p>` : '')}</div>
-    <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
-    <button class="sel-add fs" id="add-f" style="animation-delay:.6s">+ Nouveau dossier</button>
   `;
   wireFolderTiles(scrollEl, 'library', renderLibrary, localRefresh);
   wireTraumaCards(scrollEl, 'library', renderLibrary, localRefresh);
-  scrollEl.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
-  scrollEl.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(null,'library',renderLibrary)));
 }
 
 function renderFolderView(folderId){
@@ -675,16 +712,18 @@ function renderFolderView(folderId){
   s.className='select-view';
   const folder = folders.find(f=>f.id===folderId);
   const items = traumas.filter(t=>t.folderId===folderId);
-  const sorted = [...items].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  const sorted = sortTraumas(items, libSortMode);
   const cards = sorted.map(traumaCardHtml).join('');
   s.innerHTML = `
-    <h2 class="instruction fs">📁 ${escapeHtml(folder ? folder.name : '')}</h2>
+    <h2 class="instruction fs">${escapeHtml(folder ? folder.name : '')}</h2>
     <div class="sel-scroll">
       <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Dossier vide.</p>'}</div>
+      <button class="sel-add fs" id="add-t-folder" style="animation-delay:.6s">+ Souvenir</button>
     </div>
   `;
   document.body.classList.add('hide-r');
   wireTraumaCards(s, 'folder_'+folderId, ()=> renderFolderView(folderId));
+  s.querySelector('#add-t-folder').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'folder_'+folderId, ()=> renderFolderView(folderId), folderId)));
 }
 
 function renderFolderForm(folder, returnPhase, returnFn){
@@ -706,8 +745,8 @@ function renderFolderForm(folder, returnPhase, returnFn){
   }
   forwardAction = ()=>{
     const name = s.querySelector('#folder-name').value.trim();
-    if(isEdit){ if(name) folder.name = name; saveFolders(folders); }
-    else if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now()}); saveFolders(folders); }
+    if(isEdit){ if(name){ folder.name = name; folder.updatedAt = Date.now(); } saveFolders(folders); }
+    else if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now(), updatedAt:Date.now()}); saveFolders(folders); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
 }
@@ -735,7 +774,7 @@ function renderConfirmDelete(kind, id, returnPhase, returnFn){
   forwardAction = cancel;
 }
 
-function renderTraumaForm(trauma, returnPhase, returnFn){
+function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
   const s = stageBase();
   const isEdit = !!trauma;
   s.innerHTML = `
@@ -752,8 +791,8 @@ function renderTraumaForm(trauma, returnPhase, returnFn){
   forwardAction = ()=>{
     const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
     const description = s.querySelector('#tf-desc').value.trim();
-    if(isEdit){ trauma.title = title; trauma.description = description; }
-    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', createdAt:Date.now()}); }
+    if(isEdit){ trauma.title = title; trauma.description = description; trauma.updatedAt = Date.now(); }
+    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
     saveTraumas(traumas);
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
@@ -1138,41 +1177,12 @@ function renderAccountPanel(){
     `;
     panel.querySelector('#acc-panel-login').addEventListener('click', ()=>{
       panel.classList.remove('open');
-      session=null; history=[]; currentPhase=null;
       goTo('authlogin', ()=> renderAuthForm('login'));
     });
     panel.querySelector('#acc-panel-signup').addEventListener('click', ()=>{
       panel.classList.remove('open');
-      session=null; history=[]; currentPhase=null;
       goTo('authsignup', ()=> renderAuthForm('signup'));
     });
-  }
-}
-
-function renderAccount(){
-  const s = stageBase();
-  const connected = !!vault.userId;
-  s.innerHTML = `
-    <h2 class="instruction fs">Compte &amp; synchronisation</h2>
-    ${!supa ? `<p class="sub fs" style="animation-delay:.3s">La synchronisation n'est pas encore configurée sur ce site.</p>` :
-      connected ? `
-      <p class="sub fs" style="animation-delay:.3s">Connecté·e en tant que ${escapeHtml(vault.email)}. Tes souvenirs se synchronisent automatiquement.</p>
-      <button class="sel-add fs" id="acc-logout" style="animation-delay:.5s;">Se déconnecter</button>
-      ` : `
-      <p class="sub fs" style="animation-delay:.3s">Connecte-toi pour retrouver tes souvenirs sur tous tes appareils.</p>
-      <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center;">
-        <button class="sel-add" id="acc-login">Se connecter</button>
-        <button class="sel-add" id="acc-signup">Créer un compte</button>
-      </div>
-      `}
-  `;
-  document.body.classList.add('hide-r');
-  if(!supa) return;
-  if(connected){
-    s.querySelector('#acc-logout').addEventListener('click', ()=>{ vaultLogout(); renderAccount(); });
-  } else {
-    s.querySelector('#acc-login').addEventListener('click', ()=> goTo('authlogin', ()=> renderAuthForm('login')));
-    s.querySelector('#acc-signup').addEventListener('click', ()=> goTo('authsignup', ()=> renderAuthForm('signup')));
   }
 }
 
