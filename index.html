@@ -107,13 +107,22 @@
   .sel-card.has-status{ display:flex; flex-direction:column; align-items:stretch; }
   .sel-card-top{ display:flex; justify-content:space-between; align-items:center; width:100%; }
   .sel-card-done{ opacity:.5; }
-  .status-picker{ display:flex; gap:8px; overflow:hidden; max-height:0; opacity:0; margin-top:0; padding-top:0;
+  .folder-card{ border-left:3px solid var(--clay); }
+  .status-picker{ display:flex; gap:8px; flex-wrap:wrap; overflow:hidden; max-height:0; opacity:0; margin-top:0; padding-top:0;
     border-top:1px solid transparent; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .status-picker.open{ max-height:70px; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .status-picker.open{ max-height:100px; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
   .status-opt{ flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
   .status-opt:hover{ border-color:var(--teal); }
   .status-opt.selected{ background:var(--teal); border-color:var(--teal); color:white; }
+
+  .folder-picker{ display:flex; gap:8px; flex-wrap:wrap; overflow:hidden; max-height:0; opacity:0; margin-top:0; padding-top:0;
+    border-top:1px solid transparent; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
+  .folder-picker.open{ max-height:220px; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .folder-opt{ padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
+    color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
+  .folder-opt:hover{ border-color:var(--clay); }
+  .folder-opt.selected{ background:var(--clay); border-color:var(--clay); color:white; }
 
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
@@ -151,12 +160,15 @@
 </div>
 
 <script>
-const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings';
+const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings', LS_FOLDERS='soloemdr_folders';
 const $ = id => document.getElementById(id);
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 function loadTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_TRAUMAS))||[]; }catch(e){ return []; } }
 function saveTraumas(list){ localStorage.setItem(LS_TRAUMAS, JSON.stringify(list)); }
 let traumas = loadTraumas();
+function loadFolders(){ try{ return JSON.parse(localStorage.getItem(LS_FOLDERS))||[]; }catch(e){ return []; } }
+function saveFolders(list){ localStorage.setItem(LS_FOLDERS, JSON.stringify(list)); }
+let folders = loadFolders();
 
 let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
@@ -285,11 +297,8 @@ function renderSelect(){
 
 const STATUS_LABEL = {a_traiter:'À traiter', en_cours:'En cours', traite:'Traité'};
 
-function renderLibrary(){
-  const s = stageBase();
-  s.className='select-view';
-  const sorted = [...traumas].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
-  const cards = sorted.map(t=>`
+function traumaCardHtml(t){
+  return `
     <div class="sel-card has-status ${t.status==='traite' ? 'sel-card-done' : ''}" data-id="${t.id}">
       <div class="sel-card-top">
         <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}</div></div>
@@ -298,38 +307,122 @@ function renderLibrary(){
       <div class="status-picker">
         ${Object.entries(STATUS_LABEL).map(([val,label])=>`<button class="status-opt ${t.status===val?'selected':''}" data-status="${val}" data-id="${t.id}">${label}</button>`).join('')}
       </div>
-    </div>`).join('');
-  s.innerHTML = `
-    <h2 class="instruction fs">Vos souvenirs</h2>
-    <div class="sel-scroll">
-      <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir enregistré.</p>'}</div>
-      <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
-    </div>
-  `;
-  document.body.classList.add('hide-l','hide-r');
-  s.querySelectorAll('.sel-card').forEach(c=> c.addEventListener('click',(e)=>{
-    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker')) return;
+      ${folders.length ? `<div class="folder-picker">
+        <button class="folder-opt ${!t.folderId?'selected':''}" data-folder="" data-id="${t.id}">Aucun dossier</button>
+        ${folders.map(f=>`<button class="folder-opt ${t.folderId===f.id?'selected':''}" data-folder="${f.id}" data-id="${t.id}">${escapeHtml(f.name)}</button>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
+
+function wireTraumaCards(s, returnPhase, returnFn){
+  s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
+    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker')) return;
     const picker = c.querySelector('.status-picker');
+    const folderPicker = c.querySelector('.folder-picker');
     const isOpen = picker.classList.contains('open');
-    s.querySelectorAll('.status-picker.open').forEach(p=> p.classList.remove('open'));
-    if(!isOpen) picker.classList.add('open');
+    s.querySelectorAll('.status-picker.open, .folder-picker.open').forEach(p=> p.classList.remove('open'));
+    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); }
   }));
   s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
     const t = traumas.find(x=>x.id===b.dataset.id);
     t.status = b.dataset.status;
     saveTraumas(traumas);
-    renderLibrary();
+    returnFn();
+  }));
+  s.querySelectorAll('.folder-opt').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const t = traumas.find(x=>x.id===b.dataset.id);
+    t.folderId = b.dataset.folder || null;
+    saveTraumas(traumas);
+    returnFn();
   }));
   s.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
     const t = traumas.find(x=>x.id===b.dataset.edit);
-    goTo('editform', ()=> renderTraumaForm(t,'library',renderLibrary));
+    goTo('editform', ()=> renderTraumaForm(t,returnPhase,returnFn));
   }));
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
-    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); renderLibrary();
+    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); returnFn();
+  }));
+}
+
+function renderLibrary(){
+  const s = stageBase();
+  s.className='select-view';
+  const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
+  const sorted = [...ungrouped].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  const folderCards = folders.map(f=>{
+    const count = traumas.filter(t=>t.folderId===f.id).length;
+    return `
+    <div class="sel-card folder-card" data-folder-id="${f.id}">
+      <div class="sel-card-top">
+        <div><div class="t">📁 ${escapeHtml(f.name)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${count} souvenir${count>1?'s':''}</div></div>
+        <div class="actions"><button data-del-folder="${f.id}">Supprimer</button></div>
+      </div>
+    </div>`;
+  }).join('');
+  const cards = sorted.map(traumaCardHtml).join('');
+  s.innerHTML = `
+    <h2 class="instruction fs">Vos souvenirs</h2>
+    <div class="sel-scroll">
+      <div class="sel-list fs" style="animation-delay:.4s">${folderCards}${cards || (folders.length ? '' : '<p class="sub">Aucun souvenir enregistré.</p>')}</div>
+      <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
+      <button class="sel-add fs" id="add-f" style="animation-delay:.6s">+ Nouveau dossier</button>
+    </div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  wireTraumaCards(s, 'library', renderLibrary);
+  s.querySelectorAll('[data-folder-id]').forEach(c=> c.addEventListener('click',(e)=>{
+    if(e.target.closest('[data-del-folder]')) return;
+    const fid = c.dataset.folderId;
+    goTo('folder_'+fid, ()=> renderFolderView(fid));
+  }));
+  s.querySelectorAll('[data-del-folder]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const fid = b.dataset.delFolder;
+    traumas.forEach(t=>{ if(t.folderId===fid) t.folderId=null; });
+    saveTraumas(traumas);
+    folders = folders.filter(f=>f.id!==fid);
+    saveFolders(folders);
+    renderLibrary();
   }));
   s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
+  s.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm('library',renderLibrary)));
+}
+
+function renderFolderView(folderId){
+  const s = stageBase();
+  s.className='select-view';
+  const folder = folders.find(f=>f.id===folderId);
+  const items = traumas.filter(t=>t.folderId===folderId);
+  const sorted = [...items].sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  const cards = sorted.map(traumaCardHtml).join('');
+  s.innerHTML = `
+    <h2 class="instruction fs">📁 ${escapeHtml(folder ? folder.name : '')}</h2>
+    <div class="sel-scroll">
+      <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Dossier vide.</p>'}</div>
+    </div>
+  `;
+  document.body.classList.add('hide-r');
+  wireTraumaCards(s, 'folder_'+folderId, ()=> renderFolderView(folderId));
+}
+
+function renderFolderForm(returnPhase, returnFn){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Nouveau dossier</h2>
+    <div class="free-text-wrap fs" style="animation-delay:.3s">
+      <input type="text" id="folder-name" placeholder="Nom du dossier">
+    </div>
+    <p class="hint-line fs" style="animation-delay:.5s">Entrée pour enregistrer, ‹ pour annuler</p>
+  `;
+  document.body.classList.add('hide-r');
+  forwardAction = ()=>{
+    const name = s.querySelector('#folder-name').value.trim();
+    if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now()}); saveFolders(folders); }
+    history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
+  };
 }
 
 function renderTraumaForm(trauma, returnPhase, returnFn){
