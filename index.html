@@ -173,6 +173,11 @@
   .lib-sort-panel button.selected{ font-weight:600; color:var(--teal-deep); }
   .lib-sort-panel .sort-check{ opacity:0; flex:0 0 auto; }
   .lib-sort-panel button.selected .sort-check{ opacity:1; }
+  .lib-sort-color-toggle{ display:flex; align-items:center; gap:8px; width:100%; padding:8px 10px; border-radius:8px;
+    color:var(--ink); font-family:var(--font-body); font-size:13px; cursor:pointer; }
+  .lib-sort-color-toggle:hover{ background:var(--bg-soft); }
+  .lib-sort-color-toggle input{ cursor:pointer; }
+  .lib-sort-divider{ height:1px; background:var(--line); margin:4px 6px; }
 
   .lib-add-top-wrap{ width:min(560px,92%); display:flex; justify-content:space-between; align-items:center; margin:0 0 12px; }
 
@@ -691,46 +696,47 @@ function wireFolderTiles(s, returnPhase, returnFn, localRefresh){
 }
 
 const LS_LIBSORT = 'soloemdr_libsort';
-let libSortMode = localStorage.getItem(LS_LIBSORT) || 'alpha';
+const LS_LIBSORT_COLOR = 'soloemdr_libsort_color';
+let libSortCriterion = localStorage.getItem(LS_LIBSORT) || 'alpha';
+let libSortColor = localStorage.getItem(LS_LIBSORT_COLOR) === '1';
+if(libSortCriterion==='color'){ libSortColor = true; libSortCriterion = 'alpha'; }
 const SORT_OPTIONS = [
   {value:'alpha', label:'Alphabétique'},
   {value:'created', label:'Date de création'},
   {value:'modified', label:'Date de modification'},
   {value:'count', label:'Nombre de souvenirs'},
   {value:'status', label:'Statut'},
-  {value:'color', label:'Couleur'},
   {value:'priority', label:'Priorité'},
 ];
 const STATUS_ORDER = {a_traiter:0, en_cours:1, traite:2};
 
-function sortFolders(list, mode){
+function folderCompareFn(criterion){
+  const countOf = f=> traumas.filter(t=>t.folderId===f.id).length;
+  const isDone = f=>{ const items = traumas.filter(t=>t.folderId===f.id); return items.length>0 && items.every(t=>t.status==='traite'); };
+  if(criterion==='created') return (a,b)=> (b.createdAt||0) - (a.createdAt||0);
+  if(criterion==='modified') return (a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0);
+  if(criterion==='count') return (a,b)=> countOf(b) - countOf(a);
+  if(criterion==='priority') return (a,b)=> (b.priority||0) - (a.priority||0) || a.name.localeCompare(b.name);
+  if(criterion==='status') return (a,b)=> (isDone(a)?1:0) - (isDone(b)?1:0) || a.name.localeCompare(b.name);
+  return (a,b)=> a.name.localeCompare(b.name);
+}
+
+function sortFolders(list, criterion, byColor){
   const arr = [...list];
-  if(mode==='alpha') arr.sort((a,b)=> a.name.localeCompare(b.name));
-  else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
-  else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
-  else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
-  else if(mode==='priority') arr.sort((a,b)=> (b.priority||0) - (a.priority||0) || a.name.localeCompare(b.name));
-  else if(mode==='color'){
-    const countOf = f=> traumas.filter(t=>t.folderId===f.id).length;
-    const groups = new Map();
-    arr.forEach(f=>{
-      const key = f.color || 'default';
-      if(!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(f);
-    });
-    const groupList = [...groups.entries()].map(([key, items])=>{
-      items.sort((a,b)=> countOf(b) - countOf(a));
-      return {items, topCount: countOf(items[0]), isDefault: key==='default'};
-    });
-    groupList.sort((a,b)=> (a.isDefault?1:0) - (b.isDefault?1:0) || b.topCount - a.topCount);
-    return groupList.flatMap(g=> g.items);
-  }
-  else if(mode==='status'){
-    arr.sort((a,b)=> a.name.localeCompare(b.name));
-    const isDone = f=>{ const items = traumas.filter(t=>t.folderId===f.id); return items.length>0 && items.every(t=>t.status==='traite'); };
-    arr.sort((a,b)=> (isDone(a)?1:0) - (isDone(b)?1:0));
-  }
-  return arr;
+  const cmp = folderCompareFn(criterion);
+  if(!byColor){ arr.sort(cmp); return arr; }
+  const groups = new Map();
+  arr.forEach(f=>{
+    const key = f.color || 'default';
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(f);
+  });
+  const groupList = [...groups.entries()].map(([key, items])=>{
+    items.sort(cmp);
+    return {items, isDefault: key==='default'};
+  });
+  groupList.sort((a,b)=> (a.isDefault?1:0) - (b.isDefault?1:0) || cmp(a.items[0], b.items[0]));
+  return groupList.flatMap(g=> g.items);
 }
 function sortTraumas(list, mode){
   const arr = [...list];
@@ -755,6 +761,11 @@ function renderLibrary(){
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4v16M7 4L3 8M7 4l4 4"/><path d="M17 20V4M17 20l4-4M17 20l-4-4"/></svg>
           </button>
           <div class="lib-sort-panel" id="lib-sort-panel">
+            <label class="lib-sort-color-toggle">
+              <input type="checkbox" id="sort-color-toggle" ${libSortColor ? 'checked' : ''}>
+              <span>Couleur</span>
+            </label>
+            <div class="lib-sort-divider"></div>
             ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}"><span>${o.label}</span><span class="sort-check">✓</span></button>`).join('')}
           </div>
         </div>
@@ -772,12 +783,18 @@ function renderLibrary(){
 
   const sortBtn = s.querySelector('#lib-sort-btn');
   const sortPanel = s.querySelector('#lib-sort-panel');
-  function refreshSortPanel(){ sortPanel.querySelectorAll('button').forEach(b=> b.classList.toggle('selected', b.dataset.sort===libSortMode)); }
+  const colorToggle = s.querySelector('#sort-color-toggle');
+  function refreshSortPanel(){ sortPanel.querySelectorAll('button').forEach(b=> b.classList.toggle('selected', b.dataset.sort===libSortCriterion)); }
   refreshSortPanel();
   sortBtn.addEventListener('click', (e)=>{ e.stopPropagation(); sortPanel.classList.toggle('open'); });
+  colorToggle.addEventListener('change', ()=>{
+    libSortColor = colorToggle.checked;
+    localStorage.setItem(LS_LIBSORT_COLOR, libSortColor ? '1' : '0');
+    update();
+  });
   sortPanel.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
-    libSortMode = b.dataset.sort;
-    localStorage.setItem(LS_LIBSORT, libSortMode);
+    libSortCriterion = b.dataset.sort;
+    localStorage.setItem(LS_LIBSORT, libSortCriterion);
     refreshSortPanel();
     sortPanel.classList.remove('open');
     update();
@@ -789,10 +806,10 @@ function renderLibrary(){
 }
 
 function renderLibraryBody(scrollEl, query){
-  const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortMode);
+  const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortCriterion, libSortColor);
   const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
   const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
-  const sorted = sortTraumas(matchTraumas, libSortMode);
+  const sorted = sortTraumas(matchTraumas, libSortCriterion);
   const folderGrid = matchFolders.length ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
   const cards = sorted.map(traumaCardHtml).join('');
   const nothing = !matchFolders.length && !sorted.length;
@@ -810,7 +827,7 @@ function renderFolderView(folderId){
   s.className='select-view';
   const folder = folders.find(f=>f.id===folderId);
   const items = traumas.filter(t=>t.folderId===folderId);
-  const sorted = sortTraumas(items, libSortMode);
+  const sorted = sortTraumas(items, libSortCriterion);
   const cards = sorted.map(traumaCardHtml).join('');
   s.innerHTML = `
     <h2 class="instruction fs">${escapeHtml(folder ? folder.name : '')}</h2>
