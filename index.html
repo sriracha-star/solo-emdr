@@ -11,6 +11,7 @@
     --teal:#3E7371; --teal-deep:#2A5654; --clay:#C9825F; --clay-soft:#E7C3AC;
     --line:#C9D6D3; --dusk:#0F1E27; --dusk-2:#16303B;
     --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF; --teal-soft:#CFE3E0; --folder-neutral:#D7DEE6;
+    --aurora-1:#4C8B88; --aurora-2:#E7A97C; --aurora-3:#B9A6D9; --aurora-4:#7FB0AC;
     --font-display: Georgia, 'Times New Roman', serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
   }
@@ -40,7 +41,7 @@
     border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
   #account-panel.open{ display:block; }
   #account-panel .sub{ margin:0 0 10px; font-size:12.5px; max-width:none; }
-  #account-panel button{ width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:0; cursor:pointer; }
+  #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
   #settings-panel{ position:fixed; top:56px; left:98px; z-index:60; width:290px; background:white; border:1px solid var(--line);
@@ -64,10 +65,12 @@
   #stage-wrap{ flex:1; position:relative; overflow:hidden; }
   #stage{ height:100%; width:100%; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:40px; overflow-y:auto; }
-  .home-ball{ position:absolute; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--clay-soft), var(--teal));
-    opacity:.35; filter:blur(.5px); animation:homeDrift ease-in-out infinite alternate; pointer-events:none; }
-  @keyframes homeDrift{ from{ transform:translate(0,0); } to{ transform:translate(var(--dx,20px), var(--dy,15px)); } }
-  @media (prefers-reduced-motion: reduce){ .home-ball{ animation:none; } }
+  .aurora-wrap{ position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+  .aurora-blob{ position:absolute; border-radius:50%; filter:blur(min(9vw,70px)); opacity:.45;
+    animation:auroraFloat ease-in-out infinite alternate; }
+  @keyframes auroraFloat{ from{ transform:translate(0,0) scale(1) rotate(0deg); } to{ transform:translate(var(--dx,40px), var(--dy,30px)) scale(var(--sc,1.1)) rotate(6deg); } }
+  @media (prefers-reduced-motion: reduce){ .aurora-blob{ animation:none; } }
+  .home-fg{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; }
   #stage h2.instruction{ font-family:var(--font-display); font-weight:600; font-size:clamp(21px,3vw,30px); margin:0 0 6px; max-width:640px; }
   #stage p.sub{ color:var(--ink-soft); font-size:14.5px; margin:0 0 22px; max-width:540px; }
 
@@ -114,7 +117,11 @@
   .sel-card:hover{ border-color:var(--teal); }
   .sel-card .t{ font-size:14.5px; font-weight:600; }
   .sel-card .actions{ display:flex; gap:6px; }
-  .sel-card .actions button{ font-size:11px; padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; }
+  .pill-btn, .sel-card .actions button, .lib-toolbar-actions button, .lib-add-top, #account-panel button{
+    font-size:12.5px; padding:7px 14px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
+    color:var(--ink); font-family:var(--font-body); cursor:pointer; white-space:nowrap; transition:background-color .15s ease; }
+  .pill-btn:hover, .sel-card .actions button:hover, .lib-toolbar-actions button:hover, .lib-add-top:hover, #account-panel button:hover{
+    background-color:color-mix(in srgb, var(--bg-soft), black 30%); }
   .sel-alt{ margin-top:18px; font-size:13.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; background:none; border:none; }
   .sel-add{ margin-top:6px; font-size:13px; color:var(--teal-deep); background:none; border:none; cursor:pointer; }
 
@@ -142,12 +149,23 @@
   .lib-toolbar input[type=text]{ flex:1 1 240px; max-width:380px; width:auto; font-size:13.5px; padding:8px 16px; border-radius:20px;
     border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); }
   .lib-toolbar input::placeholder{ color:var(--ink-soft); }
+  .lib-toolbar input:hover{ border-color:var(--teal); }
   .lib-toolbar input:focus{ outline:none; border-color:var(--teal); background:white; }
   .lib-toolbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .lib-toolbar-actions select{ width:auto; font-size:12.5px; padding:7px 10px; border-radius:8px; cursor:pointer; }
-  .lib-toolbar-actions button{ font-size:12.5px; padding:7px 14px; border-radius:8px; border:1px solid var(--line);
-    background:var(--bg-soft); color:var(--ink); cursor:pointer; white-space:nowrap; }
-  .lib-toolbar-actions button:hover{ border-color:var(--teal); }
+  .toolbar-icon-btn{ background:var(--bg-soft); border:1px solid var(--line); border-radius:8px; padding:8px; cursor:pointer;
+    color:var(--ink); display:flex; align-items:center; justify-content:center; transition:background-color .15s ease; }
+  .toolbar-icon-btn:hover{ background-color:color-mix(in srgb, var(--bg-soft), black 30%); }
+  .toolbar-icon-btn svg{ display:block; }
+  .lib-sort-wrap{ position:relative; }
+  .lib-sort-panel{ position:absolute; top:44px; left:0; z-index:40; width:210px; background:white; border:1px solid var(--line);
+    border-radius:14px; padding:8px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
+  .lib-sort-panel.open{ display:block; }
+  .lib-sort-panel button{ display:block; width:100%; text-align:left; padding:8px 10px; border-radius:8px; border:none;
+    background:none; color:var(--ink); font-family:var(--font-body); font-size:13px; cursor:pointer; }
+  .lib-sort-panel button:hover{ background:var(--bg-soft); }
+  .lib-sort-panel button.selected{ font-weight:600; color:var(--teal-deep); }
+
+  .lib-add-top-wrap{ width:min(560px,92%); text-align:left; margin:0 0 12px; }
 
   /* folder grid */
   .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; margin:0 0 24px; }
@@ -425,6 +443,14 @@ $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.tog
 $('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#settings-panel') && !e.target.closest('#settingsIcon')){
+    $('settings-panel').classList.remove('open');
+  }
+  if(!e.target.closest('#account-panel') && !e.target.closest('#accountIcon')){
+    $('account-panel').classList.remove('open');
+  }
+});
 if(supa){
   supa.auth.onAuthStateChange((event)=>{
     if(event === 'PASSWORD_RECOVERY'){
@@ -479,21 +505,23 @@ function renderLoading(next){
   forwardAction = proceed;
 }
 
-const HOME_BALLS = [
-  {top:'14%', left:'12%', size:26, dur:12, delay:0, dx:22, dy:16},
-  {top:'20%', left:'82%', size:16, dur:9, delay:1.1, dx:-16, dy:20},
-  {top:'72%', left:'10%', size:20, dur:13, delay:2, dx:18, dy:-16},
-  {top:'80%', left:'80%', size:24, dur:10.5, delay:.6, dx:-20, dy:-14},
-  {top:'48%', left:'92%', size:14, dur:8.5, delay:1.8, dx:-14, dy:16},
-  {top:'46%', left:'5%', size:18, dur:11.5, delay:.4, dx:16, dy:12},
+const AURORA_BLOBS = [
+  {top:'-18%', left:'-12%', vw:60, color:'var(--aurora-1)', dur:26, delay:0, dx:60, dy:40, sc:1.12},
+  {top:'-14%', left:'62%', vw:52, color:'var(--aurora-2)', dur:32, delay:-6, dx:-50, dy:35, sc:1.08},
+  {top:'54%', left:'-18%', vw:56, color:'var(--aurora-3)', dur:29, delay:-12, dx:45, dy:-40, sc:1.1},
+  {top:'58%', left:'58%', vw:48, color:'var(--aurora-4)', dur:24, delay:-3, dx:-40, dy:-30, sc:1.06},
 ];
 function renderHome(){
   const s = stageBase();
-  const ballsHtml = HOME_BALLS.map(b=> `<div class="home-ball" style="top:${b.top};left:${b.left};width:${b.size}px;height:${b.size}px;animation-duration:${b.dur}s;animation-delay:${b.delay}s;--dx:${b.dx}px;--dy:${b.dy}px;"></div>`).join('');
+  const blobsHtml = AURORA_BLOBS.map(b=> `<div class="aurora-blob" style="top:${b.top};left:${b.left};width:${b.vw}vw;height:${b.vw}vw;
+    background:radial-gradient(circle at 40% 40%, ${b.color}, transparent 72%);
+    animation-duration:${b.dur}s;animation-delay:${b.delay}s;--dx:${b.dx}px;--dy:${b.dy}px;--sc:${b.sc};"></div>`).join('');
   s.innerHTML = `
-    ${ballsHtml}
-    <div class="breathe-circle fs"></div>
-    <button class="sel-add fs" id="start-session" style="animation-delay:.5s;">Commencer une séance</button>
+    <div class="aurora-wrap">${blobsHtml}</div>
+    <div class="home-fg">
+      <div class="breathe-circle fs"></div>
+      <button class="sel-add fs" id="start-session" style="animation-delay:.5s;">Commencer une séance</button>
+    </div>
   `;
   document.body.classList.add('hide-l','hide-r');
   s.querySelector('#start-session').addEventListener('click', ()=> goTo('modechoice', renderModeChoice));
@@ -642,19 +670,35 @@ function wireFolderTiles(s, returnPhase, returnFn, localRefresh){
 
 const LS_LIBSORT = 'soloemdr_libsort';
 let libSortMode = localStorage.getItem(LS_LIBSORT) || 'alpha';
+const SORT_OPTIONS = [
+  {value:'alpha', label:'Alphabétique'},
+  {value:'created', label:'Date de création'},
+  {value:'modified', label:'Date de modification'},
+  {value:'count', label:'Nombre de souvenirs'},
+  {value:'status', label:'Statut'},
+];
+const STATUS_ORDER = {a_traiter:0, en_cours:1, traite:2};
 
 function sortFolders(list, mode){
   const arr = [...list];
   if(mode==='alpha') arr.sort((a,b)=> a.name.localeCompare(b.name));
-  else if(mode==='date') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
+  else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
   else if(mode==='count') arr.sort((a,b)=> traumas.filter(t=>t.folderId===b.id).length - traumas.filter(t=>t.folderId===a.id).length);
+  else if(mode==='status'){
+    arr.sort((a,b)=> a.name.localeCompare(b.name));
+    const isDone = f=>{ const items = traumas.filter(t=>t.folderId===f.id); return items.length>0 && items.every(t=>t.status==='traite'); };
+    arr.sort((a,b)=> (isDone(a)?1:0) - (isDone(b)?1:0));
+  }
   return arr;
 }
 function sortTraumas(list, mode){
   const arr = [...list];
   if(mode==='alpha') arr.sort((a,b)=> a.title.localeCompare(b.title));
-  else if(mode==='date') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
-  arr.sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0));
+  else if(mode==='created') arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  else if(mode==='modified') arr.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
+  else if(mode==='status') arr.sort((a,b)=> (STATUS_ORDER[a.status]??0) - (STATUS_ORDER[b.status]??0));
+  if(mode!=='status'){ arr.sort((a,b)=> (a.status==='traite'?1:0) - (b.status==='traite'?1:0)); }
   return arr;
 }
 
@@ -666,11 +710,14 @@ function renderLibrary(){
     <div class="lib-toolbar fs" style="animation-delay:.3s">
       <input type="text" id="lib-search" placeholder="Rechercher un souvenir ou un dossier...">
       <div class="lib-toolbar-actions">
-        <select id="lib-sort" title="Trier par">
-          <option value="alpha">Alphabétique</option>
-          <option value="date">Date de modification</option>
-          <option value="count">Nombre de souvenirs</option>
-        </select>
+        <div class="lib-sort-wrap">
+          <button id="lib-sort-btn" class="toolbar-icon-btn" title="Trier">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4v16M7 4L3 8M7 4l4 4"/><path d="M17 20V4M17 20l4-4M17 20l-4-4"/></svg>
+          </button>
+          <div class="lib-sort-panel" id="lib-sort-panel">
+            ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}">${o.label}</button>`).join('')}
+          </div>
+        </div>
         <button id="add-t">+ Souvenir</button>
         <button id="add-f">+ Dossier</button>
       </div>
@@ -679,12 +726,23 @@ function renderLibrary(){
   `;
   document.body.classList.add('hide-l','hide-r');
   const searchInput = s.querySelector('#lib-search');
-  const sortSelect = s.querySelector('#lib-sort');
-  sortSelect.value = libSortMode;
   const scrollEl = s.querySelector('#lib-scroll');
   function update(){ renderLibraryBody(scrollEl, searchInput.value.trim().toLowerCase()); }
   searchInput.addEventListener('input', update);
-  sortSelect.addEventListener('change', ()=>{ libSortMode = sortSelect.value; localStorage.setItem(LS_LIBSORT, libSortMode); update(); });
+
+  const sortBtn = s.querySelector('#lib-sort-btn');
+  const sortPanel = s.querySelector('#lib-sort-panel');
+  function refreshSortPanel(){ sortPanel.querySelectorAll('button').forEach(b=> b.classList.toggle('selected', b.dataset.sort===libSortMode)); }
+  refreshSortPanel();
+  sortBtn.addEventListener('click', (e)=>{ e.stopPropagation(); sortPanel.classList.toggle('open'); });
+  sortPanel.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+    libSortMode = b.dataset.sort;
+    localStorage.setItem(LS_LIBSORT, libSortMode);
+    refreshSortPanel();
+    sortPanel.classList.remove('open');
+    update();
+  }));
+
   s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
   s.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(null,'library',renderLibrary)));
   update();
@@ -717,8 +775,8 @@ function renderFolderView(folderId){
   s.innerHTML = `
     <h2 class="instruction fs">${escapeHtml(folder ? folder.name : '')}</h2>
     <div class="sel-scroll">
+      <div class="lib-add-top-wrap fs" style="animation-delay:.35s"><button class="lib-add-top" id="add-t-folder">+ Souvenir</button></div>
       <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Dossier vide.</p>'}</div>
-      <button class="sel-add fs" id="add-t-folder" style="animation-delay:.6s">+ Souvenir</button>
     </div>
   `;
   document.body.classList.add('hide-r');
@@ -1171,17 +1229,10 @@ function renderAccountPanel(){
       if(currentFn) currentFn();
     });
   } else {
-    panel.innerHTML = `
-      <button id="acc-panel-login">Se connecter</button>
-      <button id="acc-panel-signup">Créer un compte</button>
-    `;
+    panel.innerHTML = `<button id="acc-panel-login">Se connecter</button>`;
     panel.querySelector('#acc-panel-login').addEventListener('click', ()=>{
       panel.classList.remove('open');
       goTo('authlogin', ()=> renderAuthForm('login'));
-    });
-    panel.querySelector('#acc-panel-signup').addEventListener('click', ()=>{
-      panel.classList.remove('open');
-      goTo('authsignup', ()=> renderAuthForm('signup'));
     });
   }
 }
@@ -1194,8 +1245,13 @@ function renderAuthForm(mode){
     <div class="free-text-wrap fs" style="animation-delay:.3s"><input type="text" id="auth-email" placeholder="Email"></div>
     <div class="free-text-wrap fs" style="animation-delay:.4s"><input type="password" id="auth-pw" placeholder="Mot de passe"></div>
     <p class="form-error" id="auth-error"></p>
-    <button class="sel-add fs" id="auth-submit" style="animation-delay:.5s;">${isSignup ? 'Créer mon compte' : 'Se connecter'}</button>
-    ${!isSignup ? `<button class="sel-alt fs" id="auth-forgot" style="animation-delay:.6s;">Mot de passe oublié ?</button>` : ''}
+    <button class="pill-btn fs" id="auth-submit" style="animation-delay:.5s;">${isSignup ? 'Créer mon compte' : 'Se connecter'}</button>
+    ${!isSignup ? `
+      <button class="sel-alt fs" id="auth-forgot" style="animation-delay:.6s;">Mot de passe oublié ?</button>
+      <button class="sel-alt fs" id="auth-toggle-signup" style="animation-delay:.65s;">Pas de compte ? Créer un compte</button>
+    ` : `
+      <button class="sel-alt fs" id="auth-toggle-login" style="animation-delay:.6s;">Déjà un compte ? Se connecter</button>
+    `}
   `;
   document.body.classList.add('hide-r');
   const errEl = s.querySelector('#auth-error');
@@ -1229,7 +1285,12 @@ function renderAuthForm(mode){
   };
   s.querySelector('#auth-submit').addEventListener('click', submit);
   forwardAction = submit;
-  if(!isSignup) s.querySelector('#auth-forgot').addEventListener('click', ()=> goTo('forgotpw', renderForgotPassword));
+  if(!isSignup){
+    s.querySelector('#auth-forgot').addEventListener('click', ()=> goTo('forgotpw', renderForgotPassword));
+    s.querySelector('#auth-toggle-signup').addEventListener('click', ()=> goTo('authsignup', ()=> renderAuthForm('signup')));
+  } else {
+    s.querySelector('#auth-toggle-login').addEventListener('click', ()=> goTo('authlogin', ()=> renderAuthForm('login')));
+  }
 }
 
 function renderRecoveryPhraseReveal(phrase, returnPhase, returnFn){
