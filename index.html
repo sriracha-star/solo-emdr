@@ -9,7 +9,7 @@
     --bg:#EEF3F2; --bg-soft:#E3ECEA; --ink:#24313A; --ink-soft:#5B6B72;
     --teal:#3E7371; --teal-deep:#2A5654; --clay:#C9825F; --clay-soft:#E7C3AC;
     --line:#C9D6D3; --dusk:#0F1E27; --dusk-2:#16303B;
-    --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF; --teal-soft:#CFE3E0;
+    --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF; --teal-soft:#CFE3E0; --folder-neutral:#D7DEE6;
     --font-display: Georgia, 'Times New Roman', serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
   }
@@ -92,7 +92,7 @@
 
   /* selection screen */
   #stage.select-view{ align-items:center; overflow:hidden; }
-  #stage.select-view h2.instruction{ flex:0 0 auto; width:100%; margin:0 0 4px; }
+  #stage.select-view h2.instruction{ flex:0 0 auto; width:100%; margin:0 0 20px; }
   .sel-scroll{ flex:1 1 auto; min-height:0; width:100%; overflow-y:auto; display:flex; flex-direction:column; align-items:center; padding-bottom:12px; }
   .sel-list{ width:min(560px,92%); display:flex; flex-direction:column; gap:10px; margin-top:14px; }
   .sel-card{ background:white; border:1px solid var(--line); border-radius:12px; padding:12px 16px; text-align:left; cursor:pointer;
@@ -123,22 +123,25 @@
   .folder-opt:hover{ border-color:var(--clay); }
   .folder-opt.selected{ background:var(--clay); border-color:var(--clay); color:white; }
 
+  /* search */
+  .lib-search-wrap{ width:min(420px,88%); flex:0 0 auto; margin:0 0 30px; }
+  .lib-search-wrap input{ width:100%; font-size:13.5px; padding:8px 16px; border-radius:20px; border:1px solid var(--line);
+    background:var(--bg-soft); color:var(--ink); }
+  .lib-search-wrap input::placeholder{ color:var(--ink-soft); }
+  .lib-search-wrap input:focus{ outline:none; border-color:var(--teal); background:white; }
+
   /* folder grid */
-  .lib-search-wrap{ width:min(560px,92%); flex:0 0 auto; margin:0 0 14px; }
-  .lib-search-wrap input{ font-size:14px; padding:10px 14px; }
-  .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:18px 16px; margin:0 0 22px; }
-  .folder-tile{ position:relative; cursor:pointer; padding-top:14px; }
-  .folder-tab{ width:44%; height:14px; margin-left:8%; border-radius:8px 8px 0 0; background:var(--clay-soft); }
-  .folder-body{ background:var(--clay-soft); border-radius:3px 14px 14px 14px; padding:14px 12px 12px; text-align:left;
-    min-height:64px; display:flex; flex-direction:column; justify-content:flex-end; box-shadow:0 3px 8px rgba(0,0,0,.08); }
-  .folder-tile.all-done .folder-tab, .folder-tile.all-done .folder-body{ background:var(--teal-soft); }
+  .folder-grid{ width:min(920px,96%); display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; margin:0 0 24px; }
+  .folder-tile{ position:relative; cursor:pointer; min-height:104px; border-radius:14px; padding:14px; text-align:left;
+    background:var(--folder-neutral); display:flex; flex-direction:column; justify-content:flex-end; }
+  .folder-tile.all-done{ background:var(--teal-soft); }
   .folder-name{ font-weight:600; font-size:14px; color:var(--ink); word-break:break-word; }
   .folder-count{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
-  .folder-actions{ position:absolute; top:-6px; right:-6px; display:flex; gap:4px; opacity:0; transition:opacity .15s ease; }
+  .folder-actions{ position:absolute; top:8px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity .15s ease; }
   .folder-tile:hover .folder-actions{ opacity:1; }
-  .folder-actions button{ width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background:white;
+  .folder-actions button{ width:24px; height:24px; border-radius:50%; border:1px solid rgba(0,0,0,.08); background:rgba(255,255,255,.75);
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
-  .folder-actions button:hover{ border-color:var(--clay); color:var(--ink); }
+  .folder-actions button:hover{ background:white; color:var(--ink); }
 
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
@@ -224,6 +227,7 @@ function goTo(phase, fn){
   currentPhase = phase; currentFn = fn;
   document.body.classList.remove('hide-r','hide-l');
   forwardAction=null; spaceAction=null;
+  window.history.pushState({soloemdrNav:true}, '', location.href);
   fn();
 }
 let currentFn = null;
@@ -242,6 +246,9 @@ document.addEventListener('keydown',(e)=>{
 });
 $('chevL').addEventListener('click',goBack);
 $('chevR').addEventListener('click',()=>{ if(forwardAction) forwardAction(); });
+/* keep the browser's own back button inside the app instead of leaving the page */
+window.history.replaceState({soloemdrNav:true}, '', location.href);
+window.addEventListener('popstate', ()=> goBack());
 
 function stageBase(){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('stage-dark','phase-positive'); const s=$('stage'); s.className=''; s.innerHTML=''; return s; }
 function fs(html, delay){ return `<div class="fs" style="animation-delay:${delay}s">${html}</div>`; }
@@ -305,7 +312,8 @@ function renderSelect(){
     beginSession(t.id, t.title, t.description);
   }));
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
-    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); renderSelect();
+    e.stopPropagation();
+    goTo('confirmdel', ()=> renderConfirmDelete('trauma', b.dataset.del, 'select', renderSelect));
   }));
   s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'select',renderSelect)));
   s.querySelector('#free-s').addEventListener('click', ()=> beginSession(null,'Séance libre',''));
@@ -360,7 +368,8 @@ function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
     goTo('editform', ()=> renderTraumaForm(t,returnPhase,returnFn));
   }));
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
-    e.stopPropagation(); traumas = traumas.filter(x=>x.id!==b.dataset.del); saveTraumas(traumas); refresh();
+    e.stopPropagation();
+    goTo('confirmdel', ()=> renderConfirmDelete('trauma', b.dataset.del, returnPhase, returnFn));
   }));
 }
 
@@ -376,11 +385,8 @@ function folderTileHtml(f){
   const allDone = items.length>0 && items.every(t=>t.status==='traite');
   return `
     <div class="folder-tile ${allDone?'all-done':''}" data-folder-id="${f.id}">
-      <div class="folder-tab"></div>
-      <div class="folder-body">
-        <div class="folder-name">${escapeHtml(f.name)}</div>
-        <div class="folder-count">${items.length} souvenir${items.length>1?'s':''}</div>
-      </div>
+      <div class="folder-name">${escapeHtml(f.name)}</div>
+      <div class="folder-count">${items.length} souvenir${items.length>1?'s':''}</div>
       <div class="folder-actions">
         <button data-edit-folder="${f.id}" title="Modifier">✎</button>
         <button data-del-folder="${f.id}" title="Supprimer">✕</button>
@@ -402,8 +408,7 @@ function wireFolderTiles(s, returnPhase, returnFn, localRefresh){
   }));
   s.querySelectorAll('[data-del-folder]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    deleteFolder(b.dataset.delFolder);
-    refresh();
+    goTo('confirmdel', ()=> renderConfirmDelete('folder', b.dataset.delFolder, returnPhase, returnFn));
   }));
 }
 
@@ -475,8 +480,7 @@ function renderFolderForm(folder, returnPhase, returnFn){
   document.body.classList.add('hide-r');
   if(isEdit){
     s.querySelector('#folder-del').addEventListener('click', ()=>{
-      deleteFolder(folder.id);
-      history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
+      goTo('confirmdel', ()=> renderConfirmDelete('folder', folder.id, returnPhase, returnFn));
     });
   }
   forwardAction = ()=>{
@@ -485,6 +489,29 @@ function renderFolderForm(folder, returnPhase, returnFn){
     else if(name){ folders.push({id:'f_'+Date.now(), name, createdAt:Date.now()}); saveFolders(folders); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
+}
+
+function renderConfirmDelete(kind, id, returnPhase, returnFn){
+  const s = stageBase();
+  const isFolder = kind==='folder';
+  const item = isFolder ? folders.find(f=>f.id===id) : traumas.find(t=>t.id===id);
+  const label = item ? (isFolder ? item.name : item.title) : '';
+  s.innerHTML = `
+    <h2 class="instruction fs">Supprimer ${isFolder ? 'le dossier' : 'le souvenir'} « ${escapeHtml(label)} » ?</h2>
+    <p class="sub fs" style="animation-delay:.3s">${isFolder ? "Les souvenirs qu'il contient ne seront pas supprimés : ils redeviendront simplement sans dossier." : 'Cette action est irréversible.'}</p>
+    <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center; margin-top:10px;">
+      <button class="sel-add" id="confirm-cancel">Annuler</button>
+      <button class="sel-add" id="confirm-del">Supprimer</button>
+    </div>
+  `;
+  document.body.classList.add('hide-r');
+  const cancel = ()=>{ history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn(); };
+  s.querySelector('#confirm-cancel').addEventListener('click', cancel);
+  s.querySelector('#confirm-del').addEventListener('click', ()=>{
+    if(isFolder){ deleteFolder(id); } else { traumas = traumas.filter(x=>x.id!==id); saveTraumas(traumas); }
+    history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
+  });
+  forwardAction = cancel;
 }
 
 function renderTraumaForm(trauma, returnPhase, returnFn){
