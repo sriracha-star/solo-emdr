@@ -308,7 +308,7 @@ async function ensureVaultCreated(userId, email, password){
 }
 
 async function vaultSignUp(email, password){
-  const {data, error} = await supa.auth.signUp({email, password});
+  const {data, error} = await supa.auth.signUp({email, password, options:{emailRedirectTo: location.origin+location.pathname}});
   if(error) throw error;
   if(!data.session) return {needsConfirmation:true};
   const result = await ensureVaultCreated(data.user.id, email, password);
