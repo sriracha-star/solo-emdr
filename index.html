@@ -971,22 +971,36 @@ const DEFAULT_TRAUMA_PRIORITY = 3;
 function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
   const s = stageBase();
   const isEdit = !!trauma;
+  let currentPriority = DEFAULT_TRAUMA_PRIORITY;
   s.innerHTML = `
     <h2 class="instruction fs">${isEdit ? 'Modifier le souvenir' : 'Ajouter un souvenir'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
       <input type="text" id="tf-title" placeholder="Titre court" value="${isEdit ? escapeHtml(trauma.title) : ''}">
     </div>
+    ${!isEdit ? `<div class="free-text-wrap fs" style="animation-delay:.4s; text-align:left;">
+      <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Priorité</label>
+      <div class="priority-picker" id="tf-priority-picker">
+        ${PRIORITY_LEVELS.map(n=>`<button type="button" class="priority-btn${n===currentPriority?' selected':''}" data-v="${n}">${n}</button>`).join('')}
+      </div>
+    </div>` : ''}
     <div class="free-text-wrap fs" style="animation-delay:.5s">
       <textarea id="tf-desc" placeholder="Détail (facultatif)">${isEdit ? escapeHtml(trauma.description) : ''}</textarea>
     </div>
     <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
   document.body.classList.add('hide-r');
+  if(!isEdit){
+    const priorityBtns = s.querySelectorAll('.priority-btn');
+    priorityBtns.forEach(b=> b.addEventListener('click', ()=>{
+      currentPriority = +b.dataset.v;
+      priorityBtns.forEach(x=> x.classList.toggle('selected', +x.dataset.v===currentPriority));
+    }));
+  }
   forwardAction = ()=>{
     const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
     const description = s.querySelector('#tf-desc').value.trim();
     if(isEdit){ trauma.title = title; trauma.description = description; trauma.updatedAt = Date.now(); }
-    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:DEFAULT_TRAUMA_PRIORITY, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
+    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:currentPriority, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
     saveTraumas(traumas);
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
