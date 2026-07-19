@@ -98,8 +98,6 @@
   .priority-btn.selected{ background:var(--teal); border-color:var(--teal); color:white; }
   .priority-btn:disabled{ cursor:default; opacity:.55; }
   .priority-btn:disabled:hover{ border-color:var(--line); }
-  .t-priority-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px;
-    border-radius:999px; background:var(--teal); color:white; font-size:10.5px; font-weight:600; line-height:1; }
 
   .hint-line{ font-size:12.5px; color:var(--ink-soft); margin-top:26px; }
 
@@ -140,11 +138,11 @@
   .sel-card-done{ opacity:.5; }
 
   /* collapsible picker rows: grid-rows trick so height always matches content, never clips */
-  .status-picker, .folder-picker{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
+  .status-picker, .folder-picker, .priority-card-picker{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
     border-top:1px solid transparent;
     transition:grid-template-rows .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .status-picker.open, .folder-picker.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
-  .status-picker > div, .folder-picker > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
+  .status-picker.open, .folder-picker.open, .priority-card-picker.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .status-picker > div, .folder-picker > div, .priority-card-picker > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
   .status-opt{ flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
   .status-opt:hover{ border-color:var(--teal); }
@@ -244,7 +242,7 @@
 <script>
 const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings', LS_FOLDERS='soloemdr_folders';
 const $ = id => document.getElementById(id);
-function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function loadTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_TRAUMAS))||[]; }catch(e){ return []; } }
 function saveTraumas(list){ localStorage.setItem(LS_TRAUMAS, JSON.stringify(list)); scheduleSync(); }
 let traumas = loadTraumas();
@@ -601,13 +599,14 @@ function traumaCardHtml(t){
   return `
     <div class="sel-card has-status ${t.status==='traite' ? 'sel-card-done' : ''}" data-id="${t.id}">
       <div class="sel-card-top">
-        <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px; display:flex; align-items:center; gap:6px;">
-          <span>${STATUS_LABEL[t.status]||''}</span>${t.priority ? `<span class="t-priority-badge" title="Priorité ${t.priority}${t.status==='traite' ? ' (indicative)' : ''}">P${t.priority}</span>` : ''}
-        </div></div>
+        <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}${t.priority ? ` · priorité ${t.priority}` : ''}</div></div>
         <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
       </div>
       <div class="status-picker"><div>
         ${Object.entries(STATUS_LABEL).map(([val,label])=>`<button class="status-opt ${t.status===val?'selected':''}" data-status="${val}" data-id="${t.id}">${label}</button>`).join('')}
+      </div></div>
+      <div class="priority-card-picker"><div>
+        ${PRIORITY_LEVELS.map(n=>`<button type="button" class="priority-btn priority-card-opt${t.priority===n?' selected':''}" data-priority="${n}" data-id="${t.id}"${t.status==='traite' ? ' disabled' : ''}>${n}</button>`).join('')}
       </div></div>
       ${folders.length ? `<div class="folder-picker"><div>
         <button class="folder-opt ${!t.folderId?'selected':''}" data-folder="" data-id="${t.id}">Aucun dossier</button>
@@ -619,17 +618,27 @@ function traumaCardHtml(t){
 function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
   const refresh = localRefresh || returnFn;
   s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
-    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker')) return;
+    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker')) return;
     const picker = c.querySelector('.status-picker');
     const folderPicker = c.querySelector('.folder-picker');
+    const priorityPicker = c.querySelector('.priority-card-picker');
     const isOpen = picker.classList.contains('open');
-    s.querySelectorAll('.status-picker.open, .folder-picker.open').forEach(p=> p.classList.remove('open'));
-    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); }
+    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open').forEach(p=> p.classList.remove('open'));
+    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); }
   }));
   s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
     const t = traumas.find(x=>x.id===b.dataset.id);
     t.status = b.dataset.status;
+    t.updatedAt = Date.now();
+    saveTraumas(traumas);
+    refresh();
+  }));
+  s.querySelectorAll('.priority-card-opt').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const t = traumas.find(x=>x.id===b.dataset.id);
+    if(t.status==='traite') return;
+    t.priority = +b.dataset.priority;
     t.updatedAt = Date.now();
     saveTraumas(traumas);
     refresh();
@@ -852,6 +861,7 @@ function renderFolderView(folderId){
   s.querySelector('#edit-folder-btn').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(folder, 'folder_'+folderId, ()=> renderFolderView(folderId))));
 }
 
+const PRIORITY_LEVELS = [1,2,3,4,5,6];
 const DEFAULT_FOLDER_COLOR = '#D7DEE6';
 const DEFAULT_FOLDER_PRIORITY = 3;
 function renderFolderForm(folder, returnPhase, returnFn){
@@ -867,7 +877,7 @@ function renderFolderForm(folder, returnPhase, returnFn){
     <div class="free-text-wrap fs" style="animation-delay:.35s; text-align:left;">
       <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Priorité</label>
       <div class="priority-picker" id="folder-priority-picker">
-        ${[1,2,3,4,5].map(n=>`<button type="button" class="priority-btn${n===currentPriority?' selected':''}" data-v="${n}">${n}</button>`).join('')}
+        ${PRIORITY_LEVELS.map(n=>`<button type="button" class="priority-btn${n===currentPriority?' selected':''}" data-v="${n}">${n}</button>`).join('')}
       </div>
     </div>
     <div class="free-text-wrap fs" style="animation-delay:.4s; text-align:left;">
@@ -961,18 +971,10 @@ const DEFAULT_TRAUMA_PRIORITY = 3;
 function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
   const s = stageBase();
   const isEdit = !!trauma;
-  const isDone = isEdit && trauma.status==='traite';
-  let currentPriority = (isEdit && trauma.priority) ? trauma.priority : DEFAULT_TRAUMA_PRIORITY;
   s.innerHTML = `
     <h2 class="instruction fs">${isEdit ? 'Modifier le souvenir' : 'Ajouter un souvenir'}</h2>
     <div class="free-text-wrap fs" style="animation-delay:.3s">
       <input type="text" id="tf-title" placeholder="Titre court" value="${isEdit ? escapeHtml(trauma.title) : ''}">
-    </div>
-    <div class="free-text-wrap fs" style="animation-delay:.4s; text-align:left;">
-      <label style="display:block;font-size:12.5px;color:var(--ink-soft);margin-bottom:4px;">Priorité${isDone ? ' (indicative — souvenir traité)' : ''}</label>
-      <div class="priority-picker" id="tf-priority-picker">
-        ${[1,2,3,4,5].map(n=>`<button type="button" class="priority-btn${n===currentPriority?' selected':''}" data-v="${n}"${isDone ? ' disabled' : ''}>${n}</button>`).join('')}
-      </div>
     </div>
     <div class="free-text-wrap fs" style="animation-delay:.5s">
       <textarea id="tf-desc" placeholder="Détail (facultatif)">${isEdit ? escapeHtml(trauma.description) : ''}</textarea>
@@ -980,18 +982,11 @@ function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
     <p class="hint-line fs" style="animation-delay:.7s">Entrée pour enregistrer, ‹ pour annuler</p>
   `;
   document.body.classList.add('hide-r');
-  if(!isDone){
-    const priorityBtns = s.querySelectorAll('.priority-btn');
-    priorityBtns.forEach(b=> b.addEventListener('click', ()=>{
-      currentPriority = +b.dataset.v;
-      priorityBtns.forEach(x=> x.classList.toggle('selected', +x.dataset.v===currentPriority));
-    }));
-  }
   forwardAction = ()=>{
     const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
     const description = s.querySelector('#tf-desc').value.trim();
-    if(isEdit){ trauma.title = title; trauma.description = description; if(!isDone) trauma.priority = currentPriority; trauma.updatedAt = Date.now(); }
-    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:currentPriority, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
+    if(isEdit){ trauma.title = title; trauma.description = description; trauma.updatedAt = Date.now(); }
+    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:DEFAULT_TRAUMA_PRIORITY, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
     saveTraumas(traumas);
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
