@@ -1251,11 +1251,19 @@ function computeXY(t){
   const swing=Math.sin(t*Math.PI*2);
   return {x:0.5+swing*0.42, y:0.5};
 }
+function ensureAudioCtx(){
+  try{
+    if(!bls.audioCtx) bls.audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(bls.audioCtx.state==='suspended') bls.audioCtx.resume();
+  }catch(e){}
+  return bls.audioCtx;
+}
 function playTick(side){
   if(!settings.audio) return;
   try{
-    if(!bls.audioCtx) bls.audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    const ctx=bls.audioCtx, osc=ctx.createOscillator(), gain=ctx.createGain(), pan=ctx.createStereoPanner();
+    const ctx=ensureAudioCtx();
+    if(!ctx || ctx.state!=='running') return;
+    const osc=ctx.createOscillator(), gain=ctx.createGain(), pan=ctx.createStereoPanner();
     osc.type='sine'; osc.frequency.value=420; pan.pan.value=side==='L'?-1:1;
     const now=ctx.currentTime;
     gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(0.18,now+0.012); gain.gain.exponentialRampToValueAtTime(0.0001,now+0.11);
@@ -1286,6 +1294,7 @@ function showBall(mode, resp){
 }
 
 function startBLS(mode){
+  if(settings.audio) ensureAudioCtx();
   spaceAction = ()=> requestStop();
   bls.mode=mode; bls.running=true; bls.accumulated=0; bls.resumeTime=performance.now(); bls.lastSide=null;
   if(mode==='neg') session.negSets++; else if(mode==='pos') session.posSets++;
