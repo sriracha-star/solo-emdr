@@ -1153,19 +1153,19 @@ function renderFeel(){
 }
 
 function bucketLabelPresence(v){
-  if(v<=1) return 'Pas du tout';
-  if(v<=3) return 'Un peu';
-  if(v<=5) return 'Bof, moyennement';
-  if(v<=7) return 'Plutôt oui';
-  if(v<=9) return 'Beaucoup';
+  if(v<=0) return 'Pas du tout';
+  if(v<=2) return 'Un peu';
+  if(v<=4) return 'Bof, moyennement';
+  if(v<=6) return 'Plutôt oui';
+  if(v<=8) return 'Beaucoup';
   return 'Totalement';
 }
 function bucketLabelDistress(v){
-  if(v<=1) return 'Aucune gêne';
-  if(v<=3) return 'Un peu';
-  if(v<=5) return 'Modérément';
-  if(v<=7) return 'Beaucoup';
-  if(v<=9) return 'Énormément';
+  if(v<=0) return 'Aucune gêne';
+  if(v<=2) return 'Un peu';
+  if(v<=4) return 'Modérément';
+  if(v<=6) return 'Beaucoup';
+  if(v<=8) return 'Énormément';
   return 'Insupportable';
 }
 
@@ -1173,7 +1173,7 @@ const VOC_SCALE_KEYS = new Set(['level2','endVoc']);
 function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn, showDetail, introHtml){
   const s = stageBase();
   const labelFn = VOC_SCALE_KEYS.has(storeKey) ? bucketLabelPresence : bucketLabelDistress;
-  const numbersHtml = Array.from({length:10},(_,i)=>i+1).map(n=>`<button class="scale-num" data-v="${n}">${n}</button>`).join('');
+  const numbersHtml = Array.from({length:11},(_,i)=>i).map(n=>`<button class="scale-num" data-v="${n}">${n}</button>`).join('');
   s.innerHTML = `
     <h2 class="instruction fs">${title}</h2>
     ${introHtml ? `<p class="sub fs" style="animation-delay:.5s">${introHtml}</p>` : ''}
@@ -1494,7 +1494,7 @@ function renderSessionEnd(){
       });
       t.status = 'en_cours'; t.updatedAt = Date.now();
       saveTraumas(traumas);
-      const success = session.endDistress!=null && session.endDistress<=2;
+      const success = session.endDistress!=null && session.endDistress<=1;
       if(success){
         autoAdvance = false;
         s.querySelector('#status-row').innerHTML = `
