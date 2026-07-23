@@ -138,11 +138,15 @@
   .sel-card-done{ opacity:.5; }
 
   /* collapsible picker rows: grid-rows trick so height always matches content, never clips */
-  .status-picker, .folder-picker, .priority-card-picker{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
+  .status-picker, .folder-picker, .priority-card-picker, .sessions-history{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
     border-top:1px solid transparent;
     transition:grid-template-rows .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .status-picker.open, .folder-picker.open, .priority-card-picker.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
-  .status-picker > div, .folder-picker > div, .priority-card-picker > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
+  .status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .status-picker > div, .folder-picker > div, .priority-card-picker > div, .sessions-history > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
+  .sessions-history > div{ flex-direction:column; gap:6px; }
+  .sessions-history-title{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); }
+  .session-entry{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; }
+  .session-entry .session-date{ color:var(--ink-soft); white-space:nowrap; }
   .status-opt{ flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
   .status-opt:hover{ border-color:var(--teal); }
@@ -595,6 +599,20 @@ function renderSelect(){
 
 const STATUS_LABEL = {a_traiter:'À traiter', en_cours:'En cours', traite:'Traité'};
 
+function sessionsHistoryHtml(t){
+  const sessions = t.sessions || [];
+  if(!sessions.length) return '';
+  const rows = [...sessions].reverse().map(sess=>{
+    const d = new Date(sess.at);
+    const dateStr = d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const timeStr = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+    const startStr = sess.startDistress!=null ? sess.startDistress : '—';
+    const endStr = sess.endDistress!=null ? sess.endDistress : '—';
+    return `<div class="session-entry"><span class="session-date">${dateStr} · ${timeStr}</span><span>Début : ${startStr}/10 → Fin : ${endStr}/10</span></div>`;
+  }).join('');
+  return `<div class="sessions-history"><div><div class="sessions-history-title">Historique des séances</div>${rows}</div></div>`;
+}
+
 function traumaCardHtml(t){
   return `
     <div class="sel-card has-status ${t.status==='traite' ? 'sel-card-done' : ''}" data-id="${t.id}">
@@ -612,19 +630,21 @@ function traumaCardHtml(t){
         <button class="folder-opt ${!t.folderId?'selected':''}" data-folder="" data-id="${t.id}">Aucun dossier</button>
         ${folders.map(f=>`<button class="folder-opt ${t.folderId===f.id?'selected':''}" data-folder="${f.id}" data-id="${t.id}">${escapeHtml(f.name)}</button>`).join('')}
       </div></div>` : ''}
+      ${sessionsHistoryHtml(t)}
     </div>`;
 }
 
 function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
   const refresh = localRefresh || returnFn;
   s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
-    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker')) return;
+    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker') || e.target.closest('.sessions-history')) return;
     const picker = c.querySelector('.status-picker');
     const folderPicker = c.querySelector('.folder-picker');
     const priorityPicker = c.querySelector('.priority-card-picker');
+    const sessionsHistory = c.querySelector('.sessions-history');
     const isOpen = picker.classList.contains('open');
-    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open').forEach(p=> p.classList.remove('open'));
-    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); }
+    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open').forEach(p=> p.classList.remove('open'));
+    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); if(sessionsHistory) sessionsHistory.classList.add('open'); }
   }));
   s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
@@ -1008,7 +1028,8 @@ function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
 
 function beginSession(traumaId, title, description){
   session = { traumaId, title, description, feltText:'', level1:null, level1Detail:'',
-    desiredText:'', level2:null, level2Detail:'', negSets:0, posSets:0, closureStep:0 };
+    desiredText:'', level2:null, level2Detail:'', negSets:0, posSets:0, closureStep:0,
+    startDistress:null, endVoc:null, endVocDetail:'', endDistress:null, endDistressDetail:'' };
   goTo('loading1', ()=> renderLoading({phase:'connect', fn:renderConnect}));
 }
 
@@ -1034,7 +1055,7 @@ function renderConnect(){
 function renderFeel(){
   const s = stageBase();
   s.innerHTML = `
-    <h2 class="instruction fs">Que ressentez-vous ?</h2>
+    <h2 class="instruction fs">Quelle affirmation vous vient ?</h2>
     <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.feltText||''}</textarea></div>
   `;
   forwardAction = ()=>{ session.feltText = s.querySelector('#ta').value; goTo('level1', renderLevel1); };
@@ -1048,21 +1069,23 @@ function bucketLabelPresence(v){
   if(v<=9) return 'Beaucoup';
   return 'Totalement';
 }
-function bucketLabelValence(v){
-  if(v<=1) return 'Très mal';
-  if(v<=3) return 'Mal';
-  if(v<=5) return 'Plutôt mal';
-  if(v<=7) return 'Plutôt bien';
-  if(v<=9) return 'Bien';
-  return 'Très bien';
+function bucketLabelDistress(v){
+  if(v<=1) return 'Aucune gêne';
+  if(v<=3) return 'Un peu';
+  if(v<=5) return 'Modérément';
+  if(v<=7) return 'Beaucoup';
+  if(v<=9) return 'Énormément';
+  return 'Insupportable';
 }
 
-function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn, showDetail){
+const VOC_SCALE_KEYS = new Set(['level2','endVoc']);
+function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn, showDetail, introHtml){
   const s = stageBase();
-  const labelFn = storeKey==='level2' ? bucketLabelPresence : bucketLabelValence;
+  const labelFn = VOC_SCALE_KEYS.has(storeKey) ? bucketLabelPresence : bucketLabelDistress;
   const numbersHtml = Array.from({length:10},(_,i)=>i+1).map(n=>`<button class="scale-num" data-v="${n}">${n}</button>`).join('');
   s.innerHTML = `
     <h2 class="instruction fs">${title}</h2>
+    ${introHtml ? `<p class="sub fs" style="animation-delay:.5s">${introHtml}</p>` : ''}
     <div class="scale-wrap fs" style="animation-delay:.9s">
       <div class="scale-label" id="sl-label"></div>
       <div class="scale-numbers" id="sl-numbers">${numbersHtml}</div>
@@ -1088,19 +1111,23 @@ function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn, showDe
   };
 }
 
-function renderLevel1(){ renderScaleScreen("Comment ça va ?", 'level1','level1Detail','desired',renderDesired,false); }
+function renderLevel1(){
+  renderScaleScreen("À quel point ce souvenir vous dérange-t-il maintenant ?", 'level1','level1Detail','desired',renderDesired,false);
+  const proceed = forwardAction;
+  forwardAction = ()=>{ proceed(); session.startDistress = session.level1; };
+}
 
 function renderDesired(){
   const s = stageBase();
   document.body.classList.add('phase-positive');
   s.innerHTML = `
-    <h2 class="instruction fs">Que voudriez-vous ressentir ?</h2>
+    <h2 class="instruction fs">Quelle affirmation voudriez-vous croire ?</h2>
     <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.desiredText||''}</textarea></div>
   `;
   forwardAction = ()=>{ session.desiredText = s.querySelector('#ta').value; goTo('level2', renderLevel2); };
 }
 function renderLevel2(){
-  renderScaleScreen("À quel point en êtes-vous proche ?", 'level2','level2Detail','loading2neg',
+  renderScaleScreen("À quel point cette affirmation vous semble vraie maintenant ?", 'level2','level2Detail','loading2neg',
     ()=> renderLoading({phase:'reconnect_neg', fn:()=>renderReconnect('neg')}));
   document.body.classList.add('phase-positive');
 }
@@ -1160,7 +1187,7 @@ function showBall(mode, resp){
   const skipBtn = $('skip-link');
   if(skipBtn) skipBtn.addEventListener('click', ()=>{
     if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos'));
-    else if(mode==='pos') goTo('bodyscan', renderBodyScan);
+    else if(mode==='pos') goTo('vocrecap', renderVocRecap);
   });
   spaceAction = ()=> startBLS(mode);
 }
@@ -1253,7 +1280,7 @@ function showStayOn(mode, nothing){
 function showCheckpointDark(mode){
   $('bls-stage').style.display='none'; $('stage').style.display='flex';
   document.body.classList.remove('hide-l','hide-r');
-  renderScaleScreen(mode==='neg' ? "Comment ça va ?" : "À quel point en êtes-vous proche ?",
+  renderScaleScreen(mode==='neg' ? "À quel point ce souvenir vous dérange-t-il maintenant ?" : "À quel point cette affirmation vous semble vraie maintenant ?",
     mode==='neg'?'level1':'level2', mode==='neg'?'level1Detail':'level2Detail',
     'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), mode!=='neg');
   if(mode==='pos') document.body.classList.add('phase-positive');
@@ -1273,7 +1300,7 @@ function renderCheckpointChoice(mode){
       <button class="sel-add" id="cc-advance">Passer à la suite</button>
     </div>
   `;
-  const advance = ()=>{ if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos')); else goTo('bodyscan', renderBodyScan); };
+  const advance = ()=>{ if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos')); else goTo('vocrecap', renderVocRecap); };
   const more = ()=> goTo('reconnect_'+mode, ()=> renderReconnect(mode));
   s.querySelector('#cc-more').addEventListener('click', more);
   s.querySelector('#cc-advance').addEventListener('click', advance);
@@ -1292,13 +1319,24 @@ goBack = function(){
   _goBack();
 };
 
+/* ---------------- end-of-session recap (VOC + distress recheck) ---------------- */
+function renderVocRecap(){
+  const affirmation = session.desiredText ? escapeHtml(session.desiredText) : '';
+  renderScaleScreen("À quel point cette affirmation vous semble vraie maintenant ?", 'endVoc','endVocDetail','enddistress',
+    renderEndDistress, true, affirmation ? `Votre affirmation : « ${affirmation} »` : '');
+  document.body.classList.add('phase-positive');
+}
+function renderEndDistress(){
+  renderScaleScreen("À quel point ce souvenir vous dérange-t-il maintenant ?", 'endDistress','endDistressDetail','bodyscan', renderBodyScan, false);
+}
+
 /* ---------------- body scan ---------------- */
 function renderBodyScan(){
   goTo('bodyscan', ()=>{
     const s = stageBase();
     const count = 1;
     s.innerHTML = `
-      <h2 class="instruction fs">Que ressentez-vous ? Ça peut être corporel, émotionnel...</h2>
+      <h2 class="instruction fs">Vous pouvez décrire votre ressenti</h2>
       <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici (facultatif)..."></textarea></div>
       <div class="fs" style="animation-delay:1.3s; display:flex; gap:12px; justify-content:center; margin-top:18px;">
         <button class="sel-add" id="bs-more">Ajouter une série</button>
@@ -1346,19 +1384,44 @@ function renderSessionEnd(){
     <p class="sub fs" style="animation-delay:.4s">Prenez un moment avant de vous relever.</p>
     <div class="btn-row fs" id="status-row" style="animation-delay:.7s; display:flex; gap:10px;"></div>
   `;
+  const finish = ()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'home',fn:renderHome})); };
+  let autoAdvance = true;
   if(session.traumaId){
     const t = traumas.find(x=>x.id===session.traumaId);
     if(t){
-      s.querySelector('#status-row').innerHTML = `
-        <button class="sel-add" data-status="en_cours">Marquer : en cours</button>
-        <button class="sel-add" data-status="traite">Marquer : traité</button>`;
-      s.querySelectorAll('[data-status]').forEach(b=> b.addEventListener('click',()=>{
-        t.status=b.dataset.status; saveTraumas(traumas);
-        s.querySelector('#status-row').innerHTML = '<p class="sub">Statut mis à jour.</p>';
-      }));
+      if(!t.sessions) t.sessions = [];
+      t.sessions.push({
+        at: Date.now(),
+        startDistress: session.startDistress,
+        endDistress: session.endDistress,
+        level2: session.level2,
+        endVoc: session.endVoc,
+        feltText: session.feltText,
+        desiredText: session.desiredText,
+        negSets: session.negSets,
+        posSets: session.posSets
+      });
+      t.status = 'en_cours'; t.updatedAt = Date.now();
+      saveTraumas(traumas);
+      const success = session.endDistress!=null && session.endDistress<=2;
+      if(success){
+        autoAdvance = false;
+        s.querySelector('#status-row').innerHTML = `
+          <div class="fs" style="animation-delay:.7s; text-align:center;">
+            <p class="sub" style="margin-bottom:10px;">Félicitations, ce souvenir ne semble plus vous déranger. On le marque comme traité ?</p>
+            <div style="display:flex; gap:10px; justify-content:center;">
+              <button class="sel-add" id="mark-done">Marquer comme traité</button>
+              <button class="sel-add" id="mark-not-yet">Pas encore</button>
+            </div>
+          </div>`;
+        s.querySelector('#mark-done').addEventListener('click', ()=>{ t.status='traite'; t.updatedAt=Date.now(); saveTraumas(traumas); finish(); });
+        s.querySelector('#mark-not-yet').addEventListener('click', finish);
+      } else {
+        s.querySelector('#status-row').innerHTML = '<p class="sub">Souvenir marqué : en cours.</p>';
+      }
     }
   }
-  setTimeout(()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'home',fn:renderHome})); }, 6000);
+  if(autoAdvance) setTimeout(finish, 6000);
 }
 
 /* ---------------- account / sync screens ---------------- */
