@@ -138,11 +138,11 @@
   .sel-card-done{ opacity:.5; }
 
   /* collapsible picker rows: grid-rows trick so height always matches content, never clips */
-  .status-picker, .folder-picker, .priority-card-picker, .sessions-history{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
+  .status-picker, .folder-picker, .priority-card-picker, .sessions-history, .trauma-quick-actions{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
     border-top:1px solid transparent;
     transition:grid-template-rows .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
-  .status-picker > div, .folder-picker > div, .priority-card-picker > div, .sessions-history > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
+  .status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open, .trauma-quick-actions.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .status-picker > div, .folder-picker > div, .priority-card-picker > div, .sessions-history > div, .trauma-quick-actions > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
   .sessions-history > div{ flex-direction:column; gap:6px; }
   .sessions-history-title{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); }
   .session-entry{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; }
@@ -566,34 +566,115 @@ function renderModeChoice(){
   s.querySelector('#mode-bls').addEventListener('click', ()=> goTo('simple_ball', ()=> showBall('simple')));
 }
 
-function renderSelect(){
-  const s = stageBase();
-  s.className='select-view';
-  const untreated = traumas.filter(t=>t.status!=='traite');
-  const cards = untreated.map(t=>`
+function selectCardHtml(t){
+  return `
     <div class="sel-card" data-id="${t.id}">
       <div><div class="t">${escapeHtml(t.title)}</div></div>
       <div class="actions"><button data-del="${t.id}">Supprimer</button></div>
-    </div>`).join('');
-  s.innerHTML = `
-    <h2 class="instruction fs">Quel souvenir souhaitez-vous travailler aujourd'hui ?</h2>
-    <div class="sel-scroll">
-      <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir en attente.</p>'}</div>
-      <button class="sel-add fs" id="add-t" style="animation-delay:.6s">+ Ajouter un souvenir</button>
-      <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans souvenir précis</button>
-    </div>
-  `;
-  document.body.classList.add('hide-l','hide-r');
-  s.querySelectorAll('.sel-card').forEach(c=> c.addEventListener('click',(e)=>{
+    </div>`;
+}
+function wireSelectCards(container, returnPhase, returnFn){
+  container.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
     if(e.target.closest('[data-del]')) return;
     const t = traumas.find(x=>x.id===c.dataset.id);
     beginSession(t.id, t.title, t.description);
   }));
-  s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
+  container.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    goTo('confirmdel', ()=> renderConfirmDelete('trauma', b.dataset.del, 'select', renderSelect));
+    goTo('confirmdel', ()=> renderConfirmDelete('trauma', b.dataset.del, returnPhase, returnFn));
   }));
+}
+
+function renderSelect(){
+  const s = stageBase();
+  s.className='select-view';
+  s.innerHTML = `
+    <h2 class="instruction fs">Quel souvenir souhaitez-vous travailler aujourd'hui ?</h2>
+    <div class="lib-toolbar fs" style="animation-delay:.3s">
+      <input type="text" id="lib-search" placeholder="Rechercher un souvenir ou un dossier...">
+      <div class="lib-toolbar-actions">
+        <div class="lib-sort-wrap">
+          <button id="lib-sort-btn" class="toolbar-icon-btn" title="Trier">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4v16M7 4L3 8M7 4l4 4"/><path d="M17 20V4M17 20l4-4M17 20l-4-4"/></svg>
+          </button>
+          <div class="lib-sort-panel" id="lib-sort-panel">
+            <label class="lib-sort-color-toggle">
+              <input type="checkbox" id="sort-color-toggle" ${libSortColor ? 'checked' : ''}>
+              <span>Couleur</span>
+            </label>
+            <div class="lib-sort-divider"></div>
+            ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}"><span>${o.label}</span><span class="sort-check">✓</span></button>`).join('')}
+          </div>
+        </div>
+        <button id="add-t">+ Souvenir</button>
+      </div>
+    </div>
+    <div class="sel-scroll" id="select-scroll"></div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const searchInput = s.querySelector('#lib-search');
+  const scrollEl = s.querySelector('#select-scroll');
+  function update(){ renderSelectBody(scrollEl, searchInput.value.trim().toLowerCase()); }
+  searchInput.addEventListener('input', update);
+
+  const sortBtn = s.querySelector('#lib-sort-btn');
+  const sortPanel = s.querySelector('#lib-sort-panel');
+  const colorToggle = s.querySelector('#sort-color-toggle');
+  function refreshSortPanel(){ sortPanel.querySelectorAll('button').forEach(b=> b.classList.toggle('selected', b.dataset.sort===libSortCriterion)); }
+  refreshSortPanel();
+  sortBtn.addEventListener('click', (e)=>{ e.stopPropagation(); sortPanel.classList.toggle('open'); });
+  colorToggle.addEventListener('change', ()=>{
+    libSortColor = colorToggle.checked;
+    localStorage.setItem(LS_LIBSORT_COLOR, libSortColor ? '1' : '0');
+    update();
+  });
+  sortPanel.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+    libSortCriterion = b.dataset.sort;
+    localStorage.setItem(LS_LIBSORT, libSortCriterion);
+    refreshSortPanel();
+    sortPanel.classList.remove('open');
+    update();
+  }));
+
   s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'select',renderSelect)));
+  update();
+}
+
+function renderSelectBody(scrollEl, query){
+  const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortCriterion, libSortColor);
+  const ungrouped = traumas.filter(t=> (!t.folderId || !folders.find(f=>f.id===t.folderId)) && t.status!=='traite');
+  const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const sorted = sortTraumas(matchTraumas, libSortCriterion);
+  const folderGrid = matchFolders.length ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
+  const cards = sorted.map(selectCardHtml).join('');
+  const nothing = !matchFolders.length && !sorted.length;
+  const localRefresh = ()=> renderSelectBody(scrollEl, query);
+  scrollEl.innerHTML = `
+    ${folderGrid}
+    <div class="sel-list fs" style="animation-delay:.5s">${cards || (nothing ? `<p class="sub">${query ? 'Aucun résultat.' : 'Aucun souvenir en attente.'}</p>` : '')}</div>
+    <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans souvenir précis</button>
+  `;
+  wireFolderTiles(scrollEl, 'select', renderSelect, localRefresh, renderSelectFolderView);
+  wireSelectCards(scrollEl, 'select', renderSelect);
+  scrollEl.querySelector('#free-s').addEventListener('click', ()=> beginSession(null,'Séance libre',''));
+}
+
+function renderSelectFolderView(folderId){
+  const s = stageBase();
+  s.className='select-view';
+  const folder = folders.find(f=>f.id===folderId);
+  const items = traumas.filter(t=>t.folderId===folderId && t.status!=='traite');
+  const sorted = sortTraumas(items, libSortCriterion);
+  const cards = sorted.map(selectCardHtml).join('');
+  s.innerHTML = `
+    <h2 class="instruction fs">${escapeHtml(folder ? folder.name : '')}</h2>
+    <div class="sel-scroll">
+      <div class="sel-list fs" style="animation-delay:.4s">${cards || '<p class="sub">Aucun souvenir en attente dans ce dossier.</p>'}</div>
+      <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans souvenir précis</button>
+    </div>
+  `;
+  document.body.classList.add('hide-r');
+  wireSelectCards(s, 'folder_'+folderId, ()=> renderSelectFolderView(folderId));
   s.querySelector('#free-s').addEventListener('click', ()=> beginSession(null,'Séance libre',''));
 }
 
@@ -620,6 +701,9 @@ function traumaCardHtml(t){
         <div><div class="t">${escapeHtml(t.title)}</div><div class="sub" style="margin:2px 0 0;font-size:12px;">${STATUS_LABEL[t.status]||''}${t.priority ? ` · priorité ${t.priority}` : ''}</div></div>
         <div class="actions"><button data-edit="${t.id}">Modifier</button><button data-del="${t.id}">Supprimer</button></div>
       </div>
+      <div class="trauma-quick-actions"><div>
+        <button class="pill-btn" data-treat="${t.id}">Traiter →</button>
+      </div></div>
       <div class="status-picker"><div>
         ${Object.entries(STATUS_LABEL).map(([val,label])=>`<button class="status-opt ${t.status===val?'selected':''}" data-status="${val}" data-id="${t.id}">${label}</button>`).join('')}
       </div></div>
@@ -637,14 +721,20 @@ function traumaCardHtml(t){
 function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
   const refresh = localRefresh || returnFn;
   s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
-    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker') || e.target.closest('.sessions-history')) return;
+    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker') || e.target.closest('.sessions-history') || e.target.closest('.trauma-quick-actions')) return;
     const picker = c.querySelector('.status-picker');
     const folderPicker = c.querySelector('.folder-picker');
     const priorityPicker = c.querySelector('.priority-card-picker');
     const sessionsHistory = c.querySelector('.sessions-history');
+    const quickActions = c.querySelector('.trauma-quick-actions');
     const isOpen = picker.classList.contains('open');
-    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open').forEach(p=> p.classList.remove('open'));
-    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); if(sessionsHistory) sessionsHistory.classList.add('open'); }
+    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open, .trauma-quick-actions.open').forEach(p=> p.classList.remove('open'));
+    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); if(sessionsHistory) sessionsHistory.classList.add('open'); if(quickActions) quickActions.classList.add('open'); }
+  }));
+  s.querySelectorAll('[data-treat]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const t = traumas.find(x=>x.id===b.dataset.treat);
+    beginSession(t.id, t.title, t.description);
   }));
   s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
@@ -712,12 +802,13 @@ function folderTileHtml(f){
     </div>`;
 }
 
-function wireFolderTiles(s, returnPhase, returnFn, localRefresh){
+function wireFolderTiles(s, returnPhase, returnFn, localRefresh, folderViewFn){
   const refresh = localRefresh || returnFn;
+  const viewFn = folderViewFn || renderFolderView;
   s.querySelectorAll('.folder-tile').forEach(el=> el.addEventListener('click',(e)=>{
     if(e.target.closest('.folder-actions')) return;
     const fid = el.dataset.folderId;
-    goTo('folder_'+fid, ()=> renderFolderView(fid));
+    goTo('folder_'+fid, ()=> viewFn(fid));
   }));
   s.querySelectorAll('[data-edit-folder]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
