@@ -342,6 +342,7 @@ async function vaultPull(row){
   localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
   localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
   localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+  refreshSettingsPanelInputs();
 }
 
 async function ensureVaultCreated(userId, email, password){
@@ -443,10 +444,13 @@ function translateAuthError(e){
   if(/password.*least/i.test(msg)) return 'Le mot de passe doit faire au moins 6 caractères.';
   return msg;
 }
-$('bls-speed').value=settings.speed; $('speed-val').textContent=settings.speed;
-$('bls-size').value=settings.size; $('bls-color').value=settings.color;
-$('bls-duration').value=settings.duration; $('duration-val').textContent=settings.duration;
-$('bls-audio').checked=settings.audio; $('bls-haptic').checked=settings.haptic;
+function refreshSettingsPanelInputs(){
+  $('bls-speed').value=settings.speed; $('speed-val').textContent=settings.speed;
+  $('bls-size').value=settings.size; $('bls-color').value=settings.color;
+  $('bls-duration').value=settings.duration; $('duration-val').textContent=settings.duration;
+  $('bls-audio').checked=settings.audio; $('bls-haptic').checked=settings.haptic;
+}
+refreshSettingsPanelInputs();
 $('bls-speed').addEventListener('input',e=>{settings.speed=+e.target.value;$('speed-val').textContent=settings.speed;saveSettings();});
 $('bls-size').addEventListener('input',e=>{settings.size=+e.target.value;saveSettings();});
 $('bls-color').addEventListener('input',e=>{settings.color=e.target.value;saveSettings();});
@@ -1258,6 +1262,12 @@ function ensureAudioCtx(){
   }catch(e){}
   return bls.audioCtx;
 }
+/* débloque le contexte audio dès la toute première interaction avec la page, pas seulement
+   au lancement d'une série : certains navigateurs n'autorisent la lecture que si le contexte
+   a été créé/repris tôt, au plus près d'un vrai geste utilisateur. */
+['keydown','pointerdown','touchstart'].forEach(evt=>{
+  document.addEventListener(evt, function unlockAudioOnFirstGesture(){ if(settings.audio) ensureAudioCtx(); }, {capture:true});
+});
 function playTick(side){
   if(!settings.audio) return;
   try{
