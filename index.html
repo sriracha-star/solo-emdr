@@ -1226,8 +1226,10 @@ function renderLevel2(){
 /* ---------------- reconnect / countdown / ball loop ---------------- */
 function renderReconnect(mode){
   const s = stageBase();
-  const txt = mode==='neg' ? "Reconnectez-vous à cette sensation." : "Concentrez-vous sur la sensation que vous aimeriez ressentir.";
-  s.innerHTML = `<div class="breathe-circle fs"></div><h2 class="instruction fs" style="animation-delay:.3s">${txt}</h2>`;
+  const txt = mode==='neg' ? "Reconnectez-vous à cette sensation." : "Concentrez-vous sur l'affirmation suivante avant de vous replonger dans le souvenir.";
+  const affirmation = mode==='pos' && session.desiredText ? escapeHtml(session.desiredText) : '';
+  s.innerHTML = `<div class="breathe-circle fs"></div><h2 class="instruction fs" style="animation-delay:.3s">${txt}</h2>
+    ${affirmation ? `<p class="sub fs" style="animation-delay:.5s">« ${affirmation} »</p>` : ''}`;
   forwardAction = ()=> goTo('countdown_'+mode, ()=> renderCountdown(mode));
 }
 
