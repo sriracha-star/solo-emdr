@@ -341,6 +341,70 @@ function generateRecoveryPhrase(){
 }
 function normalizeRecoveryPhrase(s){ return (s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
 
+/* ---------- cache DEK entre rechargements (IndexedDB, clé non-exportable) ----------
+   Le DEK en mémoire (vault.dek) est perdu à chaque rechargement de page ; sans ce
+   cache, ça revient à se retrouver "déconnecté" silencieusement à chaque fois,
+   avec la synchronisation qui s'arrête sans aucun avertissement. Une copie
+   non-exportable (utilisable pour chiffrer/déchiffrer, mais jamais lisible en
+   clair) est donc gardée dans IndexedDB, et re-validée contre la session
+   Supabase réelle à chaque démarrage avant d'être réutilisée. */
+const IDB_NAME = 'soloemdr_session', IDB_STORE = 'dek';
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+}
+async function cacheSessionDEK(dek, userId, email){
+  try{
+    const raw = await crypto.subtle.exportKey('raw', dek);
+    const lockedDek = await crypto.subtle.importKey('raw', raw, {name:'AES-GCM'}, false, ['encrypt','decrypt']);
+    const db = await idbOpen();
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put({dek:lockedDek, userId, email}, 'current');
+      tx.oncomplete = resolve; tx.onerror = ()=> reject(tx.error);
+    });
+  }catch(e){}
+}
+async function readCachedDEK(){
+  try{
+    const db = await idbOpen();
+    return await new Promise((resolve,reject)=>{
+      const tx = db.transaction(IDB_STORE,'readonly');
+      const req = tx.objectStore(IDB_STORE).get('current');
+      req.onsuccess = ()=> resolve(req.result || null);
+      req.onerror = ()=> reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+async function clearSessionDEK(){
+  try{
+    const db = await idbOpen();
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).delete('current');
+      tx.oncomplete = resolve; tx.onerror = ()=> reject(tx.error);
+    });
+  }catch(e){}
+}
+/* Essaie de restaurer une session déjà déverrouillée, sans redemander le mot de
+   passe — seulement si la session Supabase sous-jacente est toujours valide et
+   correspond bien au DEK mis en cache. */
+async function restoreVaultFromCache(){
+  if(!supa) return false;
+  const rec = await readCachedDEK();
+  if(!rec) return false;
+  try{
+    const {data:{session}} = await supa.auth.getSession();
+    if(!session || session.user.id !== rec.userId){ await clearSessionDEK(); return false; }
+  }catch(e){ return false; }
+  vault.dek = rec.dek; vault.userId = rec.userId; vault.email = rec.email;
+  return true;
+}
+
 let vault = { dek:null, userId:null, email:null };
 const LS_SYNCED = 'soloemdr_synced_before';
 function vaultReady(){ return !!(supa && vault.dek && vault.userId); }
@@ -352,6 +416,14 @@ function scheduleSync(){
   clearTimeout(syncTimer);
   syncTimer = setTimeout(vaultPush, 1000);
 }
+/* Un changement peut rester "en attente" jusqu'à 1s (debounce) avant d'être
+   réellement envoyé — si l'onglet se ferme ou passe en arrière-plan pendant
+   cette fenêtre, on force l'envoi immédiatement plutôt que de le perdre. */
+function flushPendingSync(){
+  if(syncTimer){ clearTimeout(syncTimer); syncTimer = null; vaultPush(); }
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushPendingSync(); });
+window.addEventListener('pagehide', flushPendingSync);
 async function vaultPush(){
   if(!vaultReady()) return;
   try{
@@ -396,6 +468,7 @@ async function ensureVaultCreated(userId, email, password){
   const {error: insErr} = await supa.from('vaults').insert(newRow);
   if(insErr) throw insErr;
   vault.dek = dek; vault.userId = userId; vault.email = email;
+  await cacheSessionDEK(dek, userId, email);
   localStorage.setItem(LS_SYNCED, '1');
   renderAccountPanel();
   return {created:true, recoveryPhrase, row:newRow};
@@ -421,6 +494,7 @@ async function vaultLogin(email, password){
   const kekPw = await deriveKekFromPassphrase(password, row.salt_pw);
   const dek = await unwrapDEK(row.iv_pw, row.wrapped_dek_pw, kekPw);
   vault.dek = dek; vault.userId = userId; vault.email = email;
+  await cacheSessionDEK(dek, userId, email);
   renderAccountPanel();
   const hasLocalData = traumas.length>0 || folders.length>0 || recentTraumas.length>0;
   if(hasLocalData){ return {conflict:true, row}; }
@@ -432,9 +506,10 @@ async function vaultLogin(email, password){
 async function vaultResolveKeepLocal(){ await vaultPush(); localStorage.setItem(LS_SYNCED, '1'); }
 async function vaultResolveUseCloud(row){ await vaultPull(row); localStorage.setItem(LS_SYNCED, '1'); }
 
-function vaultLogout(){
+async function vaultLogout(){
   if(supa) supa.auth.signOut();
   vault = {dek:null, userId:null, email:null};
+  await clearSessionDEK();
   traumas = []; folders = []; recentTraumas = [];
   localStorage.removeItem(LS_TRAUMAS);
   localStorage.removeItem(LS_FOLDERS);
@@ -465,6 +540,7 @@ async function completeRecovery(recoveryPhrase, newPassword){
   const {error: updRowErr} = await supa.from('vaults').update({salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64}).eq('user_id', user.id);
   if(updRowErr) throw updRowErr;
   vault.dek = dek; vault.userId = user.id; vault.email = user.email;
+  await cacheSessionDEK(dek, user.id, user.email);
   renderAccountPanel();
   await vaultPull(row);
   localStorage.setItem(LS_SYNCED, '1');
@@ -521,6 +597,7 @@ if(supa){
   });
 }
 renderAccountPanel();
+restoreVaultFromCache().then(()=> renderAccountPanel());
 
 /* ---------------- navigation core ---------------- */
 let session=null, currentPhase=null, history=[];
