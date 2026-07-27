@@ -597,7 +597,7 @@ if(supa){
   });
 }
 renderAccountPanel();
-restoreVaultFromCache().then(()=> renderAccountPanel());
+const vaultRestorePromise = restoreVaultFromCache().then(()=> renderAccountPanel());
 
 /* ---------------- navigation core ---------------- */
 let session=null, currentPhase=null, history=[];
@@ -730,7 +730,42 @@ function wireSelectCards(container, returnPhase, returnFn, kind){
   }));
 }
 
+/* Écran affiché à la place des souvenirs quand on n'est pas connecté·e :
+   pas d'accès à la bibliothèque locale hors connexion, pour ne jamais
+   laisser croire que du travail hors ligne sera conservé. */
+function renderOfflineGate(freeSessionFn){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Vous n'êtes pas connecté·e</h2>
+    <p class="sub fs" style="animation-delay:.3s">Connectez-vous pour accéder à vos souvenirs.</p>
+    <button class="sel-add fs" id="offline-gate-login" style="animation-delay:.5s;">Se connecter</button>
+    ${freeSessionFn ? `<button class="sel-alt fs" id="offline-gate-free" style="animation-delay:.6s;">Travailler sans souvenir précis</button>` : ''}
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const goLogin = ()=> goTo('authlogin', ()=> renderAuthForm('login'));
+  s.querySelector('#offline-gate-login').addEventListener('click', goLogin);
+  if(freeSessionFn){
+    s.querySelector('#offline-gate-free').addEventListener('click', ()=> goTo('offline_confirm', ()=> renderOfflineSessionConfirm(freeSessionFn)));
+  }
+  forwardAction = goLogin;
+}
+function renderOfflineSessionConfirm(beginFn){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Cette séance ne sera pas conservée</h2>
+    <p class="sub fs" style="animation-delay:.3s">Vous n'êtes pas connecté·e : les réponses de cette séance libre ne seront gardées ni en mémoire ni sur votre compte. Continuer quand même ?</p>
+    <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center; margin-top:14px;">
+      <button class="sel-add" id="offline-confirm-yes">Continuer quand même</button>
+      <button class="sel-alt" id="offline-confirm-no">Annuler</button>
+    </div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  s.querySelector('#offline-confirm-yes').addEventListener('click', ()=> beginFn(null,'Séance libre',''));
+  s.querySelector('#offline-confirm-no').addEventListener('click', ()=> goTo('modechoice', renderModeChoice));
+}
+
 function renderSelect(){
+  if(!vault.userId){ renderOfflineGate(beginSession); return; }
   const s = stageBase();
   s.className='select-view';
   s.innerHTML = `
@@ -825,6 +860,7 @@ function renderSelectFolderView(folderId){
 
 /* ---------------- sélection d'un trauma récent (R-TEP) ---------------- */
 function renderRtepSelect(){
+  if(!vault.userId){ renderOfflineGate(beginRtepSession); return; }
   const s = stageBase();
   s.className='select-view';
   s.innerHTML = `
@@ -1083,6 +1119,7 @@ function sortTraumas(list, mode){
 }
 
 function renderLibrary(){
+  if(!vault.userId){ renderOfflineGate(null); return; }
   const s = stageBase();
   s.className='select-view';
   s.innerHTML = `
@@ -1181,6 +1218,7 @@ function renderFolderView(folderId){
 
 /* ---------------- librairie des traumas récents (R-TEP) ---------------- */
 function renderRecentLibrary(){
+  if(!vault.userId){ renderOfflineGate(null); return; }
   const s = stageBase();
   s.className='select-view';
   s.innerHTML = `
@@ -2440,11 +2478,13 @@ function renderSyncChoice(row){
   });
 }
 
-/* boot */
-(function(){
+/* boot : on attend d'avoir tenté de restaurer la session avant de choisir l'écran
+   de destination, pour ne jamais afficher un instant l'écran "non connecté·e"
+   à quelqu'un qui l'est en fait (juste le temps que la restauration se résolve). */
+vaultRestorePromise.then(()=>{
   const restored = restorableTargetForPhase(sessionStorage.getItem(SS_LAST_PHASE));
-  goTo('loading0', ()=> renderLoading({phase: restored ? restored.phase : 'home', fn: restored ? restored.fn : renderHome}));
-})();
+  goTo(restored ? restored.phase : 'home', restored ? restored.fn : renderHome);
+});
 function renderPhase(phase){ }
 </script>
 </body>
