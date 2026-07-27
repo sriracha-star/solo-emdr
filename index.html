@@ -603,9 +603,33 @@ restoreVaultFromCache().then(()=> renderAccountPanel());
 let session=null, currentPhase=null, history=[];
 let forwardAction=null, spaceAction=null;
 
+/* Se souvenir du dernier écran "sûr" (listes/accueil) pour y revenir après un
+   rafraîchissement — jamais une séance EMDR/R-TEP en cours ou un formulaire,
+   dont l'état ne peut pas être reconstruit sans risque. */
+const SS_LAST_PHASE = 'soloemdr_last_phase';
+const RESTORABLE_PHASES = {
+  home: renderHome, library: renderLibrary, recentlibrary: renderRecentLibrary,
+  select: renderSelect, rtep_select: renderRtepSelect, modechoice: renderModeChoice
+};
+function restorableTargetForPhase(phase){
+  if(!phase) return null;
+  if(RESTORABLE_PHASES[phase]) return {phase, fn:RESTORABLE_PHASES[phase]};
+  if(phase.indexOf('folder_')===0){
+    const folderId = phase.slice('folder_'.length);
+    if(folders.some(f=>f.id===folderId)) return {phase, fn:()=> renderFolderView(folderId)};
+  }
+  return null;
+}
+function persistPhaseIfRestorable(phase){
+  const target = restorableTargetForPhase(phase);
+  if(target) sessionStorage.setItem(SS_LAST_PHASE, phase);
+  else sessionStorage.removeItem(SS_LAST_PHASE);
+}
+
 function goTo(phase, fn){
   if(currentPhase!==null){ history.push({phase:currentPhase, snap:JSON.parse(JSON.stringify(session||{})), fn:currentFn}); }
   currentPhase = phase; currentFn = fn;
+  persistPhaseIfRestorable(phase);
   document.body.classList.remove('hide-r','hide-l');
   forwardAction=null; spaceAction=null;
   window.history.pushState({soloemdrNav:true}, '', location.href);
@@ -616,6 +640,7 @@ function goBack(){
   if(!history.length) return;
   const h = history.pop();
   session = h.snap; currentPhase = h.phase; currentFn = h.fn;
+  persistPhaseIfRestorable(h.phase);
   document.body.classList.remove('hide-r','hide-l');
   forwardAction=null; spaceAction=null;
   h.fn();
@@ -2416,7 +2441,10 @@ function renderSyncChoice(row){
 }
 
 /* boot */
-goTo('loading0', ()=> renderLoading({phase:'home', fn:renderHome}));
+(function(){
+  const restored = restorableTargetForPhase(sessionStorage.getItem(SS_LAST_PHASE));
+  goTo('loading0', ()=> renderLoading({phase: restored ? restored.phase : 'home', fn: restored ? restored.fn : renderHome}));
+})();
 function renderPhase(phase){ }
 </script>
 </body>
