@@ -33,7 +33,8 @@
   body.stage-dark .icon-btn{ color:#EFE8DA; }
   #homeIcon{ left:14px; }
   #libraryIcon{ left:56px; }
-  #settingsIcon{ left:98px; }
+  #recentLibraryIcon{ left:98px; }
+  #settingsIcon{ left:140px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -44,7 +45,7 @@
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:98px; z-index:60; width:290px; background:white; border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:140px; z-index:60; width:290px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -138,13 +139,14 @@
   .sel-card-done{ opacity:.5; }
 
   /* collapsible picker rows: grid-rows trick so height always matches content, never clips */
-  .status-picker, .folder-picker, .priority-card-picker, .sessions-history, .trauma-quick-actions{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
+  .status-picker, .folder-picker, .priority-card-picker, .sessions-history, .trauma-quick-actions, .linked-traumas{ display:grid; grid-template-rows:0fr; opacity:0; margin-top:0; padding-top:0;
     border-top:1px solid transparent;
     transition:grid-template-rows .25s ease, opacity .2s ease, margin-top .25s ease, padding-top .25s ease, border-color .25s ease; }
-  .status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open, .trauma-quick-actions.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
-  .status-picker > div, .folder-picker > div, .priority-card-picker > div, .sessions-history > div, .trauma-quick-actions > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
-  .sessions-history > div{ flex-direction:column; gap:6px; }
+  .status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open, .trauma-quick-actions.open, .linked-traumas.open{ grid-template-rows:1fr; opacity:1; margin-top:10px; padding-top:10px; border-top-color:var(--line); }
+  .status-picker > div, .folder-picker > div, .priority-card-picker > div, .sessions-history > div, .trauma-quick-actions > div, .linked-traumas > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
+  .sessions-history > div, .linked-traumas > div{ flex-direction:column; gap:6px; }
   .sessions-history-title{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); }
+  .linked-traumas-names{ font-size:12.5px; color:var(--ink); line-height:1.5; }
   .session-entry{ display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12.5px; cursor:pointer; width:100%; }
   .session-entry-main{ display:flex; gap:10px; flex-wrap:wrap; }
   .session-entry .session-date{ color:var(--ink-soft); white-space:nowrap; }
@@ -223,6 +225,9 @@
   <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
   </button>
+  <button id="recentLibraryIcon" class="icon-btn" title="Traumas récents (R-TEP)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2l1 6 5-3-3 5 6 1-6 1 3 5-5-3-1 6-1-6-5 3 3-5-6-1 6-1-3-5 5 3z"/></svg>
+  </button>
   <button id="settingsIcon" class="icon-btn" title="Réglages">
     <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
   </button>
@@ -252,7 +257,7 @@
 </div>
 
 <script>
-const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings', LS_FOLDERS='soloemdr_folders';
+const LS_TRAUMAS='soloemdr_traumas', LS_SETTINGS='soloemdr_settings', LS_FOLDERS='soloemdr_folders', LS_RECENT_TRAUMAS='soloemdr_recent_traumas';
 const $ = id => document.getElementById(id);
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function loadTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_TRAUMAS))||[]; }catch(e){ return []; } }
@@ -261,6 +266,11 @@ let traumas = loadTraumas();
 function loadFolders(){ try{ return JSON.parse(localStorage.getItem(LS_FOLDERS))||[]; }catch(e){ return []; } }
 function saveFolders(list){ localStorage.setItem(LS_FOLDERS, JSON.stringify(list)); scheduleSync(); }
 let folders = loadFolders();
+/* traumas récents (protocole R-TEP) : même forme que `traumas`, coffre séparé mais
+   synchronisé dans le même payload chiffré (voir vaultPull/vaultPush). */
+function loadRecentTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_RECENT_TRAUMAS))||[]; }catch(e){ return []; } }
+function saveRecentTraumas(list){ localStorage.setItem(LS_RECENT_TRAUMAS, JSON.stringify(list)); scheduleSync(); }
+let recentTraumas = loadRecentTraumas();
 
 let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
@@ -338,7 +348,7 @@ function scheduleSync(){
 }
 async function vaultPush(){
   if(!vaultReady()) return;
-  const payload = JSON.stringify({traumas, folders, settings});
+  const payload = JSON.stringify({traumas, folders, settings, recentTraumas});
   const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
   await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
 }
@@ -346,9 +356,11 @@ async function vaultPull(row){
   const json = await decryptWithDEK(vault.dek, row.data_iv, row.ciphertext);
   const parsed = JSON.parse(json);
   traumas = parsed.traumas||[]; folders = parsed.folders||[];
+  recentTraumas = parsed.recentTraumas||[];
   settings = Object.assign(settings, parsed.settings||{});
   localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
   localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
+  localStorage.setItem(LS_RECENT_TRAUMAS, JSON.stringify(recentTraumas));
   localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
   refreshSettingsPanelInputs();
 }
@@ -364,7 +376,7 @@ async function ensureVaultCreated(userId, email, password){
   const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), saltRec);
   const wrapPw = await wrapDEK(dek, kekPw);
   const wrapRec = await wrapDEK(dek, kekRec);
-  const payload = JSON.stringify({traumas, folders, settings});
+  const payload = JSON.stringify({traumas, folders, settings, recentTraumas});
   const {ivB64, ctB64} = await encryptWithDEK(dek, payload);
   const newRow = { user_id:userId, salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64,
     salt_rec:saltRec, iv_rec:wrapRec.ivB64, wrapped_dek_rec:wrapRec.wrappedB64, data_iv:ivB64, ciphertext:ctB64 };
@@ -411,9 +423,10 @@ async function vaultResolveUseCloud(row){ await vaultPull(row); localStorage.set
 function vaultLogout(){
   if(supa) supa.auth.signOut();
   vault = {dek:null, userId:null, email:null};
-  traumas = []; folders = [];
+  traumas = []; folders = []; recentTraumas = [];
   localStorage.removeItem(LS_TRAUMAS);
   localStorage.removeItem(LS_FOLDERS);
+  localStorage.removeItem(LS_RECENT_TRAUMAS);
   localStorage.removeItem(LS_SYNCED);
   renderAccountPanel();
 }
@@ -473,6 +486,7 @@ $('settings-save').addEventListener('click',()=>{
 });
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
 $('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
+$('recentLibraryIcon').addEventListener('click',()=> goTo('recentlibrary', renderRecentLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
 document.addEventListener('click', (e)=>{
@@ -568,13 +582,15 @@ function renderModeChoice(){
   const s = stageBase();
   s.innerHTML = `
     <h2 class="instruction fs">Quel type de séance ?</h2>
-    <div class="fs" style="animation-delay:.4s; display:flex; gap:12px; justify-content:center; margin-top:14px;">
+    <div class="fs" style="animation-delay:.4s; display:flex; gap:12px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
       <button class="sel-add" id="mode-emdr">EMDR</button>
+      <button class="sel-add" id="mode-rtep">R-TEP (trauma récent)</button>
       <button class="sel-add" id="mode-bls">Stimulation bilatérale</button>
     </div>
   `;
   document.body.classList.add('hide-r');
   s.querySelector('#mode-emdr').addEventListener('click', ()=> goTo('select', renderSelect));
+  s.querySelector('#mode-rtep').addEventListener('click', ()=> goTo('rtep_select', renderRtepSelect));
   s.querySelector('#mode-bls').addEventListener('click', ()=> goTo('simple_ball', ()=> showBall('simple')));
 }
 
@@ -585,15 +601,18 @@ function selectCardHtml(t){
       <div class="actions"><button data-del="${t.id}">Supprimer</button></div>
     </div>`;
 }
-function wireSelectCards(container, returnPhase, returnFn){
+function wireSelectCards(container, returnPhase, returnFn, kind){
+  kind = kind || 'old';
+  const list = traumaListByKind(kind);
   container.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
     if(e.target.closest('[data-del]')) return;
-    const t = traumas.find(x=>x.id===c.dataset.id);
-    beginSession(t.id, t.title, t.description);
+    const t = list.find(x=>x.id===c.dataset.id);
+    if(kind==='recent') beginRtepSession(t.id, t.title, t.description);
+    else beginSession(t.id, t.title, t.description);
   }));
   container.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    goTo('confirmdel', ()=> renderConfirmDelete('trauma', b.dataset.del, returnPhase, returnFn));
+    goTo('confirmdel', ()=> renderConfirmDelete(kind==='recent'?'recentTrauma':'trauma', b.dataset.del, returnPhase, returnFn));
   }));
 }
 
@@ -690,6 +709,40 @@ function renderSelectFolderView(folderId){
   s.querySelector('#free-s').addEventListener('click', ()=> beginSession(null,'Séance libre',''));
 }
 
+/* ---------------- sélection d'un trauma récent (R-TEP) ---------------- */
+function renderRtepSelect(){
+  const s = stageBase();
+  s.className='select-view';
+  s.innerHTML = `
+    <h2 class="instruction fs">Quel trauma récent souhaitez-vous travailler aujourd'hui ?</h2>
+    <div class="lib-toolbar fs" style="animation-delay:.3s">
+      <input type="text" id="lib-search" placeholder="Rechercher un trauma récent...">
+      <div class="lib-toolbar-actions">
+        <button id="add-t">+ Trauma récent</button>
+      </div>
+    </div>
+    <div class="sel-scroll" id="rtep-select-scroll"></div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const searchInput = s.querySelector('#lib-search');
+  const scrollEl = s.querySelector('#rtep-select-scroll');
+  function update(){ renderRtepSelectBody(scrollEl, searchInput.value.trim().toLowerCase()); }
+  searchInput.addEventListener('input', update);
+  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'rtep_select',renderRtepSelect,null,recentTraumas,saveRecentTraumas)));
+  update();
+}
+function renderRtepSelectBody(scrollEl, query){
+  const matchTraumas = recentTraumas.filter(t=> t.status!=='traite' && (!query || t.title.toLowerCase().includes(query)));
+  const sorted = sortTraumas(matchTraumas, libSortCriterion);
+  const cards = sorted.map(selectCardHtml).join('');
+  scrollEl.innerHTML = `
+    <div class="sel-list fs" style="animation-delay:.5s">${cards || `<p class="sub">${query ? 'Aucun résultat.' : 'Aucun trauma récent en attente.'}</p>`}</div>
+    <button class="sel-alt fs" id="free-s" style="animation-delay:.6s">Séance libre, sans trauma précis</button>
+  `;
+  wireSelectCards(scrollEl, 'rtep_select', renderRtepSelect, 'recent');
+  scrollEl.querySelector('#free-s').addEventListener('click', ()=> beginRtepSession(null,'Séance libre',''));
+}
+
 const STATUS_LABEL = {a_traiter:'À traiter', en_cours:'En cours', traite:'Traité'};
 
 function sessionsHistoryHtml(t){
@@ -726,7 +779,8 @@ function wireSessionsHistory(container){
   }));
 }
 
-function traumaCardHtml(t){
+function traumaCardHtml(t, kind){
+  kind = kind || 'old';
   return `
     <div class="sel-card has-status ${t.status==='traite' ? 'sel-card-done' : ''}" data-id="${t.id}">
       <div class="sel-card-top">
@@ -742,66 +796,72 @@ function traumaCardHtml(t){
       <div class="priority-card-picker"><div>
         ${PRIORITY_LEVELS.map(n=>`<button type="button" class="priority-btn priority-card-opt${t.priority===n?' selected':''}" data-priority="${n}" data-id="${t.id}"${t.status==='traite' ? ' disabled' : ''}>${n}</button>`).join('')}
       </div></div>
-      ${folders.length ? `<div class="folder-picker"><div>
+      ${kind==='old' && folders.length ? `<div class="folder-picker"><div>
         <button class="folder-opt ${!t.folderId?'selected':''}" data-folder="" data-id="${t.id}">Aucun dossier</button>
         ${folders.map(f=>`<button class="folder-opt ${t.folderId===f.id?'selected':''}" data-folder="${f.id}" data-id="${t.id}">${escapeHtml(f.name)}</button>`).join('')}
       </div></div>` : ''}
+      ${linkedTraumasHtml(t)}
       ${sessionsHistoryHtml(t)}
     </div>`;
 }
 
-function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
+function wireTraumaCards(s, returnPhase, returnFn, localRefresh, kind){
+  kind = kind || 'old';
+  const list = traumaListByKind(kind);
+  const save = traumaSaveFnByKind(kind);
   const refresh = localRefresh || returnFn;
   wireSessionsHistory(s);
   s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
-    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker') || e.target.closest('.sessions-history') || e.target.closest('.trauma-quick-actions')) return;
+    if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker') || e.target.closest('.sessions-history') || e.target.closest('.trauma-quick-actions') || e.target.closest('.linked-traumas')) return;
     const picker = c.querySelector('.status-picker');
     const folderPicker = c.querySelector('.folder-picker');
     const priorityPicker = c.querySelector('.priority-card-picker');
     const sessionsHistory = c.querySelector('.sessions-history');
     const quickActions = c.querySelector('.trauma-quick-actions');
+    const linkedTraumas = c.querySelector('.linked-traumas');
     const isOpen = picker.classList.contains('open');
-    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open, .trauma-quick-actions.open').forEach(p=> p.classList.remove('open'));
-    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); if(sessionsHistory) sessionsHistory.classList.add('open'); if(quickActions) quickActions.classList.add('open'); }
+    s.querySelectorAll('.status-picker.open, .folder-picker.open, .priority-card-picker.open, .sessions-history.open, .trauma-quick-actions.open, .linked-traumas.open').forEach(p=> p.classList.remove('open'));
+    if(!isOpen){ picker.classList.add('open'); if(folderPicker) folderPicker.classList.add('open'); if(priorityPicker) priorityPicker.classList.add('open'); if(sessionsHistory) sessionsHistory.classList.add('open'); if(quickActions) quickActions.classList.add('open'); if(linkedTraumas) linkedTraumas.classList.add('open'); }
   }));
   s.querySelectorAll('[data-treat]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    const t = traumas.find(x=>x.id===b.dataset.treat);
-    beginSession(t.id, t.title, t.description);
+    const t = list.find(x=>x.id===b.dataset.treat);
+    if(kind==='recent') beginRtepSession(t.id, t.title, t.description);
+    else beginSession(t.id, t.title, t.description);
   }));
   s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    const t = traumas.find(x=>x.id===b.dataset.id);
+    const t = list.find(x=>x.id===b.dataset.id);
     t.status = b.dataset.status;
     t.updatedAt = Date.now();
-    saveTraumas(traumas);
+    save(list);
     refresh();
   }));
   s.querySelectorAll('.priority-card-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    const t = traumas.find(x=>x.id===b.dataset.id);
+    const t = list.find(x=>x.id===b.dataset.id);
     if(t.status==='traite') return;
     t.priority = +b.dataset.priority;
     t.updatedAt = Date.now();
-    saveTraumas(traumas);
+    save(list);
     refresh();
   }));
   s.querySelectorAll('.folder-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    const t = traumas.find(x=>x.id===b.dataset.id);
+    const t = list.find(x=>x.id===b.dataset.id);
     t.folderId = b.dataset.folder || null;
     t.updatedAt = Date.now();
-    saveTraumas(traumas);
+    save(list);
     refresh();
   }));
   s.querySelectorAll('[data-edit]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    const t = traumas.find(x=>x.id===b.dataset.edit);
-    goTo('editform', ()=> renderTraumaForm(t,returnPhase,returnFn));
+    const t = list.find(x=>x.id===b.dataset.edit);
+    goTo('editform', ()=> renderTraumaForm(t,returnPhase,returnFn,null,list,save));
   }));
   s.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
-    goTo('confirmdel', ()=> renderConfirmDelete('trauma', b.dataset.del, returnPhase, returnFn));
+    goTo('confirmdel', ()=> renderConfirmDelete(kind==='recent'?'recentTrauma':'trauma', b.dataset.del, returnPhase, returnFn));
   }));
 }
 
@@ -1005,6 +1065,59 @@ function renderFolderView(folderId){
   s.querySelector('#edit-folder-btn').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(folder, 'folder_'+folderId, ()=> renderFolderView(folderId))));
 }
 
+/* ---------------- librairie des traumas récents (R-TEP) ---------------- */
+function renderRecentLibrary(){
+  const s = stageBase();
+  s.className='select-view';
+  s.innerHTML = `
+    <h2 class="instruction fs">Traumas récents</h2>
+    <div class="lib-toolbar fs" style="animation-delay:.3s">
+      <input type="text" id="lib-search" placeholder="Rechercher un trauma récent...">
+      <div class="lib-toolbar-actions">
+        <div class="lib-sort-wrap">
+          <button id="lib-sort-btn" class="toolbar-icon-btn" title="Trier">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 4v16M7 4L3 8M7 4l4 4"/><path d="M17 20V4M17 20l4-4M17 20l-4-4"/></svg>
+          </button>
+          <div class="lib-sort-panel" id="lib-sort-panel">
+            ${SORT_OPTIONS.filter(o=>o.value!=='count').map(o=>`<button data-sort="${o.value}"><span>${o.label}</span><span class="sort-check">✓</span></button>`).join('')}
+          </div>
+        </div>
+        <button id="add-t">+ Trauma récent</button>
+      </div>
+    </div>
+    <div class="sel-scroll" id="lib-scroll"></div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const searchInput = s.querySelector('#lib-search');
+  const scrollEl = s.querySelector('#lib-scroll');
+  function update(){ renderRecentLibraryBody(scrollEl, searchInput.value.trim().toLowerCase()); }
+  searchInput.addEventListener('input', update);
+
+  const sortBtn = s.querySelector('#lib-sort-btn');
+  const sortPanel = s.querySelector('#lib-sort-panel');
+  function refreshSortPanel(){ sortPanel.querySelectorAll('button').forEach(b=> b.classList.toggle('selected', b.dataset.sort===libSortCriterion)); }
+  refreshSortPanel();
+  sortBtn.addEventListener('click', (e)=>{ e.stopPropagation(); sortPanel.classList.toggle('open'); });
+  sortPanel.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+    libSortCriterion = b.dataset.sort;
+    localStorage.setItem(LS_LIBSORT, libSortCriterion);
+    refreshSortPanel();
+    sortPanel.classList.remove('open');
+    update();
+  }));
+
+  s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'recentlibrary',renderRecentLibrary,null,recentTraumas,saveRecentTraumas)));
+  update();
+}
+
+function renderRecentLibraryBody(scrollEl, query){
+  const matchTraumas = recentTraumas.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const sorted = sortTraumas(matchTraumas, libSortCriterion);
+  const cards = sorted.map(t=> traumaCardHtml(t,'recent')).join('');
+  scrollEl.innerHTML = `<div class="sel-list fs" style="animation-delay:.5s">${cards || `<p class="sub">${query ? 'Aucun résultat.' : 'Aucun trauma récent enregistré.'}</p>`}</div>`;
+  wireTraumaCards(scrollEl, 'recentlibrary', renderRecentLibrary, ()=> renderRecentLibraryBody(scrollEl, query), 'recent');
+}
+
 const PRIORITY_LEVELS = [1,2,3,4,5,6];
 const DEFAULT_FOLDER_COLOR = '#D7DEE6';
 const DEFAULT_FOLDER_PRIORITY = 3;
@@ -1088,10 +1201,49 @@ function renderFolderForm(folder, returnPhase, returnFn){
   };
 }
 
+function traumaListByKind(kind){ return kind==='recent' ? recentTraumas : traumas; }
+function traumaSaveFnByKind(kind){ return kind==='recent' ? saveRecentTraumas : saveTraumas; }
+function addCrossLink(idA, kindA, idB, kindB){
+  const a = traumaListByKind(kindA).find(x=>x.id===idA);
+  const b = traumaListByKind(kindB).find(x=>x.id===idB);
+  if(!a || !b) return;
+  if(!a.linkedTraumas) a.linkedTraumas = [];
+  if(!b.linkedTraumas) b.linkedTraumas = [];
+  if(!a.linkedTraumas.some(l=>l.id===idB && l.kind===kindB)) a.linkedTraumas.push({id:idB, kind:kindB});
+  if(!b.linkedTraumas.some(l=>l.id===idA && l.kind===kindA)) b.linkedTraumas.push({id:idA, kind:kindA});
+  traumaSaveFnByKind(kindA)(traumaListByKind(kindA));
+  if(kindA!==kindB) traumaSaveFnByKind(kindB)(traumaListByKind(kindB));
+}
+function removeCrossLink(idA, kindA, idB, kindB){
+  const a = traumaListByKind(kindA).find(x=>x.id===idA);
+  const b = traumaListByKind(kindB).find(x=>x.id===idB);
+  if(a && a.linkedTraumas) a.linkedTraumas = a.linkedTraumas.filter(l=> !(l.id===idB && l.kind===kindB));
+  if(b && b.linkedTraumas) b.linkedTraumas = b.linkedTraumas.filter(l=> !(l.id===idA && l.kind===kindA));
+  traumaSaveFnByKind(kindA)(traumaListByKind(kindA));
+  if(kindA!==kindB) traumaSaveFnByKind(kindB)(traumaListByKind(kindB));
+}
+function unlinkTraumaEverywhere(id, kind){
+  [traumas, recentTraumas].forEach(list=>{
+    list.forEach(t=>{ if(t.linkedTraumas) t.linkedTraumas = t.linkedTraumas.filter(l=> !(l.id===id && l.kind===kind)); });
+  });
+  saveTraumas(traumas); saveRecentTraumas(recentTraumas);
+}
+function linkedTraumasHtml(t){
+  const links = t.linkedTraumas || [];
+  const names = links.map(l=>{
+    const item = traumaListByKind(l.kind).find(x=>x.id===l.id);
+    return item ? escapeHtml(item.title) : null;
+  }).filter(Boolean);
+  if(!names.length) return '';
+  return `<div class="linked-traumas"><div><div class="sessions-history-title">Souvenir${names.length>1?'s':''} lié${names.length>1?'s':''}</div><div class="linked-traumas-names">${names.join(', ')}</div></div></div>`;
+}
+
 function renderConfirmDelete(kind, id, returnPhase, returnFn){
   const s = stageBase();
   const isFolder = kind==='folder';
-  const item = isFolder ? folders.find(f=>f.id===id) : traumas.find(t=>t.id===id);
+  const isRecent = kind==='recentTrauma';
+  const list = isRecent ? recentTraumas : traumas;
+  const item = isFolder ? folders.find(f=>f.id===id) : list.find(t=>t.id===id);
   const label = item ? (isFolder ? item.name : item.title) : '';
   s.innerHTML = `
     <h2 class="instruction fs">Supprimer ${isFolder ? 'le dossier' : 'le souvenir'} « ${escapeHtml(label)} » ?</h2>
@@ -1105,14 +1257,16 @@ function renderConfirmDelete(kind, id, returnPhase, returnFn){
   const cancel = ()=>{ history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn(); };
   s.querySelector('#confirm-cancel').addEventListener('click', cancel);
   s.querySelector('#confirm-del').addEventListener('click', ()=>{
-    if(isFolder){ deleteFolder(id); } else { traumas = traumas.filter(x=>x.id!==id); saveTraumas(traumas); }
+    if(isFolder){ deleteFolder(id); }
+    else if(isRecent){ recentTraumas = recentTraumas.filter(x=>x.id!==id); saveRecentTraumas(recentTraumas); unlinkTraumaEverywhere(id,'recent'); }
+    else { traumas = traumas.filter(x=>x.id!==id); saveTraumas(traumas); unlinkTraumaEverywhere(id,'old'); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   });
   forwardAction = cancel;
 }
 
 const DEFAULT_TRAUMA_PRIORITY = 3;
-function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
+function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId, targetList, saveFn){
   const s = stageBase();
   const isEdit = !!trauma;
   let currentPriority = DEFAULT_TRAUMA_PRIORITY;
@@ -1141,11 +1295,13 @@ function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId){
     }));
   }
   forwardAction = ()=>{
+    const list = targetList || traumas;
+    const save = saveFn || saveTraumas;
     const title = s.querySelector('#tf-title').value.trim()||'Sans titre';
     const description = s.querySelector('#tf-desc').value.trim();
     if(isEdit){ trauma.title = title; trauma.description = description; trauma.updatedAt = Date.now(); }
-    else{ traumas.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:currentPriority, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now()}); }
-    saveTraumas(traumas);
+    else{ list.push({id:'t_'+Date.now(), title, description, status:'a_traiter', priority:currentPriority, folderId:presetFolderId||null, createdAt:Date.now(), updatedAt:Date.now(), linkedTraumas:[]}); }
+    save(list);
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   };
 }
@@ -1259,8 +1415,13 @@ function renderLevel2(){
 /* ---------------- reconnect / countdown / ball loop ---------------- */
 function renderReconnect(mode){
   const s = stageBase();
-  const txt = mode==='neg' ? "Reconnectez-vous à cette sensation." : "Concentrez-vous sur l'affirmation suivante avant de vous replonger dans le souvenir.";
-  const affirmation = mode==='pos' && session.desiredText ? escapeHtml(session.desiredText) : '';
+  const isPosLike = mode==='pos' || mode==='rtep_pos';
+  const txt = mode==='rtep_hotspot' ? "Reconnectez-vous à ce point chaud."
+    : mode==='rtep_worst' ? "Reconnectez-vous à ce moment."
+    : mode==='neg' ? "Reconnectez-vous à cette sensation."
+    : isPosLike ? "Concentrez-vous sur l'affirmation suivante avant de vous replonger dans le souvenir."
+    : "Reconnectez-vous.";
+  const affirmation = isPosLike && session.desiredText ? escapeHtml(session.desiredText) : '';
   s.innerHTML = `<div class="breathe-circle fs"></div><h2 class="instruction fs" style="animation-delay:.3s">${txt}</h2>
     ${affirmation ? `<p class="sub fs" style="animation-delay:.5s">« ${affirmation} »</p>` : ''}`;
   forwardAction = ()=> goTo('countdown_'+mode, ()=> renderCountdown(mode));
@@ -1310,17 +1471,28 @@ function playTick(side){
   }catch(e){}
 }
 
+const RTEP_HOTSPOT_DURATION = 20; /* secondes — "série courte", ~8-12 passages */
 function showBall(mode, resp){
   document.body.classList.add('hide-l','hide-r','stage-dark');
   $('stage').style.display='none'; $('bls-stage').style.display='block';
   const inner = $('bls-inner');
   const isFirst = resp === undefined;
-  const txt = mode==='neg' ? 'Plongez dans le souvenir.' : mode==='pos' ? 'Plongez dans le souvenir en restant sur cette fréquence.' : mode==='bodyscan' ? 'Scannez votre corps.' : 'Suivez le point des yeux.';
-  const count = mode==='neg' ? session.negSets : mode==='pos' ? session.posSets : 1;
+  const currentHotspot = mode==='rtep_hotspot' ? session.hotspots[session.hotspotIndex] : null;
+  const txt = mode==='neg' ? 'Plongez dans le souvenir.'
+    : (mode==='pos' || mode==='rtep_pos') ? 'Plongez dans le souvenir en restant sur cette fréquence.'
+    : mode==='rtep_hotspot' ? 'Plongez dans ce point chaud.'
+    : mode==='rtep_worst' ? 'Plongez dans ce moment.'
+    : mode==='bodyscan' ? 'Scannez votre corps.' : 'Suivez le point des yeux.';
+  const count = mode==='neg' ? session.negSets
+    : mode==='pos' ? session.posSets
+    : mode==='rtep_worst' ? session.negSets
+    : mode==='rtep_pos' ? session.posSets
+    : mode==='rtep_hotspot' ? (currentHotspot ? (session.hotspotWork[currentHotspot.id]?.sets||0) : 0)
+    : 1;
   inner.innerHTML = `
     ${isFirst ? `<div id="bls-instruction">${txt}</div>` : ''}
     <div id="bls-dot"></div>
-    ${count>=1 && mode!=='bodyscan' && mode!=='simple' ? `<button class="skip-link" id="skip-link">passer</button>` : ''}
+    ${count>=1 && (mode==='neg'||mode==='pos') ? `<button class="skip-link" id="skip-link">passer</button>` : ''}
   `;
   const dot = $('bls-dot');
   dot.style.width=settings.size+'px'; dot.style.height=settings.size+'px'; dot.style.background=settings.color;
@@ -1336,9 +1508,20 @@ function startBLS(mode){
   if(settings.audio) ensureAudioCtx();
   spaceAction = ()=> requestStop();
   bls.mode=mode; bls.running=true; bls.accumulated=0; bls.resumeTime=performance.now(); bls.lastSide=null;
-  if(mode==='neg') session.negSets++; else if(mode==='pos') session.posSets++;
+  if(mode==='neg') session.negSets++;
+  else if(mode==='pos') session.posSets++;
+  else if(mode==='rtep_worst') session.negSets++;
+  else if(mode==='rtep_pos') session.posSets++;
+  else if(mode==='rtep_hotspot'){
+    const h = session.hotspots[session.hotspotIndex];
+    if(h){
+      if(!session.hotspotWork[h.id]) session.hotspotWork[h.id] = {sensation:'', sud:null, negCognition:'', sets:0, lastSud:null};
+      session.hotspotWork[h.id].sets++;
+    }
+  }
   const ins = $('bls-instruction'); if(ins) ins.style.opacity='0';
-  bls.timer = setTimeout(()=> requestStop(), settings.duration*1000);
+  const duration = mode==='rtep_hotspot' ? RTEP_HOTSPOT_DURATION : settings.duration;
+  bls.timer = setTimeout(()=> requestStop(), duration*1000);
   runLoop();
 }
 
@@ -1380,6 +1563,7 @@ function requestStop(){
 
 function afterStop(){
   const mode = bls.mode;
+  if(mode==='rtep_hotspot'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); crossfadeToFormRtepHotspot(); return; }
   if(mode==='bodyscan'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); renderBodyScan(); return; }
   if(mode==='simple'){ showBall('simple'); return; }
   crossfadeToForm(mode);
@@ -1398,7 +1582,7 @@ function crossfadeToForm(mode){
     inner.style.opacity=1;
     document.body.classList.add('hide-l','hide-r');
     function proceedResponse(nothing){
-      const count = mode==='neg' ? session.negSets : session.posSets;
+      const count = (mode==='neg'||mode==='rtep_worst') ? session.negSets : session.posSets;
       forwardAction=null;
       if(count % 5 === 0){ showCheckpointDark(mode); }
       else { showStayOn(mode, nothing); }
@@ -1421,16 +1605,17 @@ function showStayOn(mode, nothing){
 function showCheckpointDark(mode){
   $('bls-stage').style.display='none'; $('stage').style.display='flex';
   document.body.classList.remove('hide-l','hide-r');
-  renderScaleScreen(mode==='neg' ? "À quel point ce souvenir vous dérange-t-il maintenant ?" : "À quel point cette affirmation vous semble vraie maintenant ?",
-    mode==='neg'?'level1':'level2', mode==='neg'?'level1Detail':'level2Detail',
-    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), mode!=='neg');
-  if(mode==='pos') document.body.classList.add('phase-positive');
+  const isNegLike = mode==='neg' || mode==='rtep_worst';
+  renderScaleScreen(isNegLike ? "À quel point ce souvenir vous dérange-t-il maintenant ?" : "À quel point cette affirmation vous semble vraie maintenant ?",
+    isNegLike?'level1':'level2', isNegLike?'level1Detail':'level2Detail',
+    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), !isNegLike);
+  if(mode==='pos'||mode==='rtep_pos') document.body.classList.add('phase-positive');
 }
 
 function renderCheckpointChoice(mode){
   const s = stageBase();
   let note = '';
-  if(mode==='pos' && session.posSets < session.negSets){
+  if((mode==='pos'||mode==='rtep_pos') && session.posSets < session.negSets){
     note = `<p class="sub fs" style="animation-delay:.4s">On pourrait faire encore une série pour équilibrer avec le travail précédent.</p>`;
   }
   s.innerHTML = `
@@ -1441,7 +1626,12 @@ function renderCheckpointChoice(mode){
       <button class="sel-add" id="cc-advance">Passer à la suite</button>
     </div>
   `;
-  const advance = ()=>{ if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos')); else goTo('vocrecap', renderVocRecap); };
+  const advance = ()=>{
+    if(mode==='neg') goTo('reconnect_pos', ()=>renderReconnect('pos'));
+    else if(mode==='rtep_worst') goTo('rtep_another_worst', renderRtepAnotherWorst);
+    else if(mode==='rtep_pos') goTo('rtep_recontext', renderRtepRecontext);
+    else goTo('vocrecap', renderVocRecap);
+  };
   const more = ()=> goTo('reconnect_'+mode, ()=> renderReconnect(mode));
   s.querySelector('#cc-more').addEventListener('click', more);
   s.querySelector('#cc-advance').addEventListener('click', advance);
@@ -1469,6 +1659,324 @@ function renderVocRecap(){
 }
 function renderEndDistress(){
   renderScaleScreen("À quel point ce souvenir vous dérange-t-il maintenant ?", 'endDistress','endDistressDetail','bodyscan', renderBodyScan, false);
+}
+
+/* ==================================================================
+   R-TEP — protocole dédié aux traumas récents.
+   Réutilise les mécaniques BLS/checkpoint partagées ci-dessus (modes
+   'rtep_hotspot' / 'rtep_worst' / 'rtep_pos') ainsi que la fin de
+   parcours EMDR (renderVocRecap -> renderEndDistress -> renderBodyScan
+   -> renderClosure -> renderSessionEnd, tous génériques via session.kind).
+   ================================================================== */
+function beginRtepSession(traumaId, title, description){
+  session = { kind:'rtep', traumaId, title, description,
+    hotspots: [], hotspotIndex: 0, hotspotWork: {},
+    hotspotSudScratch: null, hotspotSudScratchDetail: '',
+    worstMoments: [], negSets: 0,
+    desiredText:'', level2:null, level2Detail:'', posSets:0,
+    endVoc:null, endVocDetail:'', endDistress:null, endDistressDetail:'',
+    startDistress: null, recontextText:'', stagedLinks: [],
+    feltText:'' };
+  goTo('rtep_loading1', ()=> renderLoading({phase:'rtep_stabilize', fn:renderRtepStabilize}));
+}
+
+/* ---- étape 1 : stabilisation ---- */
+function renderRtepStabilize(){
+  const s = stageBase();
+  s.innerHTML = `
+    <div class="breathe-circle fs"></div>
+    <h2 class="instruction fs" style="animation-delay:.3s">Avant de commencer, vérifiez que vous vous sentez stable et en sécurité — reconnectez-vous si besoin à votre calme ou votre lieu sûr.</h2>
+    <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center; margin-top:14px;">
+      <button class="sel-add" id="rtep-stable-yes">Je suis prêt·e</button>
+      <button class="sel-alt" id="rtep-stable-wait">J'ai besoin d'un instant</button>
+    </div>
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  const proceed = ()=> goTo('rtep_narration', renderRtepNarration);
+  s.querySelector('#rtep-stable-yes').addEventListener('click', proceed);
+  s.querySelector('#rtep-stable-wait').addEventListener('click', ()=>{
+    s.querySelector('h2').textContent = "Prenez le temps qu'il faut. Reprenez quand vous êtes prêt·e.";
+  });
+  forwardAction = proceed;
+}
+
+/* ---- étape 2 : narration + repérage des points chauds ---- */
+function renderRtepNarration(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Racontez l'événement à voix haute, du début à la fin, sans vous arrêter pour analyser.</h2>
+    <p class="sub fs" style="animation-delay:.35s">Au fil du récit, notez ici chaque moment où l'intensité émotionnelle grimpe. Appuyez sur <strong>Maj + Entrée</strong> pour ajouter le moment à la liste et continuer à écrire.</p>
+    <div class="free-text-wrap fs" style="animation-delay:.5s"><textarea id="hotspot-input" rows="2" placeholder="Décrivez un moment intense, puis Maj + Entrée..."></textarea></div>
+    <div id="hotspot-draft-list" class="sel-list" style="animation-delay:.6s;margin-top:14px;width:min(560px,92%);"></div>
+    <p class="hint-line fs" style="animation-delay:.7s">Flèche droite ou Entrée (sans Maj) pour continuer quand vous avez terminé.</p>
+  `;
+  document.body.classList.add('hide-l');
+  const input = s.querySelector('#hotspot-input');
+  const listEl = s.querySelector('#hotspot-draft-list');
+  function renderDraftList(){
+    listEl.innerHTML = session.hotspots.map((h,i)=>`
+      <div class="sel-card" data-idx="${i}"><div><div class="t">${escapeHtml(h.text)}</div></div>
+      <div class="actions"><button data-remove-hotspot="${i}">Supprimer</button></div></div>`).join('');
+    listEl.querySelectorAll('[data-remove-hotspot]').forEach(b=> b.addEventListener('click', ()=>{
+      session.hotspots.splice(+b.dataset.removeHotspot,1);
+      renderDraftList();
+    }));
+  }
+  renderDraftList();
+  input.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && e.shiftKey){
+      e.preventDefault(); e.stopPropagation();
+      const val = input.value.trim();
+      if(val){ session.hotspots.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text:val}); input.value=''; renderDraftList(); }
+    }
+  });
+  input.focus();
+  forwardAction = ()=>{
+    const leftover = input.value.trim();
+    if(leftover){ session.hotspots.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text:leftover}); input.value=''; }
+    goTo('rtep_hotspot_list', renderRtepHotspotList);
+  };
+}
+
+/* ---- étape 3 : liste des points chauds, réordonnable ---- */
+function renderRtepHotspotList(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Vos points chauds, dans l'ordre chronologique</h2>
+    <p class="sub fs" style="animation-delay:.3s">Réordonnez-les si besoin avec les flèches pour qu'ils suivent bien le déroulé de l'épisode.</p>
+    <div class="sel-scroll" style="max-height:56vh;"><div class="sel-list fs" id="hotspot-order-list" style="animation-delay:.4s;width:min(560px,92%);margin:0 auto;"></div></div>
+  `;
+  document.body.classList.add('hide-l');
+  function draw(){
+    const listEl = s.querySelector('#hotspot-order-list');
+    listEl.innerHTML = session.hotspots.map((h,i)=>`
+      <div class="sel-card" data-idx="${i}">
+        <div><div class="t">${i+1}. ${escapeHtml(h.text)}</div></div>
+        <div class="actions">
+          <button data-up="${i}" ${i===0?'disabled':''}>↑</button>
+          <button data-down="${i}" ${i===session.hotspots.length-1?'disabled':''}>↓</button>
+        </div>
+      </div>`).join('') || '<p class="sub">Aucun point chaud noté pendant le récit.</p>';
+    listEl.querySelectorAll('[data-up]').forEach(b=> b.addEventListener('click', ()=>{
+      const i = +b.dataset.up;
+      [session.hotspots[i-1], session.hotspots[i]] = [session.hotspots[i], session.hotspots[i-1]];
+      draw();
+    }));
+    listEl.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=>{
+      const i = +b.dataset.down;
+      [session.hotspots[i], session.hotspots[i+1]] = [session.hotspots[i+1], session.hotspots[i]];
+      draw();
+    }));
+  }
+  draw();
+  forwardAction = ()=>{
+    session.hotspotIndex = 0;
+    if(!session.hotspots.length){ goTo('rtep_worst_intro', renderRtepWorstIntro); return; }
+    goTo('rtep_hotspot_intro', renderRtepHotspotIntro);
+  };
+}
+
+/* ---- étapes 4-8 : traitement de chaque point chaud, un à la fois ---- */
+function renderRtepHotspotIntro(){
+  const h = session.hotspots[session.hotspotIndex];
+  if(!h){ goTo('rtep_worst_intro', renderRtepWorstIntro); return; }
+  if(!session.hotspotWork[h.id]) session.hotspotWork[h.id] = {sensation:'', sud:null, negCognition:'', sets:0, lastSud:null};
+  const work = session.hotspotWork[h.id];
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Point chaud ${session.hotspotIndex+1}/${session.hotspots.length} : ${escapeHtml(h.text)}</h2>
+    <p class="sub fs" style="animation-delay:.3s">Quelle sensation corporelle associez-vous à cette image ?</p>
+    <div class="free-text-wrap fs" style="animation-delay:.4s"><textarea id="hs-sensation" placeholder="Facultatif...">${escapeHtml(work.sensation||'')}</textarea></div>
+  `;
+  forwardAction = ()=>{
+    work.sensation = s.querySelector('#hs-sensation').value;
+    goTo('rtep_hotspot_sud', renderRtepHotspotSud);
+  };
+}
+function renderRtepHotspotSud(){
+  renderScaleScreen("À quel point ce point chaud vous dérange-t-il ?", 'hotspotSudScratch','hotspotSudScratchDetail','rtep_hotspot_nc', renderRtepHotspotNc, false);
+  const proceed = forwardAction;
+  forwardAction = ()=>{
+    proceed();
+    const h = session.hotspots[session.hotspotIndex];
+    const work = session.hotspotWork[h.id];
+    work.sud = session.hotspotSudScratch; work.lastSud = session.hotspotSudScratch;
+    if(session.startDistress==null) session.startDistress = session.hotspotSudScratch;
+  };
+}
+function renderRtepHotspotNc(){
+  const h = session.hotspots[session.hotspotIndex];
+  const work = session.hotspotWork[h.id];
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Une pensée négative accompagne-t-elle ce moment ?</h2>
+    <p class="sub fs" style="animation-delay:.3s">Facultatif — ne notez que si elle apparaît naturellement.</p>
+    <div class="free-text-wrap fs" style="animation-delay:.4s"><textarea id="hs-nc" placeholder="Facultatif...">${escapeHtml(work.negCognition||'')}</textarea></div>
+  `;
+  forwardAction = ()=>{
+    work.negCognition = s.querySelector('#hs-nc').value;
+    goTo('rtep_hotspot_reconnect', ()=> renderReconnect('rtep_hotspot'));
+  };
+}
+function crossfadeToFormRtepHotspot(){
+  const inner = $('bls-inner');
+  inner.style.opacity=0;
+  setTimeout(()=>{
+    inner.innerHTML = `
+      <div class="dark-form">
+        <h2 class="fs">Qu'est-ce qui vous vient maintenant ?</h2>
+        <div class="free-text-wrap fs" style="animation-delay:.7s; width:100%;"><textarea id="resp" placeholder="Écrivez ici (facultatif)..."></textarea></div>
+      </div>`;
+    inner.style.opacity=1;
+    document.body.classList.add('hide-l','hide-r');
+    forwardAction = ()=>{
+      forwardAction = null;
+      $('bls-stage').style.display='none'; $('stage').style.display='flex';
+      document.body.classList.remove('hide-l','hide-r');
+      goTo('rtep_hotspot_recheck', renderRtepHotspotRecheck);
+    };
+  },350);
+}
+function renderRtepHotspotRecheck(){
+  renderScaleScreen("À quel point ce point chaud vous dérange-t-il maintenant ?", 'hotspotSudScratch','hotspotSudScratchDetail','rtep_hotspot_choice', renderRtepHotspotChoice, false);
+  const proceed = forwardAction;
+  forwardAction = ()=>{
+    proceed();
+    const h = session.hotspots[session.hotspotIndex];
+    session.hotspotWork[h.id].lastSud = session.hotspotSudScratch;
+  };
+}
+function renderRtepHotspotChoice(){
+  const h = session.hotspots[session.hotspotIndex];
+  const work = session.hotspotWork[h.id];
+  const low = work.lastSud!=null && work.lastSud<=2;
+  const isLast = session.hotspotIndex >= session.hotspots.length-1;
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">${low ? "Ce point chaud semble s'être apaisé." : "Souhaitez-vous..."}</h2>
+    <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center; margin-top:10px;">
+      <button class="sel-add" id="hs-more">Refaire une série</button>
+      <button class="sel-add" id="hs-next">${isLast ? "C'est bon, passer à la suite" : 'Point chaud suivant'}</button>
+    </div>
+  `;
+  const advance = ()=>{
+    session.hotspotIndex++;
+    if(session.hotspotIndex < session.hotspots.length){ goTo('rtep_hotspot_intro', renderRtepHotspotIntro); }
+    else{ goTo('rtep_worst_intro', renderRtepWorstIntro); }
+  };
+  const more = ()=> goTo('rtep_hotspot_reconnect', ()=> renderReconnect('rtep_hotspot'));
+  s.querySelector('#hs-more').addEventListener('click', more);
+  s.querySelector('#hs-next').addEventListener('click', advance);
+  forwardAction = advance;
+}
+
+/* ---- étape 9 : pire(s) moment(s) de l'épisode ---- */
+function renderRtepWorstIntro(){
+  let suggested = null;
+  session.hotspots.forEach(h=>{
+    const w = session.hotspotWork[h.id];
+    const sud = w && w.sud!=null ? w.sud : -1;
+    const bestSud = suggested ? (session.hotspotWork[suggested.id].sud!=null ? session.hotspotWork[suggested.id].sud : -1) : -1;
+    if(sud > bestSud) suggested = h;
+  });
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Quel a été le moment le plus intense de tout l'épisode ?</h2>
+    ${suggested ? `<p class="sub fs" style="animation-delay:.3s">Point chaud le plus intense noté : « ${escapeHtml(suggested.text)} ». Vous pouvez le reprendre ou décrire un autre moment.</p>` : ''}
+    <div class="free-text-wrap fs" style="animation-delay:.4s"><textarea id="worst-text" placeholder="Décrivez ce moment...">${session.worstMoments.length===0 && suggested ? escapeHtml(suggested.text) : ''}</textarea></div>
+  `;
+  document.body.classList.add('hide-l');
+  forwardAction = ()=>{
+    const text = s.querySelector('#worst-text').value.trim();
+    session.worstMoments.push({text});
+    goTo('rtep_worst_reconnect', ()=> renderReconnect('rtep_worst'));
+  };
+}
+function renderRtepAnotherWorst(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Y a-t-il un autre moment aussi intense dans cet épisode ?</h2>
+    <div class="fs" style="animation-delay:.5s; display:flex; gap:12px; justify-content:center; margin-top:10px;">
+      <button class="sel-add" id="worst-yes">Oui</button>
+      <button class="sel-add" id="worst-no">Non, passer à la suite</button>
+    </div>
+  `;
+  document.body.classList.add('hide-r');
+  const yes = ()=> goTo('rtep_worst_intro', renderRtepWorstIntro);
+  const no = ()=> goTo('rtep_desired', renderRtepDesired);
+  s.querySelector('#worst-yes').addEventListener('click', yes);
+  s.querySelector('#worst-no').addEventListener('click', no);
+  forwardAction = no;
+}
+
+/* ---- étape 10 : cognition positive ---- */
+function renderRtepDesired(){
+  const s = stageBase();
+  document.body.classList.add('phase-positive');
+  s.innerHTML = `
+    <h2 class="instruction fs">Quelle affirmation voudriez-vous croire à la place ?</h2>
+    <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${escapeHtml(session.desiredText||'')}</textarea></div>
+  `;
+  forwardAction = ()=>{ session.desiredText = s.querySelector('#ta').value; goTo('rtep_level2', renderRtepLevel2); };
+}
+function renderRtepLevel2(){
+  renderScaleScreen("À quel point cette affirmation vous semble vraie maintenant ?", 'level2','level2Detail','rtep_pos_loading',
+    ()=> renderLoading({phase:'rtep_pos_reconnect', fn:()=>renderReconnect('rtep_pos')}));
+  document.body.classList.add('phase-positive');
+}
+
+/* ---- étape 11 : recontextualisation ---- */
+function renderRtepRecontext(){
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Reparcourez mentalement l'épisode entier, du début à la fin, comme un tout.</h2>
+    <p class="sub fs" style="animation-delay:.3s">Vérifiez qu'aucun point chaud résiduel ne réactive une charge. Quel sens cet épisode prend-il pour vous maintenant ?</p>
+    <div class="free-text-wrap fs" style="animation-delay:.5s"><textarea id="ta" placeholder="Écrivez ici (facultatif)...">${escapeHtml(session.recontextText||'')}</textarea></div>
+  `;
+  forwardAction = ()=>{ session.recontextText = s.querySelector('#ta').value; goTo('rtep_link', renderRtepLinkStep); };
+}
+
+/* ---- étape 12 : pont optionnel vers du matériel ancien ---- */
+function renderRtepLinkStep(){
+  const s = stageBase();
+  const oldCandidates = traumas.filter(t=> !(session.traumaId && t.id===session.traumaId));
+  const recentCandidates = recentTraumas.filter(t=> !(session.traumaId && t.id===session.traumaId));
+  s.innerHTML = `
+    <h2 class="instruction fs">Un pont apparaît-il vers un souvenir plus ancien de même thème ?</h2>
+    <p class="sub fs" style="animation-delay:.3s">Vous pouvez le lier ici pour une future séance séparée, sans l'ouvrir maintenant. Facultatif.</p>
+    <div class="free-text-wrap fs" style="animation-delay:.4s; width:min(560px,92%);"><input type="text" id="rtep-link-search" placeholder="Rechercher un souvenir..."></div>
+    <div id="rtep-link-list" style="max-height:min(38vh,300px); overflow-y:auto; margin:10px 0; width:min(560px,92%);"></div>
+    <div id="rtep-link-selected" style="width:min(560px,92%);"></div>
+  `;
+  document.body.classList.add('hide-l');
+  const listEl = s.querySelector('#rtep-link-list');
+  const selectedEl = s.querySelector('#rtep-link-selected');
+  function renderSelected(){
+    selectedEl.innerHTML = session.stagedLinks.length ? `<p class="sub" style="margin-top:8px;">Liés : ${session.stagedLinks.map(l=> escapeHtml(l.title)).join(', ')}</p>` : '';
+  }
+  function renderList(query){
+    const q=(query||'').trim().toLowerCase();
+    const rows = [
+      ...oldCandidates.filter(t=>!q||t.title.toLowerCase().includes(q)).map(t=>({id:t.id,kind:'old',title:t.title})),
+      ...recentCandidates.filter(t=>!q||t.title.toLowerCase().includes(q)).map(t=>({id:t.id,kind:'recent',title:t.title})),
+    ];
+    listEl.innerHTML = rows.map(r=>`
+      <div class="sel-card" data-id="${r.id}" data-kind="${r.kind}">
+        <div><div class="t">${escapeHtml(r.title)}</div></div>
+        <div class="actions"><button data-pick="${r.id}" data-pick-kind="${r.kind}">${session.stagedLinks.some(l=>l.id===r.id&&l.kind===r.kind)?'Retirer':'Lier'}</button></div>
+      </div>`).join('') || `<p class="sub">Aucun résultat.</p>`;
+    listEl.querySelectorAll('[data-pick]').forEach(b=> b.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const id=b.dataset.pick, kind=b.dataset.pickKind;
+      const idx = session.stagedLinks.findIndex(l=>l.id===id&&l.kind===kind);
+      if(idx>=0) session.stagedLinks.splice(idx,1);
+      else{ const item = kind==='old'?traumas.find(t=>t.id===id):recentTraumas.find(t=>t.id===id); if(item) session.stagedLinks.push({id,kind,title:item.title}); }
+      renderList(q); renderSelected();
+    }));
+  }
+  renderList(''); renderSelected();
+  s.querySelector('#rtep-link-search').addEventListener('input', (e)=> renderList(e.target.value));
+  forwardAction = ()=> goTo('vocrecap', renderVocRecap);
 }
 
 /* ---------------- body scan ---------------- */
@@ -1527,8 +2035,11 @@ function renderSessionEnd(){
   `;
   const finish = ()=>{ session=null; history=[]; currentPhase=null; goTo('loading0final', ()=> renderLoading({phase:'home',fn:renderHome})); };
   let autoAdvance = true;
+  const kind = session.kind==='rtep' ? 'recent' : 'old';
+  const list = traumaListByKind(kind);
+  const save = traumaSaveFnByKind(kind);
   if(session.traumaId){
-    const t = traumas.find(x=>x.id===session.traumaId);
+    const t = list.find(x=>x.id===session.traumaId);
     if(t){
       if(!t.sessions) t.sessions = [];
       t.sessions.push({
@@ -1543,7 +2054,10 @@ function renderSessionEnd(){
         posSets: session.posSets
       });
       t.status = 'en_cours'; t.updatedAt = Date.now();
-      saveTraumas(traumas);
+      if(session.stagedLinks && session.stagedLinks.length){
+        session.stagedLinks.forEach(l=> addCrossLink(t.id, kind, l.id, l.kind));
+      }
+      save(list);
       const success = session.endDistress!=null && session.endDistress<=1;
       if(success){
         autoAdvance = false;
@@ -1555,7 +2069,7 @@ function renderSessionEnd(){
               <button class="sel-add" id="mark-not-yet">Pas encore</button>
             </div>
           </div>`;
-        s.querySelector('#mark-done').addEventListener('click', ()=>{ t.status='traite'; t.updatedAt=Date.now(); saveTraumas(traumas); finish(); });
+        s.querySelector('#mark-done').addEventListener('click', ()=>{ t.status='traite'; t.updatedAt=Date.now(); save(list); finish(); });
         s.querySelector('#mark-not-yet').addEventListener('click', finish);
       } else {
         s.querySelector('#status-row').innerHTML = '<p class="sub">Souvenir marqué : en cours.</p>';
