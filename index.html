@@ -38,6 +38,10 @@
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
+  .conn-dot{ position:absolute; top:2px; right:2px; width:8px; height:8px; border-radius:50%; background:#b8b0a0; border:1.5px solid var(--bg,#fff); }
+  .conn-dot.ok{ background:#5f9e7a; }
+  .conn-dot.err{ background:#c0554a; }
+  body.stage-dark .conn-dot{ border-color:var(--dusk,#0b0b0d); }
   #account-panel{ position:absolute; top:34px; right:-6px; width:220px; background:white; border:1px solid var(--line);
     border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
   #account-panel.open{ display:block; }
@@ -234,6 +238,7 @@
   <div class="account-wrap">
     <button id="accountIcon" class="icon-btn" title="Compte">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg>
+      <span id="connDot" class="conn-dot" title=""></span>
     </button>
     <div id="account-panel"></div>
   </div>
@@ -339,6 +344,7 @@ function normalizeRecoveryPhrase(s){ return (s||'').toUpperCase().replace(/[^A-Z
 let vault = { dek:null, userId:null, email:null };
 const LS_SYNCED = 'soloemdr_synced_before';
 function vaultReady(){ return !!(supa && vault.dek && vault.userId); }
+let lastSyncError = false;
 
 let syncTimer = null;
 function scheduleSync(){
@@ -348,9 +354,16 @@ function scheduleSync(){
 }
 async function vaultPush(){
   if(!vaultReady()) return;
-  const payload = JSON.stringify({traumas, folders, settings, recentTraumas});
-  const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
-  await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
+  try{
+    const payload = JSON.stringify({traumas, folders, settings, recentTraumas});
+    const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
+    const {error} = await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
+    if(error) throw error;
+    lastSyncError = false;
+  }catch(e){
+    lastSyncError = true;
+  }
+  updateConnDot();
 }
 async function vaultPull(row){
   const json = await decryptWithDEK(vault.dek, row.data_iv, row.ciphertext);
@@ -409,9 +422,8 @@ async function vaultLogin(email, password){
   const dek = await unwrapDEK(row.iv_pw, row.wrapped_dek_pw, kekPw);
   vault.dek = dek; vault.userId = userId; vault.email = email;
   renderAccountPanel();
-  const hasLocalData = traumas.length>0 || folders.length>0;
-  const syncedBefore = localStorage.getItem(LS_SYNCED);
-  if(hasLocalData && !syncedBefore){ return {conflict:true, row}; }
+  const hasLocalData = traumas.length>0 || folders.length>0 || recentTraumas.length>0;
+  if(hasLocalData){ return {conflict:true, row}; }
   await vaultPull(row);
   localStorage.setItem(LS_SYNCED, '1');
   return {conflict:false};
@@ -2080,16 +2092,80 @@ function renderSessionEnd(){
 }
 
 /* ---------------- account / sync screens ---------------- */
+function updateConnDot(){
+  const dot = $('connDot');
+  if(!dot) return;
+  if(!supa){ dot.className = 'conn-dot'; dot.title = 'Synchronisation non configurée'; return; }
+  if(!vault.userId){ dot.className = 'conn-dot'; dot.title = "Non connecté·e — vos souvenirs restent uniquement sur cet appareil"; return; }
+  if(lastSyncError){ dot.className = 'conn-dot err'; dot.title = 'La dernière synchronisation a échoué'; return; }
+  dot.className = 'conn-dot ok'; dot.title = 'Connecté·e et synchronisé·e';
+}
+
+function accountBackupHtml(){
+  return `
+  <div class="account-backup">
+    <button type="button" id="acc-export-btn">Télécharger une sauvegarde</button>
+    <button type="button" id="acc-import-btn">Restaurer une sauvegarde</button>
+    <input type="file" id="acc-import-input" accept="application/json" style="display:none;">
+    <p class="sub" id="acc-import-status" style="font-size:11px;margin:6px 0 0;"></p>
+  </div>`;
+}
+
+function wireBackupControls(panel){
+  panel.querySelector('#acc-export-btn').addEventListener('click', ()=>{
+    const data = {traumas, folders, recentTraumas, settings};
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'soloemdr_sauvegarde_'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  const importInput = panel.querySelector('#acc-import-input');
+  panel.querySelector('#acc-import-btn').addEventListener('click', ()=> importInput.click());
+  importInput.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    const statusEl = panel.querySelector('#acc-import-status');
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if(!Array.isArray(data.traumas) && !Array.isArray(data.recentTraumas) && !Array.isArray(data.folders)){
+        statusEl.textContent = 'Fichier invalide.';
+        return;
+      }
+      traumas = data.traumas || [];
+      folders = data.folders || [];
+      recentTraumas = data.recentTraumas || [];
+      if(data.settings) settings = Object.assign(settings, data.settings);
+      saveTraumas(traumas);
+      saveFolders(folders);
+      saveRecentTraumas(recentTraumas);
+      saveSettings();
+      refreshSettingsPanelInputs();
+      statusEl.textContent = `Restauré : ${traumas.length} souvenir(s), ${folders.length} dossier(s), ${recentTraumas.length} trauma(s) récent(s).` +
+        (vault.userId ? ' Synchronisation avec votre compte en cours...' : ' (non connecté·e pour le moment : restera uniquement sur cet appareil tant que vous ne vous connectez pas)');
+    }catch(err){
+      statusEl.textContent = 'Erreur de lecture du fichier : ' + err.message;
+    }
+    importInput.value = '';
+  });
+}
+
 function renderAccountPanel(){
   const panel = $('account-panel');
+  updateConnDot();
   if(!supa){
-    panel.innerHTML = `<p class="sub">Synchronisation non configurée.</p>`;
+    panel.innerHTML = `<p class="sub">Synchronisation non configurée.</p>` + accountBackupHtml();
+    wireBackupControls(panel);
     return;
   }
   if(vault.userId){
     panel.innerHTML = `
       <p class="sub">Connecté·e : ${escapeHtml(vault.email)}</p>
+      ${lastSyncError ? `<p class="sub" style="color:#c0554a;">La dernière synchronisation a échoué. Vos changements récents ne sont peut-être pas enregistrés sur votre compte.</p>` : ''}
       <button id="acc-panel-logout">Se déconnecter</button>
+      ${accountBackupHtml()}
     `;
     panel.querySelector('#acc-panel-logout').addEventListener('click', ()=>{
       vaultLogout();
@@ -2097,12 +2173,17 @@ function renderAccountPanel(){
       if(currentFn) currentFn();
     });
   } else {
-    panel.innerHTML = `<button id="acc-panel-login">Se connecter</button>`;
+    panel.innerHTML = `
+      <p class="sub">Non connecté·e — vos souvenirs restent uniquement sur cet appareil tant que vous n'êtes pas connecté·e.</p>
+      <button id="acc-panel-login">Se connecter</button>
+      ${accountBackupHtml()}
+    `;
     panel.querySelector('#acc-panel-login').addEventListener('click', ()=>{
       panel.classList.remove('open');
       goTo('authlogin', ()=> renderAuthForm('login'));
     });
   }
+  wireBackupControls(panel);
 }
 
 function renderAuthForm(mode){
