@@ -145,8 +145,16 @@
   .status-picker > div, .folder-picker > div, .priority-card-picker > div, .sessions-history > div, .trauma-quick-actions > div{ overflow:hidden; min-height:0; display:flex; gap:8px; flex-wrap:wrap; }
   .sessions-history > div{ flex-direction:column; gap:6px; }
   .sessions-history-title{ font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); }
-  .session-entry{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; }
+  .session-entry{ display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12.5px; cursor:pointer; width:100%; }
+  .session-entry-main{ display:flex; gap:10px; flex-wrap:wrap; }
   .session-entry .session-date{ color:var(--ink-soft); white-space:nowrap; }
+  .session-chevron{ color:var(--ink-soft); transition:transform .15s ease; flex:0 0 auto; }
+  .session-entry.open .session-chevron{ transform:rotate(90deg); }
+  .session-detail{ display:none; flex-direction:column; gap:4px; width:100%; margin:2px 0 6px; padding:6px 0 0 10px; border-left:2px solid var(--line); font-size:11.5px; color:var(--ink-soft); }
+  .session-detail.open{ display:flex; }
+  .session-detail-row{ display:flex; justify-content:space-between; gap:10px; }
+  .session-detail-row span:first-child{ font-weight:600; color:var(--ink); flex:0 0 auto; }
+  .session-detail-row span:last-child{ text-align:right; }
   .status-opt{ flex:1; padding:7px 8px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); font-size:12.5px; cursor:pointer; }
   .status-opt:hover{ border-color:var(--teal); }
@@ -687,15 +695,35 @@ const STATUS_LABEL = {a_traiter:'À traiter', en_cours:'En cours', traite:'Trait
 function sessionsHistoryHtml(t){
   const sessions = t.sessions || [];
   if(!sessions.length) return '';
-  const rows = [...sessions].reverse().map(sess=>{
+  const rows = [...sessions].reverse().map((sess,i)=>{
     const d = new Date(sess.at);
     const dateStr = d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
     const timeStr = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
     const startStr = sess.startDistress!=null ? sess.startDistress : '—';
     const endStr = sess.endDistress!=null ? sess.endDistress : '—';
-    return `<div class="session-entry"><span class="session-date">${dateStr} · ${timeStr}</span><span>Début : ${startStr}/10 → Fin : ${endStr}/10</span></div>`;
+    const detailRows = [
+      sess.feltText ? `<div class="session-detail-row"><span>Cognition négative</span><span>${escapeHtml(sess.feltText)}</span></div>` : '',
+      sess.desiredText ? `<div class="session-detail-row"><span>Cognition positive</span><span>${escapeHtml(sess.desiredText)}</span></div>` : '',
+      sess.level2!=null ? `<div class="session-detail-row"><span>VOC initial</span><span>${sess.level2}/10</span></div>` : '',
+      sess.endVoc!=null ? `<div class="session-detail-row"><span>VOC final</span><span>${sess.endVoc}/10</span></div>` : '',
+      sess.negSets!=null ? `<div class="session-detail-row"><span>Séries (phase négative)</span><span>${sess.negSets}</span></div>` : '',
+      sess.posSets!=null ? `<div class="session-detail-row"><span>Séries (phase positive)</span><span>${sess.posSets}</span></div>` : '',
+    ].filter(Boolean).join('');
+    return `<div class="session-entry" data-session-toggle="${i}">
+        <div class="session-entry-main"><span class="session-date">${dateStr} · ${timeStr}</span><span>Début : ${startStr}/10 → Fin : ${endStr}/10</span></div>
+        <span class="session-chevron">›</span>
+      </div>
+      ${detailRows ? `<div class="session-detail">${detailRows}</div>` : ''}`;
   }).join('');
   return `<div class="sessions-history"><div><div class="sessions-history-title">Historique des séances</div>${rows}</div></div>`;
+}
+function wireSessionsHistory(container){
+  container.querySelectorAll('[data-session-toggle]').forEach(row=> row.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    row.classList.toggle('open');
+    const detail = row.nextElementSibling;
+    if(detail && detail.classList.contains('session-detail')) detail.classList.toggle('open');
+  }));
 }
 
 function traumaCardHtml(t){
@@ -724,6 +752,7 @@ function traumaCardHtml(t){
 
 function wireTraumaCards(s, returnPhase, returnFn, localRefresh){
   const refresh = localRefresh || returnFn;
+  wireSessionsHistory(s);
   s.querySelectorAll('.sel-card[data-id]').forEach(c=> c.addEventListener('click',(e)=>{
     if(e.target.closest('[data-edit]') || e.target.closest('[data-del]') || e.target.closest('.status-picker') || e.target.closest('.folder-picker') || e.target.closest('.priority-card-picker') || e.target.closest('.sessions-history') || e.target.closest('.trauma-quick-actions')) return;
     const picker = c.querySelector('.status-picker');
@@ -1448,7 +1477,7 @@ function renderBodyScan(){
     const s = stageBase();
     const count = 1;
     s.innerHTML = `
-      <h2 class="instruction fs">Vous pouvez décrire votre ressenti</h2>
+      <h2 class="instruction fs">Scannez votre corps, que ressentez-vous ?</h2>
       <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici (facultatif)..."></textarea></div>
       <div class="fs" style="animation-delay:1.3s; display:flex; gap:12px; justify-content:center; margin-top:18px;">
         <button class="sel-add" id="bs-more">Ajouter une série</button>
