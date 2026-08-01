@@ -826,12 +826,12 @@ function renderSelect(){
 
 function renderSelectBody(scrollEl, query){
   const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortCriterion, libSortColor);
-  const relevantTraumas = (hideFolders ? traumas : traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId))).filter(t=> t.status!=='traite');
-  const matchTraumas = relevantTraumas.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const ungrouped = traumas.filter(t=> (!t.folderId || !folders.find(f=>f.id===t.folderId)) && t.status!=='traite');
+  const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
   const sorted = sortTraumas(matchTraumas, libSortCriterion);
   const folderGrid = (!hideFolders && matchFolders.length) ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
   const cards = sorted.map(selectCardHtml).join('');
-  const nothing = (hideFolders || !matchFolders.length) && !sorted.length;
+  const nothing = !folderGrid && !sorted.length;
   const localRefresh = ()=> renderSelectBody(scrollEl, query);
   scrollEl.innerHTML = `
     ${folderGrid}
@@ -1199,12 +1199,12 @@ function renderLibrary(){
 
 function renderLibraryBody(scrollEl, query){
   const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortCriterion, libSortColor);
-  const relevantTraumas = hideFolders ? traumas : traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
-  const matchTraumas = relevantTraumas.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
+  const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
   const sorted = sortTraumas(matchTraumas, libSortCriterion);
   const folderGrid = (!hideFolders && matchFolders.length) ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
   const cards = sorted.map(traumaCardHtml).join('');
-  const nothing = (hideFolders || !matchFolders.length) && !sorted.length;
+  const nothing = !folderGrid && !sorted.length;
   const localRefresh = ()=> renderLibraryBody(scrollEl, query);
   scrollEl.innerHTML = `
     ${folderGrid}
