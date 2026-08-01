@@ -136,6 +136,8 @@
   .pill-btn:hover, .sel-card .actions button:hover, .lib-toolbar-actions button:hover, .lib-add-top:hover, #account-panel button:hover{
     background-color:color-mix(in srgb, var(--bg-soft), black 30%); }
   .sel-alt{ margin-top:18px; font-size:13.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; background:none; border:none; }
+  .lib-toolbar-actions .toggle-folders-btn{ font-size:11px; padding:0; border:none; background:none; color:var(--ink-soft); text-decoration:underline; }
+  .lib-toolbar-actions .toggle-folders-btn:hover{ color:var(--ink); background:none; }
   .sel-add{ margin-top:6px; font-size:13px; color:var(--teal-deep); background:none; border:none; cursor:pointer; }
 
   .sel-card.has-status{ display:flex; flex-direction:column; align-items:stretch; }
@@ -786,6 +788,7 @@ function renderSelect(){
             ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}"><span>${o.label}</span><span class="sort-check">✓</span></button>`).join('')}
           </div>
         </div>
+        ${toggleFoldersBtnHtml()}
         <button id="add-t">+ Souvenir</button>
       </div>
     </div>
@@ -795,6 +798,7 @@ function renderSelect(){
   const searchInput = s.querySelector('#lib-search');
   const scrollEl = s.querySelector('#select-scroll');
   function update(){ renderSelectBody(scrollEl, searchInput.value.trim().toLowerCase()); }
+  wireToggleFoldersBtn(s, update);
   searchInput.addEventListener('input', update);
 
   const sortBtn = s.querySelector('#lib-sort-btn');
@@ -822,12 +826,12 @@ function renderSelect(){
 
 function renderSelectBody(scrollEl, query){
   const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortCriterion, libSortColor);
-  const ungrouped = traumas.filter(t=> (!t.folderId || !folders.find(f=>f.id===t.folderId)) && t.status!=='traite');
-  const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const relevantTraumas = (hideFolders ? traumas : traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId))).filter(t=> t.status!=='traite');
+  const matchTraumas = relevantTraumas.filter(t=> !query || t.title.toLowerCase().includes(query));
   const sorted = sortTraumas(matchTraumas, libSortCriterion);
-  const folderGrid = matchFolders.length ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
+  const folderGrid = (!hideFolders && matchFolders.length) ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
   const cards = sorted.map(selectCardHtml).join('');
-  const nothing = !matchFolders.length && !sorted.length;
+  const nothing = (hideFolders || !matchFolders.length) && !sorted.length;
   const localRefresh = ()=> renderSelectBody(scrollEl, query);
   scrollEl.innerHTML = `
     ${folderGrid}
@@ -1066,8 +1070,23 @@ function wireFolderTiles(s, returnPhase, returnFn, localRefresh, folderViewFn){
 
 const LS_LIBSORT = 'soloemdr_libsort';
 const LS_LIBSORT_COLOR = 'soloemdr_libsort_color';
+const LS_HIDE_FOLDERS = 'soloemdr_hide_folders';
 let libSortCriterion = localStorage.getItem(LS_LIBSORT) || 'alpha';
 let libSortColor = localStorage.getItem(LS_LIBSORT_COLOR) === '1';
+let hideFolders = localStorage.getItem(LS_HIDE_FOLDERS) === '1';
+function toggleFoldersBtnHtml(){
+  return `<button type="button" id="toggle-folders-btn" class="toggle-folders-btn">${hideFolders ? 'Afficher les dossiers' : 'Masquer les dossiers'}</button>`;
+}
+function wireToggleFoldersBtn(container, refreshFn){
+  const btn = container.querySelector('#toggle-folders-btn');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    hideFolders = !hideFolders;
+    localStorage.setItem(LS_HIDE_FOLDERS, hideFolders ? '1' : '0');
+    btn.textContent = hideFolders ? 'Afficher les dossiers' : 'Masquer les dossiers';
+    refreshFn();
+  });
+}
 if(libSortCriterion==='color'){ libSortColor = true; libSortCriterion = 'alpha'; }
 const SORT_OPTIONS = [
   {value:'alpha', label:'Alphabétique'},
@@ -1140,6 +1159,7 @@ function renderLibrary(){
             ${SORT_OPTIONS.map(o=>`<button data-sort="${o.value}"><span>${o.label}</span><span class="sort-check">✓</span></button>`).join('')}
           </div>
         </div>
+        ${toggleFoldersBtnHtml()}
         <button id="add-t">+ Souvenir</button>
         <button id="add-f">+ Dossier</button>
       </div>
@@ -1150,6 +1170,7 @@ function renderLibrary(){
   const searchInput = s.querySelector('#lib-search');
   const scrollEl = s.querySelector('#lib-scroll');
   function update(){ renderLibraryBody(scrollEl, searchInput.value.trim().toLowerCase()); }
+  wireToggleFoldersBtn(s, update);
   searchInput.addEventListener('input', update);
 
   const sortBtn = s.querySelector('#lib-sort-btn');
@@ -1178,12 +1199,12 @@ function renderLibrary(){
 
 function renderLibraryBody(scrollEl, query){
   const matchFolders = sortFolders(folders.filter(f=> !query || f.name.toLowerCase().includes(query)), libSortCriterion, libSortColor);
-  const ungrouped = traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
-  const matchTraumas = ungrouped.filter(t=> !query || t.title.toLowerCase().includes(query));
+  const relevantTraumas = hideFolders ? traumas : traumas.filter(t=> !t.folderId || !folders.find(f=>f.id===t.folderId));
+  const matchTraumas = relevantTraumas.filter(t=> !query || t.title.toLowerCase().includes(query));
   const sorted = sortTraumas(matchTraumas, libSortCriterion);
-  const folderGrid = matchFolders.length ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
+  const folderGrid = (!hideFolders && matchFolders.length) ? `<div class="folder-grid fs" style="animation-delay:.4s">${matchFolders.map(folderTileHtml).join('')}</div>` : '';
   const cards = sorted.map(traumaCardHtml).join('');
-  const nothing = !matchFolders.length && !sorted.length;
+  const nothing = (hideFolders || !matchFolders.length) && !sorted.length;
   const localRefresh = ()=> renderLibraryBody(scrollEl, query);
   scrollEl.innerHTML = `
     ${folderGrid}
@@ -1820,15 +1841,34 @@ function renderEndDistress(){
    parcours EMDR (renderVocRecap -> renderEndDistress -> renderBodyScan
    -> renderClosure -> renderSessionEnd, tous génériques via session.kind).
    ================================================================== */
+/* Une séance R-TEP peut s'étaler sur plusieurs fois : la liste des points
+   chauds (et le travail déjà fait dessus) est donc réenregistrée sur le
+   trauma lui-même au fil de l'eau, séparément de l'historique des séances
+   terminées, pour ne jamais perdre ce travail si la séance n'est pas finie
+   d'un coup. */
+function saveRtepProgress(){
+  if(!session || session.kind!=='rtep' || !session.traumaId) return;
+  const t = recentTraumas.find(x=>x.id===session.traumaId);
+  if(!t) return;
+  t.rtepProgress = { hotspots: session.hotspots, hotspotWork: session.hotspotWork, hotspotIndex: session.hotspotIndex, updatedAt: Date.now() };
+  if(t.status!=='traite') t.status = 'en_cours';
+  t.updatedAt = Date.now();
+  saveRecentTraumas(recentTraumas);
+}
+
 function beginRtepSession(traumaId, title, description){
+  const t = traumaId ? recentTraumas.find(x=>x.id===traumaId) : null;
+  const progress = t && t.rtepProgress;
   session = { kind:'rtep', traumaId, title, description,
-    hotspots: [], hotspotIndex: 0, hotspotWork: {},
+    hotspots: progress ? progress.hotspots : [], hotspotIndex: progress ? progress.hotspotIndex : 0,
+    hotspotWork: progress ? progress.hotspotWork : {},
     hotspotSudScratch: null, hotspotSudScratchDetail: '',
     worstMoments: [], negSets: 0,
     desiredText:'', level2:null, level2Detail:'', posSets:0,
     endVoc:null, endVocDetail:'', endDistress:null, endDistressDetail:'',
     startDistress: null, recontextText:'', stagedLinks: [],
     feltText:'' };
+  if(t){ if(t.status!=='traite') t.status = 'en_cours'; t.updatedAt = Date.now(); saveRecentTraumas(recentTraumas); }
   goTo('rtep_loading1', ()=> renderLoading({phase:'rtep_stabilize', fn:renderRtepStabilize}));
 }
 
@@ -1872,6 +1912,7 @@ function renderRtepNarration(){
     listEl.querySelectorAll('[data-remove-hotspot]').forEach(b=> b.addEventListener('click', ()=>{
       session.hotspots.splice(+b.dataset.removeHotspot,1);
       renderDraftList();
+      saveRtepProgress();
     }));
   }
   renderDraftList();
@@ -1879,13 +1920,13 @@ function renderRtepNarration(){
     if(e.key==='Enter' && e.shiftKey){
       e.preventDefault(); e.stopPropagation();
       const val = input.value.trim();
-      if(val){ session.hotspots.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text:val}); input.value=''; renderDraftList(); }
+      if(val){ session.hotspots.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text:val}); input.value=''; renderDraftList(); saveRtepProgress(); }
     }
   });
   input.focus();
   forwardAction = ()=>{
     const leftover = input.value.trim();
-    if(leftover){ session.hotspots.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text:leftover}); input.value=''; }
+    if(leftover){ session.hotspots.push({id:'h_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), text:leftover}); input.value=''; saveRtepProgress(); }
     goTo('rtep_hotspot_list', renderRtepHotspotList);
   };
 }
@@ -1913,16 +1954,19 @@ function renderRtepHotspotList(){
       const i = +b.dataset.up;
       [session.hotspots[i-1], session.hotspots[i]] = [session.hotspots[i], session.hotspots[i-1]];
       draw();
+      saveRtepProgress();
     }));
     listEl.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=>{
       const i = +b.dataset.down;
       [session.hotspots[i], session.hotspots[i+1]] = [session.hotspots[i+1], session.hotspots[i]];
       draw();
+      saveRtepProgress();
     }));
   }
   draw();
   forwardAction = ()=>{
-    session.hotspotIndex = 0;
+    if(session.hotspotIndex==null || session.hotspotIndex>=session.hotspots.length) session.hotspotIndex = 0;
+    saveRtepProgress();
     if(!session.hotspots.length){ goTo('rtep_worst_intro', renderRtepWorstIntro); return; }
     goTo('rtep_hotspot_intro', renderRtepHotspotIntro);
   };
@@ -1942,6 +1986,7 @@ function renderRtepHotspotIntro(){
   `;
   forwardAction = ()=>{
     work.sensation = s.querySelector('#hs-sensation').value;
+    saveRtepProgress();
     goTo('rtep_hotspot_sud', renderRtepHotspotSud);
   };
 }
@@ -1954,6 +1999,7 @@ function renderRtepHotspotSud(){
     const work = session.hotspotWork[h.id];
     work.sud = session.hotspotSudScratch; work.lastSud = session.hotspotSudScratch;
     if(session.startDistress==null) session.startDistress = session.hotspotSudScratch;
+    saveRtepProgress();
   };
 }
 function renderRtepHotspotNc(){
@@ -1967,6 +2013,7 @@ function renderRtepHotspotNc(){
   `;
   forwardAction = ()=>{
     work.negCognition = s.querySelector('#hs-nc').value;
+    saveRtepProgress();
     goTo('rtep_hotspot_reconnect', ()=> renderReconnect('rtep_hotspot'));
   };
 }
@@ -1996,6 +2043,7 @@ function renderRtepHotspotRecheck(){
     proceed();
     const h = session.hotspots[session.hotspotIndex];
     session.hotspotWork[h.id].lastSud = session.hotspotSudScratch;
+    saveRtepProgress();
   };
 }
 function renderRtepHotspotChoice(){
@@ -2013,6 +2061,7 @@ function renderRtepHotspotChoice(){
   `;
   const advance = ()=>{
     session.hotspotIndex++;
+    saveRtepProgress();
     if(session.hotspotIndex < session.hotspots.length){ goTo('rtep_hotspot_intro', renderRtepHotspotIntro); }
     else{ goTo('rtep_worst_intro', renderRtepWorstIntro); }
   };
@@ -2206,6 +2255,7 @@ function renderSessionEnd(){
         posSets: session.posSets
       });
       t.status = 'en_cours'; t.updatedAt = Date.now();
+      if(kind==='recent') delete t.rtepProgress;
       if(session.stagedLinks && session.stagedLinks.length){
         session.stagedLinks.forEach(l=> addCrossLink(t.id, kind, l.id, l.kind));
       }
