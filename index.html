@@ -649,7 +649,7 @@ function goBack(){
 }
 document.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowLeft'){ e.preventDefault(); goBack(); }
-  else if(e.key==='ArrowRight'||e.key==='Enter'){ e.preventDefault(); if(forwardAction) forwardAction(); }
+  else if(e.key==='ArrowRight' || (e.key==='Enter' && !e.shiftKey)){ e.preventDefault(); if(forwardAction) forwardAction(); }
   else if(e.code==='Space'){ if(spaceAction){ e.preventDefault(); spaceAction(); } }
 });
 $('chevL').addEventListener('click',goBack);
