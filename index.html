@@ -652,6 +652,12 @@ document.addEventListener('keydown',(e)=>{
   else if(e.key==='ArrowRight' || (e.key==='Enter' && !e.shiftKey)){ e.preventDefault(); if(forwardAction) forwardAction(); }
   else if(e.code==='Space'){ if(spaceAction){ e.preventDefault(); spaceAction(); } }
 });
+/* Sur mobile (pas de barre d'espace) : taper sur l'écran de stimulation lance/arrête les
+   mouvements du point, comme la barre d'espace. Les boutons et champs restent utilisables. */
+$('bls-stage').addEventListener('click',(e)=>{
+  if(e.target.closest('button, input, textarea, label, a')) return;
+  if(spaceAction) spaceAction();
+});
 $('chevL').addEventListener('click',goBack);
 $('chevR').addEventListener('click',()=>{ if(forwardAction) forwardAction(); });
 /* keep the browser's own back button inside the app instead of leaving the page */
