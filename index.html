@@ -395,14 +395,34 @@ async function clearSessionDEK(){
 /* Essaie de restaurer une session déjà déverrouillée, sans redemander le mot de
    passe — seulement si la session Supabase sous-jacente est toujours valide et
    correspond bien au DEK mis en cache. */
+const LS_LAST_RESTORE = 'soloemdr_last_restore';
+function noteRestore(msg){ try{ localStorage.setItem(LS_LAST_RESTORE, JSON.stringify({at:Date.now(), msg})); }catch(e){} }
 async function restoreVaultFromCache(){
   if(!supa) return false;
   const rec = await readCachedDEK();
-  if(!rec) return false;
+  if(!rec){ noteRestore('aucune clé en cache sur cet appareil'); return false; }
+  let res;
   try{
-    const {data:{session}} = await supa.auth.getSession();
-    if(!session || session.user.id !== rec.userId){ await clearSessionDEK(); return false; }
-  }catch(e){ return false; }
+    res = await Promise.race([
+      supa.auth.getSession(),
+      new Promise(r=> setTimeout(()=> r({data:{session:null}, error:{transient:true, message:'délai dépassé'}}), 8000))
+    ]);
+  }catch(e){ res = {data:{session:null}, error:e}; }
+  const session = res && res.data && res.data.session;
+  if(session){
+    if(session.user.id !== rec.userId){ await clearSessionDEK(); noteRestore('la session appartient à un autre compte'); return false; }
+    try{ localStorage.removeItem(LS_LAST_RESTORE); }catch(e){}
+  } else {
+    const err = res && res.error;
+    /* un raté réseau / serveur qui se réveille n'est pas une vraie déconnexion : on garde la clé */
+    const transient = !!err && (err.transient || err.name==='AuthRetryableFetchError' || (typeof err.status==='number' && (err.status===0 || err.status>=500)));
+    if(!transient){
+      await clearSessionDEK();
+      noteRestore('session expirée ou révoquée' + (err && err.message ? ' (' + err.message + ')' : ''));
+      return false;
+    }
+    noteRestore('réseau indisponible au démarrage : session conservée, synchronisation reprise dès que possible');
+  }
   vault.dek = rec.dek; vault.userId = rec.userId; vault.email = rec.email;
   return true;
 }
@@ -509,7 +529,9 @@ async function vaultResolveKeepLocal(){ await vaultPush(); localStorage.setItem(
 async function vaultResolveUseCloud(row){ await vaultPull(row); localStorage.setItem(LS_SYNCED, '1'); }
 
 async function vaultLogout(){
-  if(supa) supa.auth.signOut();
+  /* scope local : ne déconnecte QUE cet appareil (par défaut Supabase coupe toutes les
+     sessions du compte, sur les autres appareils et dans Parts Mapping aussi) */
+  if(supa) supa.auth.signOut({scope:'local'});
   vault = {dek:null, userId:null, email:null};
   await clearSessionDEK();
   traumas = []; folders = []; recentTraumas = [];
@@ -595,6 +617,13 @@ if(supa){
   supa.auth.onAuthStateChange((event)=>{
     if(event === 'PASSWORD_RECOVERY'){
       goTo('setnewpw', renderSetNewPasswordAfterRecovery);
+    }
+    if(event === 'SIGNED_OUT' && vault.userId){
+      /* la session a été révoquée ailleurs : on le reflète et on explique pourquoi */
+      vault = {dek:null, userId:null, email:null};
+      clearSessionDEK();
+      noteRestore('session révoquée (déconnexion depuis un autre appareil ou onglet, ou session expirée)');
+      renderAccountPanel();
     }
   });
 }
@@ -2311,6 +2340,13 @@ function renderSessionEnd(){
 }
 
 /* ---------------- account / sync screens ---------------- */
+function lastRestoreHtml(){
+  try{
+    const r = JSON.parse(localStorage.getItem(LS_LAST_RESTORE)||'null');
+    if(!r) return '';
+    return `<p class="sub" style="font-size:11px;">Reconnexion automatique : ${escapeHtml(r.msg)}.</p>`;
+  }catch(e){ return ''; }
+}
 function updateConnDot(){
   const dot = $('connDot');
   if(!dot) return;
@@ -2394,6 +2430,7 @@ function renderAccountPanel(){
   } else {
     panel.innerHTML = `
       <p class="sub">Non connecté·e — vos souvenirs restent uniquement sur cet appareil tant que vous n'êtes pas connecté·e.</p>
+      ${lastRestoreHtml()}
       <button id="acc-panel-login">Se connecter</button>
       ${accountBackupHtml()}
     `;
