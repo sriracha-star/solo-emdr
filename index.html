@@ -1486,7 +1486,11 @@ function renderTraumaForm(trauma, returnPhase, returnFn, presetFolderId, targetL
 }
 
 function beginSession(traumaId, title, description){
-  session = { traumaId, title, description, feltText:'', level1:null, level1Detail:'',
+  /* la cognition négative donnée à la 1re séance sur ce souvenir est gardée sur le souvenir
+     et simplement rappelée (non modifiable) aux séances suivantes */
+  const savedT = traumaId ? traumas.find(x=>x.id===traumaId) : null;
+  const savedNeg = (savedT && savedT.negCognition) || '';
+  session = { traumaId, title, description, feltText:savedNeg, negCognitionLocked:!!savedNeg, level1:null, level1Detail:'',
     desiredText:'', level2:null, level2Detail:'', negSets:0, posSets:0, closureStep:0,
     startDistress:null, endVoc:null, endVocDetail:'', endDistress:null, endDistressDetail:'' };
   goTo('loading1', ()=> renderLoading({phase:'connect', fn:renderConnect}));
@@ -1511,13 +1515,32 @@ function renderConnect(){
   forwardAction = ()=> goTo('feel', renderFeel);
 }
 
+/* rappel de la cognition négative sur les écrans de SUD de la 1re phase */
+function negCognitionIntroHtml(){
+  return session.feltText && session.feltText.trim() ? `Votre affirmation négative : « ${escapeHtml(session.feltText.trim())} »` : '';
+}
+
 function renderFeel(){
   const s = stageBase();
+  if(session.negCognitionLocked){
+    s.innerHTML = `
+      <h2 class="instruction fs">Votre affirmation négative</h2>
+      <p class="sub fs" style="animation-delay:.4s; font-size:17px;">« ${escapeHtml(session.feltText)} »</p>
+      <p class="sub fs" style="animation-delay:.7s">Celle donnée lors de votre première séance sur ce souvenir.</p>
+    `;
+    forwardAction = ()=> goTo('level1', renderLevel1);
+    return;
+  }
   s.innerHTML = `
     <h2 class="instruction fs">Quelle affirmation vous vient ?</h2>
     <div class="free-text-wrap fs" style="animation-delay:.9s"><textarea id="ta" placeholder="Écrivez ici...">${session.feltText||''}</textarea></div>
   `;
-  forwardAction = ()=>{ session.feltText = s.querySelector('#ta').value; goTo('level1', renderLevel1); };
+  forwardAction = ()=>{
+    session.feltText = s.querySelector('#ta').value;
+    const t = session.traumaId ? traumas.find(x=>x.id===session.traumaId) : null;
+    if(t && !t.negCognition && session.feltText.trim()){ t.negCognition = session.feltText.trim(); t.updatedAt = Date.now(); saveTraumas(traumas); }
+    goTo('level1', renderLevel1);
+  };
 }
 
 function bucketLabelPresence(v){
@@ -1571,7 +1594,7 @@ function renderScaleScreen(title, storeKey, detailKey, nextPhase, nextFn, showDe
 }
 
 function renderLevel1(){
-  renderScaleScreen("À quel point ce souvenir vous dérange-t-il maintenant ?", 'level1','level1Detail','desired',renderDesired,false);
+  renderScaleScreen("À quel point ce souvenir vous dérange-t-il maintenant ?", 'level1','level1Detail','desired',renderDesired,false,negCognitionIntroHtml());
   const proceed = forwardAction;
   forwardAction = ()=>{ proceed(); session.startDistress = session.level1; };
 }
@@ -1787,7 +1810,7 @@ function showCheckpointDark(mode){
   const isNegLike = mode==='neg' || mode==='rtep_worst';
   renderScaleScreen(isNegLike ? "À quel point ce souvenir vous dérange-t-il maintenant ?" : "À quel point cette affirmation vous semble vraie maintenant ?",
     isNegLike?'level1':'level2', isNegLike?'level1Detail':'level2Detail',
-    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), !isNegLike);
+    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), !isNegLike, mode==='neg' ? negCognitionIntroHtml() : '');
   if(mode==='pos'||mode==='rtep_pos') document.body.classList.add('phase-positive');
 }
 
