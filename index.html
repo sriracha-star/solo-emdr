@@ -219,6 +219,8 @@
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
   .skip-link:hover{ color:rgba(239,232,218,0.9); }
+  .audio-hint{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:45; background:rgba(239,232,218,0.12);
+    border:1px solid rgba(239,232,218,0.3); color:#EFE8DA; border-radius:20px; padding:8px 16px; font-size:13px; cursor:pointer; font-family:var(--font-body); }
 
   .form-error{ color:#B3423E; font-size:12.5px; margin-top:10px; min-height:16px; max-width:420px; }
 </style>
@@ -1714,14 +1716,29 @@ function ensureAudioCtx(){
 /* débloque le contexte audio dès la toute première interaction avec la page, pas seulement
    au lancement d'une série : certains navigateurs n'autorisent la lecture que si le contexte
    a été créé/repris tôt, au plus près d'un vrai geste utilisateur. */
-['keydown','pointerdown','touchstart'].forEach(evt=>{
+['keydown','mousedown','pointerdown','touchstart','touchend','click'].forEach(evt=>{
   document.addEventListener(evt, function unlockAudioOnFirstGesture(){ if(settings.audio) ensureAudioCtx(); }, {capture:true});
 });
+/* Si le navigateur refuse de lancer le son (politique de lecture automatique), on le dit
+   au lieu d'échouer en silence : un clic sur le message suffit à le débloquer. */
+function showAudioBlockedHint(){
+  const inner = $('bls-inner');
+  if(!inner || $('audio-hint')) return;
+  const b = document.createElement('button');
+  b.id = 'audio-hint'; b.className = 'audio-hint'; b.type = 'button';
+  b.textContent = "Son bloqué par le navigateur — cliquez ici pour l'activer";
+  b.addEventListener('click', ()=>{
+    ensureAudioCtx();
+    setTimeout(()=>{ if(bls.audioCtx && bls.audioCtx.state==='running') b.remove(); }, 300);
+  });
+  inner.appendChild(b);
+}
 function playTick(side, force){
   if(!settings.audio && !force) return;
   try{
     const ctx=ensureAudioCtx();
-    if(!ctx || ctx.state!=='running') return;
+    if(!ctx || ctx.state!=='running'){ if(!force) showAudioBlockedHint(); return; }
+    const hint=$('audio-hint'); if(hint) hint.remove();
     const osc=ctx.createOscillator(), gain=ctx.createGain(), pan=ctx.createStereoPanner();
     osc.type='sine'; osc.frequency.value=420; pan.pan.value=side==='L'?-1:1;
     const now=ctx.currentTime;
