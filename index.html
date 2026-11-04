@@ -254,6 +254,7 @@
     <div class="control-group"><label>Durée d'une série : <span id="duration-val">90</span> s</label><input type="range" id="bls-duration" min="20" max="180" value="90"></div>
     <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
     <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
+    <div class="control-group"><button type="button" id="bls-test-btn" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px;">Tester le son et la vibration</button><p class="sub" id="bls-test-result" style="font-size:11.5px; margin:6px 0 0;"></p></div>
     <button id="settings-save" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:4px;">Enregistrer</button>
   </div>
 
@@ -590,6 +591,26 @@ $('bls-color').addEventListener('input',e=>{settings.color=e.target.value;saveSe
 $('bls-duration').addEventListener('input',e=>{settings.duration=+e.target.value;$('duration-val').textContent=settings.duration;saveSettings();});
 $('bls-audio').addEventListener('change',e=>{settings.audio=e.target.checked;saveSettings();});
 $('bls-haptic').addEventListener('change',e=>{settings.haptic=e.target.checked;saveSettings();});
+$('bls-test-btn').addEventListener('click',()=>{
+  const out = $('bls-test-result');
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  const canVibrate = typeof navigator.vibrate==='function';
+  const vibOk = canVibrate ? navigator.vibrate(150) : false;
+  const ctx = ensureAudioCtx();
+  setTimeout(()=>{
+    playTick('L', true);
+    setTimeout(()=> playTick('R', true), 500);
+    const lines = [];
+    if(!ctx) lines.push('Son : ce navigateur ne gère pas l\'audio.');
+    else if(ctx.state==='running') lines.push('Son : prêt — tu devrais entendre deux tops (gauche puis droite)' + (iOS && !navigator.audioSession ? '. Si rien : désactive le mode silencieux de l\'iPhone.' : '.'));
+    else lines.push('Son : bloqué par le navigateur (état « ' + ctx.state + ' »). Touche l\'écran puis réessaie.');
+    if(!settings.audio) lines.push('La case « Tonalité audio alternée » est décochée : elle doit être cochée pour les séances.');
+    if(!canVibrate) lines.push('Vibration : impossible sur cet appareil/navigateur' + (iOS ? ' (iPhone et iPad ne la permettent pas depuis le web).' : '.'));
+    else lines.push(vibOk ? 'Vibration : envoyée.' : 'Vibration : refusée par le navigateur.');
+    if(canVibrate && !settings.haptic) lines.push('La case « Vibration alternée » est décochée : coche-la pour les séances.');
+    out.textContent = lines.join(' ');
+  }, 250);
+});
 $('settings-save').addEventListener('click',()=>{
   saveSettings();
   const dot = $('bls-dot');
@@ -1545,6 +1566,9 @@ function renderConnect(){
 }
 
 /* rappel de la cognition négative sur les écrans de SUD de la 1re phase */
+function posCognitionIntroHtml(){
+  return session.desiredText && session.desiredText.trim() ? `Votre affirmation : « ${escapeHtml(session.desiredText.trim())} »` : '';
+}
 function negCognitionIntroHtml(){
   return session.feltText && session.feltText.trim() ? `Votre affirmation négative : « ${escapeHtml(session.feltText.trim())} »` : '';
 }
@@ -1639,7 +1663,7 @@ function renderDesired(){
 }
 function renderLevel2(){
   renderScaleScreen("À quel point cette affirmation vous semble vraie maintenant ?", 'level2','level2Detail','loading2neg',
-    ()=> renderLoading({phase:'reconnect_neg', fn:()=>renderReconnect('neg')}));
+    ()=> renderLoading({phase:'reconnect_neg', fn:()=>renderReconnect('neg')}), true, posCognitionIntroHtml());
   document.body.classList.add('phase-positive');
 }
 
@@ -1676,10 +1700,14 @@ function computeXY(t){
   const swing=Math.sin(t*Math.PI*2);
   return {x:0.5+swing*0.42, y:0.5};
 }
+/* iOS : par défaut le son Web Audio est coupé par le bouton silencieux ; 'playback' l'en affranchit */
+try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(e){}
 function ensureAudioCtx(){
   try{
+    if(bls.audioCtx && bls.audioCtx.state==='closed') bls.audioCtx = null;
     if(!bls.audioCtx) bls.audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    if(bls.audioCtx.state==='suspended') bls.audioCtx.resume();
+    /* 'suspended' mais aussi 'interrupted' (iOS : après un changement d'appli, un verrouillage…) */
+    if(bls.audioCtx.state!=='running'){ const p = bls.audioCtx.resume(); if(p && p.catch) p.catch(()=>{}); }
   }catch(e){}
   return bls.audioCtx;
 }
@@ -1689,8 +1717,8 @@ function ensureAudioCtx(){
 ['keydown','pointerdown','touchstart'].forEach(evt=>{
   document.addEventListener(evt, function unlockAudioOnFirstGesture(){ if(settings.audio) ensureAudioCtx(); }, {capture:true});
 });
-function playTick(side){
-  if(!settings.audio) return;
+function playTick(side, force){
+  if(!settings.audio && !force) return;
   try{
     const ctx=ensureAudioCtx();
     if(!ctx || ctx.state!=='running') return;
@@ -1839,7 +1867,7 @@ function showCheckpointDark(mode){
   const isNegLike = mode==='neg' || mode==='rtep_worst';
   renderScaleScreen(isNegLike ? "À quel point ce souvenir vous dérange-t-il maintenant ?" : "À quel point cette affirmation vous semble vraie maintenant ?",
     isNegLike?'level1':'level2', isNegLike?'level1Detail':'level2Detail',
-    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), !isNegLike, mode==='neg' ? negCognitionIntroHtml() : '');
+    'checkpoint_choice_'+mode, ()=> renderCheckpointChoice(mode), !isNegLike, mode==='neg' ? negCognitionIntroHtml() : (mode==='pos' || mode==='rtep_pos') ? posCognitionIntroHtml() : '');
   if(mode==='pos'||mode==='rtep_pos') document.body.classList.add('phase-positive');
 }
 
@@ -2180,7 +2208,7 @@ function renderRtepDesired(){
 }
 function renderRtepLevel2(){
   renderScaleScreen("À quel point cette affirmation vous semble vraie maintenant ?", 'level2','level2Detail','rtep_pos_loading',
-    ()=> renderLoading({phase:'rtep_pos_reconnect', fn:()=>renderReconnect('rtep_pos')}));
+    ()=> renderLoading({phase:'rtep_pos_reconnect', fn:()=>renderReconnect('rtep_pos')}), true, posCognitionIntroHtml());
   document.body.classList.add('phase-positive');
 }
 
