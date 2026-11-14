@@ -828,8 +828,7 @@ function renderEmbodiment(){
     <button class="pill-btn emb-edit-btn" id="emb-edit">Modifier</button>
     <h2 class="instruction fs">Embodiment</h2>
     <p class="sub fs" style="animation-delay:.3s">Atteindre cet état de pleine présence et d'authenticité, l'incarner.</p>
-    ${n ? `<button class="pill-btn fs" id="emb-start" style="animation-delay:.5s; font-size:14px; padding:10px 26px;">Commencer</button>
-           <p class="sub fs" style="animation-delay:.6s; margin:12px 0 0; font-size:12.5px;">${n} état${n>1?'s':''} à incarner</p>`
+    ${n ? `<button class="pill-btn fs" id="emb-start" style="animation-delay:.5s; font-size:14px; padding:10px 26px;">Commencer</button>`
         : `<p class="sub fs" style="animation-delay:.5s">Aucun état pour l'instant. Ajoutez-en avec « Modifier » (vous pouvez aussi coller toute une liste).</p>`}
   `;
   document.body.classList.add('hide-l','hide-r');
@@ -948,7 +947,6 @@ function renderEmbodimentPoint(){
   const size = len>400 ? 16 : len>180 ? 18 : len>80 ? 22 : 28;
   s.innerHTML = `
     <div style="margin:auto; width:min(680px,100%);">
-      <p class="sub fs" style="margin:0 0 16px; font-size:12.5px;">État ${session.index+1} sur ${session.ids.length}</p>
       <h2 class="instruction fs" style="animation-delay:.2s; font-size:${size}px; line-height:1.5; font-weight:${len>180?400:600}; max-width:none;">${escapeHtml(it.text).replace(/\n/g,'<br>')}</h2>
       <button class="pill-btn fs" id="emb-go" style="animation-delay:.6s; margin-top:26px; font-size:14px; padding:10px 24px;">Commencer la stimulation</button>
       <div><button class="sel-alt fs" id="emb-quit" style="animation-delay:.7s; margin-top:14px;">Quitter</button></div>
