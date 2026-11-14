@@ -412,7 +412,7 @@ const LS_LAST_RESTORE = 'soloemdr_last_restore';
 function noteRestore(msg){ try{ localStorage.setItem(LS_LAST_RESTORE, JSON.stringify({at:Date.now(), msg})); }catch(e){} }
 async function restoreVaultFromCache(){
   if(!supa) return false;
-  const rec = await readCachedDEK();
+  const rec = await Promise.race([readCachedDEK(), new Promise(r=> setTimeout(()=> r(null), 3000))]);
   if(!rec){ noteRestore('aucune clé en cache sur cet appareil'); return false; }
   let res;
   try{
@@ -661,7 +661,14 @@ if(supa){
   });
 }
 renderAccountPanel();
-const vaultRestorePromise = restoreVaultFromCache().then(()=> renderAccountPanel());
+/* La reconnexion automatique tourne en arrière-plan : l'écran s'affiche tout de suite. Seuls les
+   écrans qui exigent d'être connecté·e attendent (message "Connexion…") puis se réaffichent. */
+let vaultRestoreDone = false, pendingGateRerender = false;
+const vaultRestorePromise = restoreVaultFromCache().catch(()=> false).then(()=>{
+  vaultRestoreDone = true;
+  renderAccountPanel();
+  if(pendingGateRerender){ pendingGateRerender = false; if(currentFn) currentFn(); }
+});
 
 /* ---------------- navigation core ---------------- */
 let session=null, currentPhase=null, history=[];
@@ -692,6 +699,7 @@ function persistPhaseIfRestorable(phase){
 }
 
 function goTo(phase, fn){
+  pendingGateRerender = false; /* une navigation annule le réaffichage différé d'un écran "Connexion…" */
   if(currentPhase!==null){ history.push({phase:currentPhase, snap:JSON.parse(JSON.stringify(session||{})), fn:currentFn}); }
   currentPhase = phase; currentFn = fn;
   persistPhaseIfRestorable(phase);
@@ -806,6 +814,12 @@ function wireSelectCards(container, returnPhase, returnFn, kind){
    laisser croire que du travail hors ligne sera conservé. */
 function renderOfflineGate(freeSessionFn, withModeBtn){
   const s = stageBase();
+  if(!vaultRestoreDone){
+    pendingGateRerender = true;
+    document.body.classList.add('hide-l','hide-r');
+    s.innerHTML = `<p class="sub fs">Connexion…</p>`;
+    return;
+  }
   s.innerHTML = `
     <h2 class="instruction fs">Vous n'êtes pas connecté·e</h2>
     <p class="sub fs" style="animation-delay:.3s">Connectez-vous pour accéder à vos souvenirs.</p>
@@ -2654,13 +2668,11 @@ function renderSyncChoice(row){
   });
 }
 
-/* boot : on attend d'avoir tenté de restaurer la session avant de choisir l'écran
-   de destination, pour ne jamais afficher un instant l'écran "non connecté·e"
-   à quelqu'un qui l'est en fait (juste le temps que la restauration se résolve). */
-vaultRestorePromise.then(()=>{
+/* boot : affichage immédiat de l'écran (l'accueil, ou le dernier écran "sûr") */
+(function(){
   const restored = restorableTargetForPhase(sessionStorage.getItem(SS_LAST_PHASE));
   goTo(restored ? restored.phase : 'home', restored ? restored.fn : renderHome);
-});
+})();
 function renderPhase(phase){ }
 </script>
 </body>
