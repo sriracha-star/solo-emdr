@@ -2449,23 +2449,19 @@ function showAudioBlockedHint(){
   inner.appendChild(b);
 }
 function soundVolume(){ return typeof settings.volume==='number' ? Math.max(0, Math.min(1, settings.volume)) : 0.8; }
-/* Un "tock" bien audible (deux sinusoïdes, ~0,25 s) dans UNE seule oreille. Le côté passe par un
-   fusionneur de canaux : le StereoPanner manque aux vieux Safari et faisait échouer le son en silence. */
+/* Le son d'origine (sinusoïde douce de 420 Hz, ~0,1 s) : doux et non distrayant. Le curseur de volume
+   le règle de façon progressive (80 % = niveau d'origine, 100 % = ~5 fois plus fort).
+   Le côté (gauche/droite) passe par un fusionneur de canaux, supporté partout. */
+function tickPeak(vol){ return vol<=0.8 ? 0.18*(vol/0.8) : 0.18*Math.pow(5, (vol-0.8)/0.2); }
 function buildTick(ctx, dest, side, when, vol){
-  const env=ctx.createGain();
-  env.gain.setValueAtTime(0.0001, when);
-  env.gain.exponentialRampToValueAtTime(0.7, when+0.012);
-  env.gain.exponentialRampToValueAtTime(0.0001, when+0.24);
-  const o1=ctx.createOscillator(); o1.type='sine'; o1.frequency.value=523;
-  const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=1046;
-  const g2=ctx.createGain(); g2.gain.value=0.25;
-  o1.connect(env); o2.connect(g2); g2.connect(env);
-  const master=ctx.createGain(); master.gain.value=vol;
-  env.connect(master);
+  const osc=ctx.createOscillator(), gain=ctx.createGain();
+  osc.type='sine'; osc.frequency.value=420;
+  gain.gain.setValueAtTime(0, when);
+  gain.gain.linearRampToValueAtTime(tickPeak(vol), when+0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, when+0.11);
   const merger=ctx.createChannelMerger(2);
-  master.connect(merger, 0, side==='L' ? 0 : 1);
-  merger.connect(dest);
-  o1.start(when); o2.start(when); o1.stop(when+0.26); o2.stop(when+0.26);
+  osc.connect(gain); gain.connect(merger, 0, side==='L' ? 0 : 1); merger.connect(dest);
+  osc.start(when); osc.stop(when+0.13);
 }
 /* Repli : le même tock en petit fichier WAV joué par une balise <audio>. Sert quand Web Audio est
    indisponible/bloqué, et sur les vieux iPhone (iOS < 17) où Web Audio est coupé par le bouton
@@ -2483,10 +2479,11 @@ function wavUrl(int16, channels, rate){
 let tickWavUrls = {}, beepUrl = null;
 function tickWavUrl(side){
   if(tickWavUrls[side]) return tickWavUrls[side];
-  const rate=22050, n=Math.floor(rate*0.25), data=new Int16Array(n*2);
+  const rate=22050, n=Math.floor(rate*0.2), data=new Int16Array(n*2);
   for(let i=0;i<n;i++){
-    const t=i/rate, env=Math.min(1,t/0.012)*Math.exp(-t*16);
-    const v=Math.max(-1, Math.min(1, (Math.sin(2*Math.PI*523*t)+0.25*Math.sin(2*Math.PI*1046*t))*env*0.7))*32767;
+    const t=i/rate;
+    const env = t<0.012 ? t/0.012 : t<0.11 ? Math.exp(-(t-0.012)*76.5) : 0;
+    const v=Math.sin(2*Math.PI*420*t)*env*0.7*32767;
     data[i*2] = side==='L' ? v : 0; data[i*2+1] = side==='L' ? 0 : v;
   }
   return (tickWavUrls[side] = wavUrl(data, 2, rate));
@@ -2499,7 +2496,7 @@ function beepWavUrl(){
 }
 function playTickMedia(side){
   const a = new Audio(tickWavUrl(side));
-  a.volume = soundVolume();
+  a.volume = Math.min(1, tickPeak(soundVolume())/0.7); /* le fichier a un pic de 0,7 */
   const p = a.play();
   return p && p.catch ? p : Promise.resolve();
 }
