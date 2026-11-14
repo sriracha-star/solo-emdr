@@ -227,8 +227,9 @@
   body.no-rtep #settings-panel{ left:224px; }
 
   /* commandements */
-  .rule-card{ cursor:default; justify-content:flex-start; line-height:1.55; font-size:15px; }
-  .rule-card:hover{ border-color:var(--line); }
+  .rules-list{ width:min(680px,92%); margin-top:14px; padding:0 0 24px; list-style:none; counter-reset:rule; text-align:left; display:flex; flex-direction:column; gap:16px; }
+  .rules-list li{ counter-increment:rule; display:flex; gap:14px; align-items:baseline; line-height:1.6; font-size:15.5px; }
+  .rules-list li::before{ content:counter(rule) "."; flex:0 0 2.2em; text-align:right; font-family:var(--font-display); color:var(--teal); font-size:15px; }
 
   /* SOS */
   .sos-quote{ margin:0 0 18px; padding:12px 16px; border-left:2px solid var(--teal); color:var(--ink-soft); font-size:15px; line-height:1.5; text-align:left; white-space:pre-wrap; width:min(560px,90%); max-height:30vh; overflow:auto; }
@@ -1041,10 +1042,8 @@ function renderRules(){
     ${canEdit ? '<button class="pill-btn emb-edit-btn" id="rules-edit">Modifier</button>' : ''}
     <h2 class="instruction fs">Commandements</h2>
     <div class="sel-scroll">
-      <div class="sel-list fs" style="animation-delay:.3s; width:min(680px,92%);">
-        ${shown.map(x=> `<div class="sel-card rule-card">${escapeHtml(x.text).replace(/\n/g,'<br>')}</div>`).join('')
-          || `<p class="sub">${canEdit ? 'Aucun commandement pour l\u2019instant. Ajoutez-les avec « Modifier » (vous pouvez aussi coller toute une liste).' : 'Connectez-vous pour ajouter ou modifier vos commandements.'}</p>`}
-      </div>
+      ${shown.length ? `<ol class="rules-list fs" style="animation-delay:.3s;">${shown.map(x=> `<li><span>${escapeHtml(x.text).replace(/\n/g,'<br>')}</span></li>`).join('')}</ol>`
+        : `<div class="sel-list fs" style="animation-delay:.3s; width:min(680px,92%);"><p class="sub">${canEdit ? 'Aucun commandement pour l\u2019instant. Ajoutez-les avec « Modifier » (vous pouvez aussi coller toute une liste).' : 'Connectez-vous pour ajouter ou modifier vos commandements.'}</p></div>`}
     </div>`;
   document.body.classList.add('hide-l','hide-r');
   const edit = s.querySelector('#rules-edit');
