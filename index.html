@@ -37,10 +37,11 @@
   #libraryIcon{ left:56px; }
   #embodimentIcon{ left:98px; }
   #sosIcon{ left:140px; }
-  #recentLibraryIcon{ left:182px; }
-  #settingsIcon{ left:224px; }
+  #rulesIcon{ left:182px; }
+  #recentLibraryIcon{ left:224px; }
+  #settingsIcon{ left:266px; }
   body.no-rtep #recentLibraryIcon{ display:none; }
-  body.no-rtep #settingsIcon{ left:182px; }
+  body.no-rtep #settingsIcon{ left:224px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -55,7 +56,7 @@
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:224px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:266px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -223,7 +224,11 @@
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
   .folder-actions button:hover{ background:var(--surface); color:var(--ink); }
 
-  body.no-rtep #settings-panel{ left:182px; }
+  body.no-rtep #settings-panel{ left:224px; }
+
+  /* commandements */
+  .rule-card{ cursor:default; justify-content:flex-start; line-height:1.55; font-size:15px; }
+  .rule-card:hover{ border-color:var(--line); }
 
   /* SOS */
   .sos-quote{ margin:0 0 18px; padding:12px 16px; border-left:2px solid var(--teal); color:var(--ink-soft); font-size:15px; line-height:1.5; text-align:left; white-space:pre-wrap; width:min(560px,90%); max-height:30vh; overflow:auto; }
@@ -275,6 +280,9 @@
   </button>
   <button id="sosIcon" class="icon-btn" title="SOS">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/></svg>
+  </button>
+  <button id="rulesIcon" class="icon-btn" title="Commandements">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19M9 12h7M9 16h7"/></svg>
   </button>
   <button id="recentLibraryIcon" class="icon-btn" title="Traumas récents (R-TEP)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2l1 6 5-3-3 5 6 1-6 1 3 5-5-3-1 6-1-6-5 3 3-5-6-1 6-1-3-5 5 3z"/></svg>
@@ -340,6 +348,12 @@ const LS_SOS_AFF = 'soloemdr_sos_affirmations';
 function loadSosAff(){ try{ const a = JSON.parse(localStorage.getItem(LS_SOS_AFF)); return Array.isArray(a) ? a.filter(x=> typeof x==='string') : []; }catch(e){ return []; } }
 function saveSosAff(list){ localStorage.setItem(LS_SOS_AFF, JSON.stringify(list)); scheduleSync(); }
 let sosAffirmations = loadSosAff();
+/* Commandements : liste personnelle de règles de vie, modifiable. Comme Embodiment, elle commence vide
+   (le site est public : rien de personnel dans le code) et se synchronise chiffrée avec le compte. */
+const LS_RULES = 'soloemdr_commandments';
+function loadRules(){ try{ const a = JSON.parse(localStorage.getItem(LS_RULES)); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function saveRules(list){ localStorage.setItem(LS_RULES, JSON.stringify(list)); scheduleSync(); }
+let rulesItems = loadRules();
 
 let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
@@ -511,7 +525,7 @@ window.addEventListener('pagehide', flushPendingSync);
 async function vaultPush(){
   if(!vaultReady()) return;
   try{
-    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations});
+    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems});
     const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
     const {error} = await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
     if(error) throw error;
@@ -527,6 +541,7 @@ async function vaultPull(row){
   traumas = parsed.traumas||[]; folders = parsed.folders||[];
   recentTraumas = parsed.recentTraumas||[];
   if(Array.isArray(parsed.embodiment)){ embodimentItems = parsed.embodiment; localStorage.setItem(LS_EMBODIMENT, JSON.stringify(embodimentItems)); }
+  if(Array.isArray(parsed.commandments)){ rulesItems = parsed.commandments; localStorage.setItem(LS_RULES, JSON.stringify(rulesItems)); }
   if(Array.isArray(parsed.sosAffirmations)){ sosAffirmations = parsed.sosAffirmations; localStorage.setItem(LS_SOS_AFF, JSON.stringify(sosAffirmations)); }
   settings = Object.assign(settings, parsed.settings||{});
   localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
@@ -547,7 +562,7 @@ async function ensureVaultCreated(userId, email, password){
   const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), saltRec);
   const wrapPw = await wrapDEK(dek, kekPw);
   const wrapRec = await wrapDEK(dek, kekRec);
-  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations});
+  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems});
   const {ivB64, ctB64} = await encryptWithDEK(dek, payload);
   const newRow = { user_id:userId, salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64,
     salt_rec:saltRec, iv_rec:wrapRec.ivB64, wrapped_dek_rec:wrapRec.wrappedB64, data_iv:ivB64, ciphertext:ctB64 };
@@ -598,7 +613,8 @@ async function vaultLogout(){
   if(supa) supa.auth.signOut({scope:'local'});
   vault = {dek:null, userId:null, email:null};
   await clearSessionDEK();
-  traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = [];
+  traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = []; rulesItems = [];
+  localStorage.removeItem(LS_RULES);
   localStorage.removeItem(LS_EMBODIMENT);
   localStorage.removeItem(LS_SOS_AFF);
   localStorage.removeItem(LS_TRAUMAS);
@@ -686,6 +702,7 @@ $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.tog
 $('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
 $('embodimentIcon').addEventListener('click',()=> goTo('embodiment', renderEmbodiment));
 $('sosIcon').addEventListener('click',()=> goTo('sos', renderSos));
+$('rulesIcon').addEventListener('click',()=> goTo('rules', renderRules));
 $('recentLibraryIcon').addEventListener('click',()=> goTo('recentlibrary', renderRecentLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
@@ -734,7 +751,7 @@ let forwardAction=null, spaceAction=null;
    dont l'état ne peut pas être reconstruit sans risque. */
 const SS_LAST_PHASE = 'soloemdr_last_phase';
 const RESTORABLE_PHASES = {
-  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, sos: renderSos, recentlibrary: renderRecentLibrary,
+  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, sos: renderSos, rules: renderRules, recentlibrary: renderRecentLibrary,
   select: renderSelect, rtep_select: renderRtepSelect, modechoice: renderModeChoice
 };
 function restorableTargetForPhase(phase){
@@ -829,7 +846,7 @@ function renderHome(){
 /* ================= EMBODIMENT ================= */
 function parseEmbodimentList(text){
   const lines = text.split(/\r?\n/).map(l=> l.trim()).filter(Boolean);
-  const bullet = /^[*•\-–]\s+/;
+  const bullet = /^([*•\-–]\s*)+(?=\S)/;
   let out = [];
   if(lines.some(l=> bullet.test(l))){
     lines.forEach(l=>{
@@ -862,18 +879,27 @@ function renderEmbodiment(){
 }
 
 function openEmbodimentModal(onClose){
+  openListModal({
+    title:'Modifier les états à incarner', add:'+ Ajouter un état', empty:'Aucun état. Ajoutez-en un ou collez une liste.',
+    paste:'Collez ici votre liste : une ligne par état, ou des puces (* ou -)', addBtn:'Ajouter ces états',
+    get:()=> embodimentItems, save:(l)=>{ embodimentItems = l; saveEmbodiment(embodimentItems); }, newId:newEmbodimentId
+  }, onClose);
+}
+function openListModal(cfg, onClose){
+  let items = cfg.get();
+  const commit = ()=> cfg.save(items);
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-panel" role="dialog" aria-label="Modifier les états à incarner">
-      <div class="modal-head"><h3>Modifier les états à incarner</h3></div>
+    <div class="modal-panel" role="dialog" aria-label="${cfg.title}">
+      <div class="modal-head"><h3>${cfg.title}</h3></div>
       <div class="modal-body" id="emb-list"></div>
       <div class="modal-import" id="emb-import" style="display:none;">
-        <textarea id="emb-import-text" placeholder="Collez ici votre liste : une ligne par état, ou des puces (* ou -)"></textarea>
-        <button type="button" id="emb-import-go">Ajouter ces états</button>
+        <textarea id="emb-import-text" placeholder="${cfg.paste}"></textarea>
+        <button type="button" id="emb-import-go">${cfg.addBtn}</button>
       </div>
       <div class="modal-foot">
-        <button type="button" id="emb-add">+ Ajouter un état</button>
+        <button type="button" id="emb-add">${cfg.add}</button>
         <button type="button" id="emb-paste">Coller une liste</button>
         <button type="button" id="emb-done" class="primary">Terminer</button>
       </div>
@@ -882,29 +908,29 @@ function openEmbodimentModal(onClose){
   const listEl = overlay.querySelector('#emb-list');
   const auto = t=>{ t.style.height='auto'; t.style.height = t.scrollHeight+'px'; };
   function draw(focusId){
-    if(!embodimentItems.length){ listEl.innerHTML = `<p class="emb-empty">Aucun état. Ajoutez-en un ou collez une liste.</p>`; return; }
-    listEl.innerHTML = embodimentItems.map((it,i)=>`
+    if(!items.length){ listEl.innerHTML = `<p class="emb-empty">${cfg.empty}</p>`; return; }
+    listEl.innerHTML = items.map((it,i)=>`
       <div class="emb-row">
         <textarea data-id="${it.id}" rows="2">${escapeHtml(it.text)}</textarea>
         <div class="emb-row-actions">
           <button type="button" data-up="${it.id}" title="Monter" ${i===0?'disabled':''}>↑</button>
-          <button type="button" data-down="${it.id}" title="Descendre" ${i===embodimentItems.length-1?'disabled':''}>↓</button>
+          <button type="button" data-down="${it.id}" title="Descendre" ${i===items.length-1?'disabled':''}>↓</button>
           <button type="button" data-del="${it.id}" title="Supprimer">✕</button>
         </div>
       </div>`).join('');
     listEl.querySelectorAll('textarea').forEach(t=>{
       auto(t);
       t.addEventListener('input', ()=>{
-        const it = embodimentItems.find(x=>x.id===t.dataset.id);
-        if(it){ it.text = t.value; saveEmbodiment(embodimentItems); }
+        const it = items.find(x=>x.id===t.dataset.id);
+        if(it){ it.text = t.value; commit(); }
         auto(t);
       });
     });
     const move = (id,dir)=>{
-      const i = embodimentItems.findIndex(x=>x.id===id), j = i+dir;
-      if(i<0 || j<0 || j>=embodimentItems.length) return;
-      [embodimentItems[i], embodimentItems[j]] = [embodimentItems[j], embodimentItems[i]];
-      saveEmbodiment(embodimentItems); draw();
+      const i = items.findIndex(x=>x.id===id), j = i+dir;
+      if(i<0 || j<0 || j>=items.length) return;
+      [items[i], items[j]] = [items[j], items[i]];
+      commit(); draw();
     };
     listEl.querySelectorAll('[data-up]').forEach(b=> b.addEventListener('click', ()=> move(b.dataset.up,-1)));
     listEl.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=> move(b.dataset.down,1)));
@@ -914,15 +940,15 @@ function openEmbodimentModal(onClose){
         setTimeout(()=>{ if(b.isConnected){ b.classList.remove('armed'); b.textContent = '✕'; } }, 3000);
         return;
       }
-      embodimentItems = embodimentItems.filter(x=>x.id!==b.dataset.del);
-      saveEmbodiment(embodimentItems); draw();
+      items = items.filter(x=>x.id!==b.dataset.del);
+      commit(); draw();
     }));
     if(focusId){ const t = listEl.querySelector(`textarea[data-id="${focusId}"]`); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }
   }
   draw();
   const close = ()=>{
-    embodimentItems = embodimentItems.filter(x=> x.text.trim());
-    saveEmbodiment(embodimentItems);
+    items = items.filter(x=> x.text.trim());
+    commit();
     overlay.remove();
     if(onClose) onClose();
   };
@@ -931,8 +957,8 @@ function openEmbodimentModal(onClose){
   overlay.addEventListener('click', (e)=>{ if(e.target===overlay) close(); });
   overlay.querySelector('#emb-done').addEventListener('click', close);
   overlay.querySelector('#emb-add').addEventListener('click', ()=>{
-    const it = {id:newEmbodimentId(), text:''};
-    embodimentItems.push(it); saveEmbodiment(embodimentItems); draw(it.id);
+    const it = {id:cfg.newId(), text:''};
+    items.push(it); commit(); draw(it.id);
   });
   const importBox = overlay.querySelector('#emb-import');
   overlay.querySelector('#emb-paste').addEventListener('click', ()=>{
@@ -943,8 +969,8 @@ function openEmbodimentModal(onClose){
     const ta = overlay.querySelector('#emb-import-text');
     const parsed = parseEmbodimentList(ta.value);
     if(!parsed.length) return;
-    parsed.forEach(text=> embodimentItems.push({id:newEmbodimentId(), text}));
-    saveEmbodiment(embodimentItems);
+    parsed.forEach(text=> items.push({id:cfg.newId(), text}));
+    commit();
     ta.value = ''; importBox.style.display = 'none'; draw();
     listEl.scrollTop = listEl.scrollHeight;
   });
@@ -1003,6 +1029,32 @@ function renderEmbodimentChoice(){
   s.querySelector('#emb-next').addEventListener('click', next);
   const q = s.querySelector('#emb-quit'); if(q) q.addEventListener('click', endEmbodiment);
   forwardAction = next;
+}
+
+/* ================= COMMANDEMENTS ================= */
+function renderRules(){
+  const s = stageBase();
+  s.className = 'select-view';
+  const canEdit = !!vault.userId; /* modifier seulement connectée : une liste éditée hors ligne serait écrasée à la reconnexion */
+  const shown = rulesItems.filter(x=> x.text.trim());
+  s.innerHTML = `
+    ${canEdit ? '<button class="pill-btn emb-edit-btn" id="rules-edit">Modifier</button>' : ''}
+    <h2 class="instruction fs">Commandements</h2>
+    <div class="sel-scroll">
+      <div class="sel-list fs" style="animation-delay:.3s; width:min(680px,92%);">
+        ${shown.map(x=> `<div class="sel-card rule-card">${escapeHtml(x.text).replace(/\n/g,'<br>')}</div>`).join('')
+          || `<p class="sub">${canEdit ? 'Aucun commandement pour l\u2019instant. Ajoutez-les avec « Modifier » (vous pouvez aussi coller toute une liste).' : 'Connectez-vous pour ajouter ou modifier vos commandements.'}</p>`}
+      </div>
+    </div>`;
+  document.body.classList.add('hide-l','hide-r');
+  const edit = s.querySelector('#rules-edit');
+  if(edit) edit.addEventListener('click', ()=> openListModal({
+    title:'Modifier les commandements', add:'+ Ajouter un commandement', empty:'Aucun commandement. Ajoutez-en un ou collez une liste.',
+    paste:'Collez ici votre liste : une ligne par commandement, ou des puces (* ou -)', addBtn:'Ajouter ces commandements',
+    get:()=> rulesItems, save:(l)=>{ rulesItems = l; saveRules(rulesItems); }, newId:newEmbodimentId
+  }, ()=> renderRules()));
+  /* au chargement de la page, la connexion se rétablit en arrière-plan : on réaffiche alors le bouton */
+  if(!vaultRestoreDone) vaultRestorePromise.then(()=>{ if(currentPhase==='rules') renderRules(); });
 }
 
 /* ================= SOS ================= */
@@ -2822,7 +2874,7 @@ function accountBackupHtml(){
 
 function wireBackupControls(panel){
   panel.querySelector('#acc-export-btn').addEventListener('click', ()=>{
-    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems, sosAffirmations};
+    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems};
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2847,6 +2899,7 @@ function wireBackupControls(panel){
       folders = data.folders || [];
       recentTraumas = data.recentTraumas || [];
       if(Array.isArray(data.embodiment)){ embodimentItems = data.embodiment; saveEmbodiment(embodimentItems); }
+      if(Array.isArray(data.commandments)){ rulesItems = data.commandments; saveRules(rulesItems); }
       if(Array.isArray(data.sosAffirmations)){ sosAffirmations = data.sosAffirmations; saveSosAff(sosAffirmations); }
       if(data.settings) settings = Object.assign(settings, data.settings);
       saveTraumas(traumas);
