@@ -34,10 +34,11 @@
   .icon-btn svg{ display:block; }
   body.stage-dark .icon-btn{ color:#EFE8DA; }
   #homeIcon{ left:14px; }
-  #recentLibraryIcon{ left:56px; }
-  #settingsIcon{ left:98px; }
+  #libraryIcon{ left:56px; }
+  #recentLibraryIcon{ left:98px; }
+  #settingsIcon{ left:140px; }
   body.no-rtep #recentLibraryIcon{ display:none; }
-  body.no-rtep #settingsIcon{ left:56px; }
+  body.no-rtep #settingsIcon{ left:98px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -52,7 +53,7 @@
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:98px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:140px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -220,7 +221,7 @@
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
   .folder-actions button:hover{ background:var(--surface); color:var(--ink); }
 
-  body.no-rtep #settings-panel{ left:56px; }
+  body.no-rtep #settings-panel{ left:98px; }
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
   .skip-link:hover{ color:rgba(239,232,218,0.9); }
@@ -232,8 +233,11 @@
 </head>
 <body>
 <div id="app">
-  <button id="homeIcon" class="icon-btn" title="Vos souvenirs">
+  <button id="homeIcon" class="icon-btn" title="Accueil">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3a3 3 0 00-3 3v1a3 3 0 00-2 2.8V12a3 3 0 002 2.8v1A3 3 0 008 19h1V3H8z"/><path d="M16 3a3 3 0 013 3v1a3 3 0 012 2.8V12a3 3 0 01-2 2.8v1a3 3 0 01-3 3.2h-1V3h1z"/></svg>
+  </button>
+  <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
   </button>
   <button id="recentLibraryIcon" class="icon-btn" title="Traumas récents (R-TEP)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2l1 6 5-3-3 5 6 1-6 1 3 5-5-3-1 6-1-6-5 3 3-5-6-1 6-1-3-5 5 3z"/></svg>
@@ -626,6 +630,7 @@ $('settings-save').addEventListener('click',()=>{
   $('settings-panel').classList.remove('open');
 });
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
+$('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
 $('recentLibraryIcon').addEventListener('click',()=> goTo('recentlibrary', renderRecentLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
@@ -741,10 +746,7 @@ const AURORA_BLOBS = [
   {top:'54%', left:'-18%', vw:56, color:'var(--aurora-3)', dur:29, delay:-12, dx:45, dy:-40, sc:1.1},
   {top:'58%', left:'58%', vw:48, color:'var(--aurora-4)', dur:24, delay:-3, dx:-40, dy:-30, sc:1.06},
 ];
-/* L'accueil est maintenant la bibliothèque (premier onglet) ; l'ancien écran vide est conservé
-   sous renderHomeClassic au cas où. */
-function renderHome(){ renderLibrary(); }
-function renderHomeClassic(){
+function renderHome(){
   const s = stageBase();
   const blobsHtml = AURORA_BLOBS.map(b=> `<div class="aurora-blob" style="top:${b.top};left:${b.left};width:${b.vw}vw;height:${b.vw}vw;
     background:radial-gradient(circle at 40% 40%, ${b.color}, transparent 72%);
@@ -1208,7 +1210,7 @@ function sortTraumas(list, mode){
 }
 
 function renderLibrary(){
-  if(!vault.userId){ renderOfflineGate(null, true); return; }
+  if(!vault.userId){ renderOfflineGate(null); return; }
   const s = stageBase();
   s.className='select-view';
   s.innerHTML = `
@@ -1230,7 +1232,6 @@ function renderLibrary(){
           </div>
         </div>
         ${toggleFoldersBtnHtml()}
-        <button id="start-session">Commencer une séance</button>
         <button id="add-t">+ Souvenir</button>
         <button id="add-f">+ Dossier</button>
       </div>
@@ -1263,7 +1264,6 @@ function renderLibrary(){
     update();
   }));
 
-  s.querySelector('#start-session').addEventListener('click', ()=> goTo('modechoice', renderModeChoice));
   s.querySelector('#add-t').addEventListener('click', ()=> goTo('addform', ()=> renderTraumaForm(null,'library',renderLibrary)));
   s.querySelector('#add-f').addEventListener('click', ()=> goTo('folderform', ()=> renderFolderForm(null,'library',renderLibrary)));
   update();
