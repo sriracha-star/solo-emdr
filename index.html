@@ -35,10 +35,11 @@
   body.stage-dark .icon-btn{ color:#EFE8DA; }
   #homeIcon{ left:14px; }
   #libraryIcon{ left:56px; }
-  #recentLibraryIcon{ left:98px; }
-  #settingsIcon{ left:140px; }
+  #embodimentIcon{ left:98px; }
+  #recentLibraryIcon{ left:140px; }
+  #settingsIcon{ left:182px; }
   body.no-rtep #recentLibraryIcon{ display:none; }
-  body.no-rtep #settingsIcon{ left:98px; }
+  body.no-rtep #settingsIcon{ left:140px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -53,7 +54,7 @@
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:140px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:182px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -221,7 +222,28 @@
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
   .folder-actions button:hover{ background:var(--surface); color:var(--ink); }
 
-  body.no-rtep #settings-panel{ left:98px; }
+  body.no-rtep #settings-panel{ left:140px; }
+
+  /* embodiment */
+  .emb-edit-btn{ position:absolute; top:18px; right:64px; }
+  .modal-overlay{ position:fixed; inset:0; z-index:80; background:rgba(4,10,14,.72); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-panel{ background:var(--surface); border:1px solid var(--line); border-radius:14px; width:min(700px,100%); max-height:90vh;
+    display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.5); text-align:left; }
+  .modal-head{ padding:16px 18px 6px; } .modal-head h3{ margin:0; font-size:15px; }
+  .modal-body{ padding:8px 18px; overflow-y:auto; flex:1 1 auto; display:flex; flex-direction:column; gap:10px; }
+  .emb-row{ display:flex; gap:8px; align-items:flex-start; }
+  .emb-row textarea{ min-height:56px; font-size:13.5px; line-height:1.45; resize:none; overflow:hidden; }
+  .emb-row-actions{ display:flex; flex-direction:column; gap:4px; }
+  .emb-row-actions button, .modal-foot button, .modal-import button{ font-size:12.5px; padding:6px 10px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg-soft); color:var(--ink); font-family:var(--font-body); cursor:pointer; white-space:nowrap; }
+  .emb-row-actions button:hover, .modal-foot button:hover, .modal-import button:hover{ background-color:color-mix(in srgb, var(--bg-soft), white 9%); }
+  .emb-row-actions button:disabled{ opacity:.35; cursor:default; }
+  .emb-row-actions button.armed{ border-color:#C0554A; color:#E8908A; }
+  .modal-import{ padding:0 18px 8px; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .modal-import textarea{ min-height:110px; font-size:13px; }
+  .modal-foot{ display:flex; gap:8px; flex-wrap:wrap; padding:12px 18px 16px; border-top:1px solid var(--line); }
+  .modal-foot .primary{ margin-left:auto; background:var(--teal); border-color:var(--teal); color:white; }
+  .emb-empty{ color:var(--ink-soft); font-size:13.5px; margin:8px 0; }
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
   .skip-link:hover{ color:rgba(239,232,218,0.9); }
@@ -238,6 +260,9 @@
   </button>
   <button id="libraryIcon" class="icon-btn" title="Vos souvenirs">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3.5a1 1 0 011-1h10a1 1 0 011 1V20l-6-3.6L6 20V3.5z"/></svg>
+  </button>
+  <button id="embodimentIcon" class="icon-btn" title="Embodiment">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 8.5V15M5.5 11l6.5-1.5 6.5 1.5M8.5 21l3.5-6 3.5 6"/></svg>
   </button>
   <button id="recentLibraryIcon" class="icon-btn" title="Traumas récents (R-TEP)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2l1 6 5-3-3 5 6 1-6 1 3 5-5-3-1 6-1-6-5 3 3-5-6-1 6-1-3-5 5 3z"/></svg>
@@ -291,6 +316,12 @@ let folders = loadFolders();
 function loadRecentTraumas(){ try{ return JSON.parse(localStorage.getItem(LS_RECENT_TRAUMAS))||[]; }catch(e){ return []; } }
 function saveRecentTraumas(list){ localStorage.setItem(LS_RECENT_TRAUMAS, JSON.stringify(list)); scheduleSync(); }
 let recentTraumas = loadRecentTraumas();
+/* Embodiment : liste d'états à incarner avec la stimulation bilatérale. Elle commence vide (rien de
+   personnel n'est livré dans le code de ce site public) ; elle se remplit via « Modifier ». */
+const LS_EMBODIMENT = 'soloemdr_embodiment';
+function loadEmbodiment(){ try{ const a = JSON.parse(localStorage.getItem(LS_EMBODIMENT)); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function saveEmbodiment(list){ localStorage.setItem(LS_EMBODIMENT, JSON.stringify(list)); scheduleSync(); }
+let embodimentItems = loadEmbodiment();
 
 let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
@@ -462,7 +493,7 @@ window.addEventListener('pagehide', flushPendingSync);
 async function vaultPush(){
   if(!vaultReady()) return;
   try{
-    const payload = JSON.stringify({traumas, folders, settings, recentTraumas});
+    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems});
     const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
     const {error} = await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
     if(error) throw error;
@@ -477,6 +508,7 @@ async function vaultPull(row){
   const parsed = JSON.parse(json);
   traumas = parsed.traumas||[]; folders = parsed.folders||[];
   recentTraumas = parsed.recentTraumas||[];
+  if(Array.isArray(parsed.embodiment)){ embodimentItems = parsed.embodiment; localStorage.setItem(LS_EMBODIMENT, JSON.stringify(embodimentItems)); }
   settings = Object.assign(settings, parsed.settings||{});
   localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
   localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
@@ -496,7 +528,7 @@ async function ensureVaultCreated(userId, email, password){
   const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), saltRec);
   const wrapPw = await wrapDEK(dek, kekPw);
   const wrapRec = await wrapDEK(dek, kekRec);
-  const payload = JSON.stringify({traumas, folders, settings, recentTraumas});
+  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems});
   const {ivB64, ctB64} = await encryptWithDEK(dek, payload);
   const newRow = { user_id:userId, salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64,
     salt_rec:saltRec, iv_rec:wrapRec.ivB64, wrapped_dek_rec:wrapRec.wrappedB64, data_iv:ivB64, ciphertext:ctB64 };
@@ -547,7 +579,8 @@ async function vaultLogout(){
   if(supa) supa.auth.signOut({scope:'local'});
   vault = {dek:null, userId:null, email:null};
   await clearSessionDEK();
-  traumas = []; folders = []; recentTraumas = [];
+  traumas = []; folders = []; recentTraumas = []; embodimentItems = [];
+  localStorage.removeItem(LS_EMBODIMENT);
   localStorage.removeItem(LS_TRAUMAS);
   localStorage.removeItem(LS_FOLDERS);
   localStorage.removeItem(LS_RECENT_TRAUMAS);
@@ -631,6 +664,7 @@ $('settings-save').addEventListener('click',()=>{
 });
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
 $('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
+$('embodimentIcon').addEventListener('click',()=> goTo('embodiment', renderEmbodiment));
 $('recentLibraryIcon').addEventListener('click',()=> goTo('recentlibrary', renderRecentLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
@@ -679,7 +713,7 @@ let forwardAction=null, spaceAction=null;
    dont l'état ne peut pas être reconstruit sans risque. */
 const SS_LAST_PHASE = 'soloemdr_last_phase';
 const RESTORABLE_PHASES = {
-  home: renderHome, library: renderLibrary, recentlibrary: renderRecentLibrary,
+  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, recentlibrary: renderRecentLibrary,
   select: renderSelect, rtep_select: renderRtepSelect, modechoice: renderModeChoice
 };
 function restorableTargetForPhase(phase){
@@ -771,6 +805,183 @@ function renderHome(){
   forwardAction = ()=> goTo('modechoice', renderModeChoice);
 }
 
+/* ================= EMBODIMENT ================= */
+function parseEmbodimentList(text){
+  const lines = text.split(/\r?\n/).map(l=> l.trim()).filter(Boolean);
+  const bullet = /^[*•\-–]\s+/;
+  let out = [];
+  if(lines.some(l=> bullet.test(l))){
+    lines.forEach(l=>{
+      if(bullet.test(l)) out.push(l.replace(bullet,''));
+      else if(out.length) out[out.length-1] += ' ' + l; /* suite d'une puce sur plusieurs lignes ; l'en-tête avant la 1re puce est ignoré */
+    });
+  } else out = lines;
+  return out.filter(Boolean);
+}
+function newEmbodimentId(){ return 'e_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); }
+
+function renderEmbodiment(){
+  if(!vault.userId){ renderOfflineGate(null, false, 'Connectez-vous pour accéder à vos états à incarner.'); return; }
+  const s = stageBase();
+  const n = embodimentItems.length;
+  s.innerHTML = `
+    <button class="pill-btn emb-edit-btn" id="emb-edit">Modifier</button>
+    <h2 class="instruction fs">Embodiment</h2>
+    <p class="sub fs" style="animation-delay:.3s">Atteindre cet état de pleine présence et d'authenticité, l'incarner.</p>
+    ${n ? `<button class="pill-btn fs" id="emb-start" style="animation-delay:.5s; font-size:14px; padding:10px 26px;">Commencer</button>
+           <p class="sub fs" style="animation-delay:.6s; margin:12px 0 0; font-size:12.5px;">${n} état${n>1?'s':''} à incarner</p>`
+        : `<p class="sub fs" style="animation-delay:.5s">Aucun état pour l'instant. Ajoutez-en avec « Modifier » (vous pouvez aussi coller toute une liste).</p>`}
+  `;
+  document.body.classList.add('hide-l','hide-r');
+  s.querySelector('#emb-edit').addEventListener('click', ()=> openEmbodimentModal(()=> renderEmbodiment()));
+  if(n){
+    const start = ()=>{ session = {kind:'embodiment', ids: embodimentItems.map(x=>x.id), index:0}; goTo('emb_point', renderEmbodimentPoint); };
+    s.querySelector('#emb-start').addEventListener('click', start);
+    forwardAction = start;
+  }
+}
+
+function openEmbodimentModal(onClose){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-panel" role="dialog" aria-label="Modifier les états à incarner">
+      <div class="modal-head"><h3>Modifier les états à incarner</h3></div>
+      <div class="modal-body" id="emb-list"></div>
+      <div class="modal-import" id="emb-import" style="display:none;">
+        <textarea id="emb-import-text" placeholder="Collez ici votre liste : une ligne par état, ou des puces (* ou -)"></textarea>
+        <button type="button" id="emb-import-go">Ajouter ces états</button>
+      </div>
+      <div class="modal-foot">
+        <button type="button" id="emb-add">+ Ajouter un état</button>
+        <button type="button" id="emb-paste">Coller une liste</button>
+        <button type="button" id="emb-done" class="primary">Terminer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const listEl = overlay.querySelector('#emb-list');
+  const auto = t=>{ t.style.height='auto'; t.style.height = t.scrollHeight+'px'; };
+  function draw(focusId){
+    if(!embodimentItems.length){ listEl.innerHTML = `<p class="emb-empty">Aucun état. Ajoutez-en un ou collez une liste.</p>`; return; }
+    listEl.innerHTML = embodimentItems.map((it,i)=>`
+      <div class="emb-row">
+        <textarea data-id="${it.id}" rows="2">${escapeHtml(it.text)}</textarea>
+        <div class="emb-row-actions">
+          <button type="button" data-up="${it.id}" title="Monter" ${i===0?'disabled':''}>↑</button>
+          <button type="button" data-down="${it.id}" title="Descendre" ${i===embodimentItems.length-1?'disabled':''}>↓</button>
+          <button type="button" data-del="${it.id}" title="Supprimer">✕</button>
+        </div>
+      </div>`).join('');
+    listEl.querySelectorAll('textarea').forEach(t=>{
+      auto(t);
+      t.addEventListener('input', ()=>{
+        const it = embodimentItems.find(x=>x.id===t.dataset.id);
+        if(it){ it.text = t.value; saveEmbodiment(embodimentItems); }
+        auto(t);
+      });
+    });
+    const move = (id,dir)=>{
+      const i = embodimentItems.findIndex(x=>x.id===id), j = i+dir;
+      if(i<0 || j<0 || j>=embodimentItems.length) return;
+      [embodimentItems[i], embodimentItems[j]] = [embodimentItems[j], embodimentItems[i]];
+      saveEmbodiment(embodimentItems); draw();
+    };
+    listEl.querySelectorAll('[data-up]').forEach(b=> b.addEventListener('click', ()=> move(b.dataset.up,-1)));
+    listEl.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=> move(b.dataset.down,1)));
+    listEl.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', ()=>{
+      if(!b.classList.contains('armed')){
+        b.classList.add('armed'); b.textContent = 'Supprimer ?';
+        setTimeout(()=>{ if(b.isConnected){ b.classList.remove('armed'); b.textContent = '✕'; } }, 3000);
+        return;
+      }
+      embodimentItems = embodimentItems.filter(x=>x.id!==b.dataset.del);
+      saveEmbodiment(embodimentItems); draw();
+    }));
+    if(focusId){ const t = listEl.querySelector(`textarea[data-id="${focusId}"]`); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }
+  }
+  draw();
+  const close = ()=>{
+    embodimentItems = embodimentItems.filter(x=> x.text.trim());
+    saveEmbodiment(embodimentItems);
+    overlay.remove();
+    if(onClose) onClose();
+  };
+  /* le clavier ne doit pas piloter l'écran en dessous (Entrée = écran suivant, etc.) */
+  overlay.addEventListener('keydown', (e)=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) close(); });
+  overlay.querySelector('#emb-done').addEventListener('click', close);
+  overlay.querySelector('#emb-add').addEventListener('click', ()=>{
+    const it = {id:newEmbodimentId(), text:''};
+    embodimentItems.push(it); saveEmbodiment(embodimentItems); draw(it.id);
+  });
+  const importBox = overlay.querySelector('#emb-import');
+  overlay.querySelector('#emb-paste').addEventListener('click', ()=>{
+    importBox.style.display = importBox.style.display==='none' ? 'flex' : 'none';
+    if(importBox.style.display==='flex') overlay.querySelector('#emb-import-text').focus();
+  });
+  overlay.querySelector('#emb-import-go').addEventListener('click', ()=>{
+    const ta = overlay.querySelector('#emb-import-text');
+    const parsed = parseEmbodimentList(ta.value);
+    if(!parsed.length) return;
+    parsed.forEach(text=> embodimentItems.push({id:newEmbodimentId(), text}));
+    saveEmbodiment(embodimentItems);
+    ta.value = ''; importBox.style.display = 'none'; draw();
+    listEl.scrollTop = listEl.scrollHeight;
+  });
+}
+
+function currentEmbodimentItem(){
+  while(session && session.index < session.ids.length){
+    const it = embodimentItems.find(x=>x.id===session.ids[session.index]);
+    if(it) return it;
+    session.index++;
+  }
+  return null;
+}
+function endEmbodiment(){ session = null; history = []; currentPhase = null; goTo('embodiment', renderEmbodiment); }
+
+function renderEmbodimentPoint(){
+  const it = currentEmbodimentItem();
+  if(!it){ endEmbodiment(); return; }
+  const s = stageBase();
+  const len = it.text.length;
+  const size = len>400 ? 16 : len>180 ? 18 : len>80 ? 22 : 28;
+  s.innerHTML = `
+    <div style="margin:auto; width:min(680px,100%);">
+      <p class="sub fs" style="margin:0 0 16px; font-size:12.5px;">État ${session.index+1} sur ${session.ids.length}</p>
+      <h2 class="instruction fs" style="animation-delay:.2s; font-size:${size}px; line-height:1.5; font-weight:${len>180?400:600}; max-width:none;">${escapeHtml(it.text).replace(/\n/g,'<br>')}</h2>
+      <button class="pill-btn fs" id="emb-go" style="animation-delay:.6s; margin-top:26px; font-size:14px; padding:10px 24px;">Commencer la stimulation</button>
+      <div><button class="sel-alt fs" id="emb-quit" style="animation-delay:.7s; margin-top:14px;">Quitter</button></div>
+    </div>`;
+  const go = ()=> goTo('emb_ball', ()=> showBall('embodiment'));
+  s.querySelector('#emb-go').addEventListener('click', go);
+  s.querySelector('#emb-quit').addEventListener('click', endEmbodiment);
+  forwardAction = go;
+}
+
+function renderEmbodimentChoice(){
+  if(!session || session.kind!=='embodiment'){ renderEmbodiment(); return; }
+  const s = stageBase();
+  const isLast = session.index >= session.ids.length-1;
+  s.innerHTML = `
+    <h2 class="instruction fs">Que voulez-vous faire ?</h2>
+    <div class="fs" style="animation-delay:.4s; display:flex; gap:14px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
+      <button class="pill-btn" id="emb-same" style="font-size:14px; padding:10px 22px;">Reprendre avec le même</button>
+      <button class="pill-btn" id="emb-next" style="font-size:14px; padding:10px 22px;">${isLast ? 'Terminer' : 'Point suivant'}</button>
+    </div>
+    ${isLast ? '' : `<button class="sel-alt fs" id="emb-quit" style="animation-delay:.6s;">Quitter</button>`}
+  `;
+  const next = ()=>{
+    session.index++;
+    if(session.index >= session.ids.length) endEmbodiment();
+    else goTo('emb_point', renderEmbodimentPoint);
+  };
+  s.querySelector('#emb-same').addEventListener('click', ()=> goTo('emb_ball', ()=> showBall('embodiment')));
+  s.querySelector('#emb-next').addEventListener('click', next);
+  const q = s.querySelector('#emb-quit'); if(q) q.addEventListener('click', endEmbodiment);
+  forwardAction = next;
+}
+
 function renderModeChoice(){
   const s = stageBase();
   s.innerHTML = `
@@ -812,7 +1023,7 @@ function wireSelectCards(container, returnPhase, returnFn, kind){
 /* Écran affiché à la place des souvenirs quand on n'est pas connecté·e :
    pas d'accès à la bibliothèque locale hors connexion, pour ne jamais
    laisser croire que du travail hors ligne sera conservé. */
-function renderOfflineGate(freeSessionFn, withModeBtn){
+function renderOfflineGate(freeSessionFn, withModeBtn, msg){
   const s = stageBase();
   if(!vaultRestoreDone){
     pendingGateRerender = true;
@@ -822,7 +1033,7 @@ function renderOfflineGate(freeSessionFn, withModeBtn){
   }
   s.innerHTML = `
     <h2 class="instruction fs">Vous n'êtes pas connecté·e</h2>
-    <p class="sub fs" style="animation-delay:.3s">Connectez-vous pour accéder à vos souvenirs.</p>
+    <p class="sub fs" style="animation-delay:.3s">${msg || 'Connectez-vous pour accéder à vos souvenirs.'}</p>
     <button class="sel-add fs" id="offline-gate-login" style="animation-delay:.5s;">Se connecter</button>
     ${freeSessionFn ? `<button class="sel-alt fs" id="offline-gate-free" style="animation-delay:.6s;">Travailler sans souvenir précis</button>` : ''}
     ${withModeBtn ? `<button class="sel-alt fs" id="offline-gate-mode" style="animation-delay:.6s;">Commencer une séance</button>` : ''}
@@ -1787,6 +1998,7 @@ function showBall(mode, resp){
     : (mode==='pos' || mode==='rtep_pos') ? 'Plongez dans le souvenir en restant sur cette fréquence.'
     : mode==='rtep_hotspot' ? 'Plongez dans ce point chaud.'
     : mode==='rtep_worst' ? 'Plongez dans ce moment.'
+    : mode==='embodiment' ? 'Incarnez cet état.'
     : mode==='bodyscan' ? 'Scannez votre corps.' : 'Suivez le point des yeux.';
   const count = mode==='neg' ? session.negSets
     : mode==='pos' ? session.posSets
@@ -1869,6 +2081,11 @@ function requestStop(){
 function afterStop(){
   const mode = bls.mode;
   if(mode==='rtep_hotspot'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); crossfadeToFormRtepHotspot(); return; }
+  if(mode==='embodiment'){
+    /* l'animation d'arrêt peut finir après qu'on a quitté l'écran : on ne force pas le choix dans ce cas */
+    if(currentPhase==='emb_ball' && session && session.kind==='embodiment') goTo('emb_choice', renderEmbodimentChoice);
+    return;
+  }
   if(mode==='bodyscan'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); renderBodyScan(); return; }
   if(mode==='simple'){ showBall('simple'); return; }
   crossfadeToForm(mode);
@@ -2442,7 +2659,7 @@ function accountBackupHtml(){
 
 function wireBackupControls(panel){
   panel.querySelector('#acc-export-btn').addEventListener('click', ()=>{
-    const data = {traumas, folders, recentTraumas, settings};
+    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems};
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2466,6 +2683,7 @@ function wireBackupControls(panel){
       traumas = data.traumas || [];
       folders = data.folders || [];
       recentTraumas = data.recentTraumas || [];
+      if(Array.isArray(data.embodiment)){ embodimentItems = data.embodiment; saveEmbodiment(embodimentItems); }
       if(data.settings) settings = Object.assign(settings, data.settings);
       saveTraumas(traumas);
       saveFolders(folders);
