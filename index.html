@@ -40,8 +40,12 @@
   #rulesIcon{ left:182px; }
   #recentLibraryIcon{ left:224px; }
   #settingsIcon{ left:266px; }
+  #musicIcon{ left:308px; display:none; }
+  body.stage-dark.music-ctx #musicIcon{ display:block; }
+  body.music-on #musicIcon{ color:var(--teal); opacity:1; }
   body.no-rtep #recentLibraryIcon{ display:none; }
   body.no-rtep #settingsIcon{ left:224px; }
+  body.no-rtep #musicIcon{ left:266px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -59,6 +63,22 @@
   #settings-panel{ position:fixed; top:56px; left:266px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
+  #music-panel{ position:fixed; top:56px; left:308px; z-index:60; width:310px; max-width:calc(100vw - 24px); background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:none; text-align:left; }
+  body.no-rtep #music-panel{ left:266px; }
+  #music-panel.open{ display:block; }
+  body:not(.stage-dark) #music-panel, body:not(.music-ctx) #music-panel{ display:none; }
+  #music-panel h3, .music-box-title{ font-size:13px; margin:0 0 10px; }
+  .music-list{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .music-row{ display:flex; align-items:center; gap:8px; }
+  .music-row.missing .music-name{ opacity:.55; }
+  .music-name{ flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .music-name em{ font-style:normal; font-size:11.5px; }
+  .music-play, .music-del, .music-add, .music-stop{ font-size:12.5px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; }
+  .music-play{ width:34px; padding:6px 0; }
+  .music-play:disabled, .music-add:disabled, .music-stop:disabled{ opacity:.4; cursor:default; }
+  .music-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .music-note{ font-size:12px; margin:8px 0 0; color:var(--ink-soft); min-height:1em; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
   .control-group{ margin-bottom:12px; }
   .control-group label{ font-size:12.5px; color:var(--ink-soft); display:block; margin-bottom:4px; }
@@ -291,6 +311,9 @@
   <button id="settingsIcon" class="icon-btn" title="Réglages">
     <svg width="20" height="20" viewBox="0 0 20 20"><line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="5" r="2" fill="currentColor"/><line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.6"/><circle cx="13" cy="10" r="2" fill="currentColor"/><line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="15" r="2" fill="currentColor"/></svg>
   </button>
+  <button id="musicIcon" class="icon-btn" title="Musique">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
+  </button>
   <div class="account-wrap">
     <button id="accountIcon" class="icon-btn" title="Compte">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg>
@@ -307,10 +330,13 @@
     <div class="control-group"><label>Couleur du point</label><input type="color" id="bls-color" value="#F4E3C1" style="width:100%;height:34px;padding:2px;cursor:pointer;"></div>
     <div class="control-group"><label>Durée d'une série : <span id="duration-val">90</span> s</label><input type="range" id="bls-duration" min="20" max="180" value="90"></div>
     <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
+    <div class="control-group"><label>Volume de la tonalité : <span id="vol-val">80</span> %</label><input type="range" id="bls-volume" min="0" max="100" value="80"></div>
     <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
     <div class="control-group"><button type="button" id="bls-test-btn" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px;">Tester le son et la vibration</button><p class="sub" id="bls-test-result" style="font-size:11.5px; margin:6px 0 0;"></p></div>
     <button id="settings-save" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:4px;">Enregistrer</button>
   </div>
+
+  <div id="music-panel"></div>
 
   <div id="stage-wrap">
     <div id="stage"></div>
@@ -356,7 +382,190 @@ function loadRules(){ try{ const a = JSON.parse(localStorage.getItem(LS_RULES));
 function saveRules(list){ localStorage.setItem(LS_RULES, JSON.stringify(list)); scheduleSync(); }
 let rulesItems = loadRules();
 
-let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
+/* ================= MUSIQUE (MP3 par souvenir) =================
+   Les fichiers sont gardés sur CET appareil (IndexedDB) : trop lourds pour le coffre chiffré.
+   Seuls leurs noms sont rattachés au souvenir (t.music = [{id,name,size}]) et se synchronisent ;
+   sur un autre appareil ils apparaissent comme « absents » tant qu'on ne les y a pas importés. */
+const MUSIC_MAX = 5;
+const MUSIC_DB = 'soloemdr_music';
+function musicDb(){
+  return new Promise((res, rej)=>{
+    const r = indexedDB.open(MUSIC_DB, 1);
+    r.onupgradeneeded = ()=> r.result.createObjectStore('files', {keyPath:'id'});
+    r.onsuccess = ()=> res(r.result);
+    r.onerror = ()=> rej(r.error);
+  });
+}
+async function musicTx(mode, fn){
+  const db = await musicDb();
+  return new Promise((res, rej)=>{
+    const tx = db.transaction('files', mode); let out;
+    try{ out = fn(tx.objectStore('files')); }catch(e){ rej(e); return; }
+    tx.oncomplete = ()=>{ db.close(); res(out && 'result' in out ? out.result : undefined); };
+    tx.onerror = tx.onabort = ()=>{ db.close(); rej(tx.error); };
+  });
+}
+const musicPut = (id, blob)=> musicTx('readwrite', st=> st.put({id, blob}));
+const musicDel = (id)=> musicTx('readwrite', st=> st.delete(id)).catch(()=>{});
+async function musicGet(id){ const r = await musicTx('readonly', st=> st.get(id)); return r ? r.blob : null; }
+async function musicHas(ids){
+  const out = {};
+  try{ await Promise.all(ids.map(async id=>{ out[id] = !!(await musicGet(id)); })); }catch(e){ ids.forEach(id=> out[id] = false); }
+  return out;
+}
+
+const music = { el:null, id:null, url:null, loop:true, redraw:null };
+function musicEl(){
+  if(!music.el){
+    music.el = new Audio(); music.el.preload = 'auto';
+    ['play','pause','ended'].forEach(ev=> music.el.addEventListener(ev, ()=>{ updateMusicBadge(); if(music.redraw) music.redraw(); }));
+  }
+  return music.el;
+}
+function musicPlaying(){ return !!(music.el && music.id && !music.el.paused); }
+function musicVolume(){ return typeof settings.musicVolume==='number' ? Math.max(0, Math.min(1, settings.musicVolume)) : 0.6; }
+function updateMusicBadge(){ document.body.classList.toggle('music-on', musicPlaying()); }
+async function musicPlay(item){
+  const el = musicEl();
+  if(music.id===item.id && el.src){ await el.play(); return; }
+  const blob = await musicGet(item.id);
+  if(!blob) throw new Error('absent');
+  if(music.url) URL.revokeObjectURL(music.url);
+  music.url = URL.createObjectURL(blob);
+  el.src = music.url; el.loop = music.loop; el.volume = musicVolume();
+  music.id = item.id;
+  await el.play();
+}
+function musicStop(){
+  if(music.el){ music.el.pause(); music.el.removeAttribute('src'); try{ music.el.load(); }catch(e){} }
+  if(music.url){ URL.revokeObjectURL(music.url); music.url = null; }
+  music.id = null;
+  updateMusicBadge();
+  if(music.redraw) music.redraw();
+}
+
+/* Liste + commandes de lecture d'un souvenir, dans n'importe quel conteneur */
+function musicMount(box, getT, save, onChange){
+  let notice = '';
+  async function draw(){
+    const t = getT();
+    if(!box.isConnected){ if(music.redraw===draw) music.redraw = null; return; }
+    if(!t){ box.innerHTML = '<p class="emb-empty">Aucun souvenir.</p>'; return; }
+    const list = Array.isArray(t.music) ? t.music : [];
+    const have = await musicHas(list.map(m=> m.id));
+    const playing = musicPlaying();
+    box.innerHTML = `
+      <div class="music-list">${list.map(m=>{
+        const ok = have[m.id], on = ok && playing && music.id===m.id;
+        return `<div class="music-row${ok?'':' missing'}">
+          <button type="button" class="music-play" data-play="${m.id}" ${ok?'':'disabled'} title="${on?'Pause':'Lire'}">${on?'❚❚':'▶'}</button>
+          <span class="music-name" title="${escapeHtml(m.name)}">${escapeHtml(m.name)}${ok?'':' <em>(absent de cet appareil)</em>'}</span>
+          <button type="button" class="music-del" data-del="${m.id}" title="Retirer">✕</button></div>`;
+      }).join('') || '<p class="emb-empty">Aucun fichier. Ajoutez jusqu’à 5 MP3 pour ce souvenir.</p>'}</div>
+      <div class="control-group"><label>Volume : <span class="music-vol-val">${Math.round(musicVolume()*100)}</span> %</label>
+        <input type="range" class="music-vol" min="0" max="100" value="${Math.round(musicVolume()*100)}"></div>
+      <div class="control-group"><label><input type="checkbox" class="music-loop" ${music.loop?'checked':''}> Lire en boucle</label></div>
+      <div class="music-actions">
+        <button type="button" class="music-add" ${list.length>=MUSIC_MAX?'disabled':''}>+ Ajouter un MP3 (${list.length}/${MUSIC_MAX})</button>
+        <button type="button" class="music-stop" ${music.id?'':'disabled'}>Couper</button>
+      </div>
+      <input type="file" class="music-file" accept=".mp3,audio/mpeg" multiple hidden>
+      <p class="sub music-note">${notice}</p>`;
+    box.querySelectorAll('[data-play]').forEach(b=> b.addEventListener('click', async ()=>{
+      const item = list.find(x=> x.id===b.dataset.play); if(!item) return;
+      try{
+        if(music.id===item.id && musicPlaying()) musicEl().pause();
+        else{ if(music.id && music.id!==item.id) musicStop(); await musicPlay(item); }
+        notice = '';
+      }catch(e){ notice = 'Lecture impossible (fichier absent ou illisible).'; }
+      draw();
+    }));
+    box.querySelectorAll('[data-del]').forEach(b=> b.addEventListener('click', async ()=>{
+      if(!b.classList.contains('armed')){
+        b.classList.add('armed'); b.textContent = 'Retirer ?';
+        setTimeout(()=>{ if(b.isConnected){ b.classList.remove('armed'); b.textContent = '✕'; } }, 3000);
+        return;
+      }
+      if(music.id===b.dataset.del) musicStop();
+      await musicDel(b.dataset.del);
+      t.music = list.filter(x=> x.id!==b.dataset.del);
+      save(); if(onChange) onChange(); notice = ''; draw();
+    }));
+    const vol = box.querySelector('.music-vol');
+    vol.addEventListener('input', ()=>{
+      settings.musicVolume = (+vol.value)/100; box.querySelector('.music-vol-val').textContent = vol.value;
+      if(music.el) music.el.volume = musicVolume();
+      saveSettings();
+    });
+    box.querySelector('.music-loop').addEventListener('change', e=>{ music.loop = e.target.checked; if(music.el) music.el.loop = music.loop; });
+    box.querySelector('.music-stop').addEventListener('click', ()=>{ musicStop(); });
+    const input = box.querySelector('.music-file');
+    box.querySelector('.music-add').addEventListener('click', ()=> input.click());
+    input.addEventListener('change', async ()=>{
+      const files = [...input.files]; input.value = '';
+      t.music = Array.isArray(t.music) ? t.music : [];
+      let added = 0, skipped = [];
+      for(const f of files){
+        if(t.music.length >= MUSIC_MAX){ skipped.push('limite de '+MUSIC_MAX+' fichiers atteinte'); break; }
+        if(!/\.mp3$/i.test(f.name) && f.type!=='audio/mpeg'){ skipped.push('« '+f.name+' » n’est pas un MP3'); continue; }
+        const id = 'm_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+        try{ await musicPut(id, f); }catch(e){ skipped.push('« '+f.name+' » n’a pas pu être enregistré (espace insuffisant ?)'); continue; }
+        t.music.push({id, name:f.name.replace(/\.mp3$/i,''), size:f.size}); added++;
+      }
+      if(added){ save(); if(onChange) onChange(); try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){} }
+      notice = skipped.length ? 'Non ajouté : '+skipped.join(' ; ')+'.' : '';
+      draw();
+    });
+  }
+  music.redraw = draw;
+  draw();
+}
+
+/* Depuis la fiche du souvenir (bibliothèque) */
+function openMusicModal(t, save, onChange){
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-panel" role="dialog" aria-label="Musique">
+      <div class="modal-head"><h3>Musique — ${escapeHtml(t.title)}</h3></div>
+      <div class="modal-body" id="music-modal-box"></div>
+      <div class="modal-foot"><button type="button" id="music-modal-done" class="primary">Fermer</button></div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const close = ()=>{ musicStop(); music.redraw = null; overlay.remove(); if(onChange) onChange(); };
+  overlay.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+  overlay.querySelector('#music-modal-done').addEventListener('click', close);
+  musicMount(overlay.querySelector('#music-modal-box'), ()=> t, save, null);
+}
+
+/* Pendant la stimulation : icône ♪ + panneau, comme les réglages de la balle */
+function musicCtxTrauma(){
+  if(typeof session==='undefined' || !session || !session.traumaId) return null;
+  return (session.kind==='rtep' ? recentTraumas : traumas).find(x=> x.id===session.traumaId) || null;
+}
+function musicCtxSave(){ if(session.kind==='rtep') saveRecentTraumas(recentTraumas); else saveTraumas(traumas); }
+function updateMusicCtx(){
+  const on = !!musicCtxTrauma();
+  document.body.classList.toggle('music-ctx', on);
+  if(!on) $('music-panel').classList.remove('open');
+}
+const MUSIC_STOP_RE = /^(home|library|embodiment|sos|rules|recentlibrary|rtep_select|select|modechoice|simple_ball|folder_.*|sos_.*|emb_.*|editform|confirmdel)$/;
+function afterNavMusic(phase){
+  if(music.id && MUSIC_STOP_RE.test(phase||'')) musicStop();
+  updateMusicCtx();
+}
+$('musicIcon').addEventListener('click', ()=>{
+  const panel = $('music-panel');
+  if(panel.classList.toggle('open')){
+    const t = musicCtxTrauma();
+    panel.innerHTML = `<h3>Musique</h3><div id="music-box"></div>`;
+    musicMount(panel.querySelector('#music-box'), musicCtxTrauma, musicCtxSave, null);
+  } else if(music.redraw) music.redraw = null;
+});
+$('music-panel').addEventListener('keydown', e=> e.stopPropagation());
+
+let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false, volume:0.8, musicVolume:0.6 };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
 function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); scheduleSync(); }
 
@@ -665,6 +874,7 @@ function refreshSettingsPanelInputs(){
   $('bls-size').value=settings.size; $('bls-color').value=settings.color;
   $('bls-duration').value=settings.duration; $('duration-val').textContent=settings.duration;
   $('bls-audio').checked=settings.audio; $('bls-haptic').checked=settings.haptic;
+  $('bls-volume').value=Math.round(soundVolume()*100); $('vol-val').textContent=Math.round(soundVolume()*100);
 }
 refreshSettingsPanelInputs();
 $('bls-speed').addEventListener('input',e=>{settings.speed=+e.target.value;$('speed-val').textContent=settings.speed;saveSettings();});
@@ -672,6 +882,8 @@ $('bls-size').addEventListener('input',e=>{settings.size=+e.target.value;saveSet
 $('bls-color').addEventListener('input',e=>{settings.color=e.target.value;saveSettings();});
 $('bls-duration').addEventListener('input',e=>{settings.duration=+e.target.value;$('duration-val').textContent=settings.duration;saveSettings();});
 $('bls-audio').addEventListener('change',e=>{settings.audio=e.target.checked;saveSettings();});
+$('bls-volume').addEventListener('input',e=>{settings.volume=(+e.target.value)/100;$('vol-val').textContent=e.target.value;saveSettings();});
+$('bls-volume').addEventListener('change',()=>{ playTick('L', true); });
 $('bls-haptic').addEventListener('change',e=>{settings.haptic=e.target.checked;saveSettings();});
 $('bls-test-btn').addEventListener('click',()=>{
   const out = $('bls-test-result');
@@ -684,8 +896,8 @@ $('bls-test-btn').addEventListener('click',()=>{
     setTimeout(()=> playTick('R', true), 500);
     const lines = [];
     if(!ctx) lines.push('Son : ce navigateur ne gère pas l\'audio.');
-    else if(ctx.state==='running') lines.push('Son : prêt — tu devrais entendre deux tops (gauche puis droite)' + (iOS && !navigator.audioSession ? '. Si rien : désactive le mode silencieux de l\'iPhone.' : '.'));
-    else lines.push('Son : bloqué par le navigateur (état « ' + ctx.state + ' »). Touche l\'écran puis réessaie.');
+    else if(ctx.state==='running') lines.push('Son : prêt — tu devrais entendre deux tops (gauche puis droite). Si rien : vérifie le volume de l\'appareil, le volume de la tonalité ci-dessus' + (iOS && !navigator.audioSession ? ' et le mode silencieux de l\'iPhone.' : '.'));
+    else lines.push('Son : le contexte audio est « ' + ctx.state + ' » ; un son de secours est joué. Si tu n\'entends rien, touche l\'écran puis réessaie, et vérifie le volume de l\'appareil.');
     if(!settings.audio) lines.push('La case « Tonalité audio alternée » est décochée : elle doit être cochée pour les séances.');
     if(!canVibrate) lines.push('Vibration : impossible sur cet appareil/navigateur' + (iOS ? ' (iPhone et iPad ne la permettent pas depuis le web).' : '.'));
     else lines.push(vibOk ? 'Vibration : envoyée.' : 'Vibration : refusée par le navigateur.');
@@ -713,6 +925,9 @@ document.addEventListener('click', (e)=>{
   }
   if(!e.target.closest('#account-panel') && !e.target.closest('#accountIcon')){
     $('account-panel').classList.remove('open');
+  }
+  if(!e.target.closest('#music-panel') && !e.target.closest('#musicIcon')){
+    $('music-panel').classList.remove('open');
   }
   const sortPanel = $('lib-sort-panel');
   if(sortPanel && !e.target.closest('#lib-sort-panel') && !e.target.closest('#lib-sort-btn')){
@@ -780,6 +995,7 @@ function goTo(phase, fn){
   forwardAction=null; spaceAction=null;
   window.history.pushState({soloemdrNav:true}, '', location.href);
   fn();
+  afterNavMusic(phase);
 }
 let currentFn = null;
 function goBack(){
@@ -790,6 +1006,7 @@ function goBack(){
   document.body.classList.remove('hide-r','hide-l');
   forwardAction=null; spaceAction=null;
   h.fn();
+  afterNavMusic(h.phase);
 }
 document.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowLeft'){ e.preventDefault(); goBack(); }
@@ -1449,6 +1666,7 @@ function traumaCardHtml(t, kind){
       </div>
       <div class="trauma-quick-actions"><div>
         <button class="pill-btn" data-treat="${t.id}">Traiter →</button>
+        <button class="pill-btn" data-music="${t.id}">♪ Musique${(t.music && t.music.length) ? ' ('+t.music.length+')' : ''}</button>
       </div></div>
       <div class="status-picker"><div>
         ${Object.entries(STATUS_LABEL).map(([val,label])=>`<button class="status-opt ${t.status===val?'selected':''}" data-status="${val}" data-id="${t.id}">${label}</button>`).join('')}
@@ -1488,6 +1706,11 @@ function wireTraumaCards(s, returnPhase, returnFn, localRefresh, kind){
     const t = list.find(x=>x.id===b.dataset.treat);
     if(kind==='recent') beginRtepSession(t.id, t.title, t.description);
     else beginSession(t.id, t.title, t.description);
+  }));
+  s.querySelectorAll('[data-music]').forEach(b=> b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    const t = list.find(x=>x.id===b.dataset.music);
+    if(t) openMusicModal(t, ()=> save(list), refresh);
   }));
   s.querySelectorAll('.status-opt').forEach(b=> b.addEventListener('click',(e)=>{
     e.stopPropagation();
@@ -1938,8 +2161,8 @@ function renderConfirmDelete(kind, id, returnPhase, returnFn){
   s.querySelector('#confirm-cancel').addEventListener('click', cancel);
   s.querySelector('#confirm-del').addEventListener('click', ()=>{
     if(isFolder){ deleteFolder(id); }
-    else if(isRecent){ recentTraumas = recentTraumas.filter(x=>x.id!==id); saveRecentTraumas(recentTraumas); unlinkTraumaEverywhere(id,'recent'); }
-    else { traumas = traumas.filter(x=>x.id!==id); saveTraumas(traumas); unlinkTraumaEverywhere(id,'old'); }
+    else if(isRecent){ (item && item.music || []).forEach(m=> musicDel(m.id)); recentTraumas = recentTraumas.filter(x=>x.id!==id); saveRecentTraumas(recentTraumas); unlinkTraumaEverywhere(id,'recent'); }
+    else { (item && item.music || []).forEach(m=> musicDel(m.id)); traumas = traumas.filter(x=>x.id!==id); saveTraumas(traumas); unlinkTraumaEverywhere(id,'old'); }
     history.pop(); currentPhase=returnPhase; currentFn=returnFn; returnFn();
   });
   forwardAction = cancel;
@@ -2182,18 +2405,65 @@ function showAudioBlockedHint(){
   });
   inner.appendChild(b);
 }
+function soundVolume(){ return typeof settings.volume==='number' ? Math.max(0, Math.min(1, settings.volume)) : 0.8; }
+/* Un "tock" bien audible (deux sinusoïdes, ~0,25 s) dans UNE seule oreille. Le côté passe par un
+   fusionneur de canaux : le StereoPanner manque aux vieux Safari et faisait échouer le son en silence. */
+function buildTick(ctx, dest, side, when, vol){
+  const env=ctx.createGain();
+  env.gain.setValueAtTime(0.0001, when);
+  env.gain.exponentialRampToValueAtTime(0.7, when+0.012);
+  env.gain.exponentialRampToValueAtTime(0.0001, when+0.24);
+  const o1=ctx.createOscillator(); o1.type='sine'; o1.frequency.value=523;
+  const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=1046;
+  const g2=ctx.createGain(); g2.gain.value=0.25;
+  o1.connect(env); o2.connect(g2); g2.connect(env);
+  const master=ctx.createGain(); master.gain.value=vol;
+  env.connect(master);
+  const merger=ctx.createChannelMerger(2);
+  master.connect(merger, 0, side==='L' ? 0 : 1);
+  merger.connect(dest);
+  o1.start(when); o2.start(when); o1.stop(when+0.26); o2.stop(when+0.26);
+}
+/* Repli : le même tock en petit fichier WAV joué par une balise <audio>. Sert quand Web Audio est
+   indisponible/bloqué, et sur les vieux iPhone (iOS < 17) où Web Audio est coupé par le bouton
+   silencieux alors qu'une balise <audio> ne l'est pas. */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const PREFER_MEDIA_TICKS = IS_IOS && !navigator.audioSession;
+let tickWavUrls = {};
+function tickWavUrl(side){
+  if(tickWavUrls[side]) return tickWavUrls[side];
+  const rate=22050, n=Math.floor(rate*0.25), bytes=44+n*4, buf=new ArrayBuffer(bytes), dv=new DataView(buf);
+  const w=(o,str)=>{ for(let i=0;i<str.length;i++) dv.setUint8(o+i, str.charCodeAt(i)); };
+  w(0,'RIFF'); dv.setUint32(4,bytes-8,true); w(8,'WAVE'); w(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,2,true);
+  dv.setUint32(24,rate,true); dv.setUint32(28,rate*4,true); dv.setUint16(32,4,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,n*4,true);
+  for(let i=0;i<n;i++){
+    const t=i/rate, env=Math.min(1,t/0.012)*Math.exp(-t*16);
+    const v=Math.max(-1, Math.min(1, (Math.sin(2*Math.PI*523*t)+0.25*Math.sin(2*Math.PI*1046*t))*env*0.7))*32767;
+    dv.setInt16(44+i*4, side==='L' ? v : 0, true); dv.setInt16(46+i*4, side==='L' ? 0 : v, true);
+  }
+  tickWavUrls[side] = URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
+  return tickWavUrls[side];
+}
+function playTickMedia(side){
+  const a = new Audio(tickWavUrl(side));
+  a.volume = soundVolume();
+  const p = a.play();
+  return p && p.catch ? p : Promise.resolve();
+}
 function playTick(side, force){
   if(!settings.audio && !force) return;
+  if(PREFER_MEDIA_TICKS){ playTickMedia(side).catch(()=>{ if(!force) showAudioBlockedHint(); }); return; }
   try{
     const ctx=ensureAudioCtx();
-    if(!ctx || ctx.state!=='running'){ if(!force) showAudioBlockedHint(); return; }
-    const hint=$('audio-hint'); if(hint) hint.remove();
-    const osc=ctx.createOscillator(), gain=ctx.createGain(), pan=ctx.createStereoPanner();
-    osc.type='sine'; osc.frequency.value=420; pan.pan.value=side==='L'?-1:1;
-    const now=ctx.currentTime;
-    gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(0.18,now+0.012); gain.gain.exponentialRampToValueAtTime(0.0001,now+0.11);
-    osc.connect(gain).connect(pan).connect(ctx.destination); osc.start(now); osc.stop(now+0.13);
+    if(ctx && ctx.state==='running'){
+      const hint=$('audio-hint'); if(hint) hint.remove();
+      buildTick(ctx, ctx.destination, side, ctx.currentTime, soundVolume());
+      return;
+    }
   }catch(e){}
+  /* Web Audio indisponible ou pas encore débloqué : on essaie la balise <audio> */
+  try{ playTickMedia(side).catch(()=>{ if(!force) showAudioBlockedHint(); }); }
+  catch(e){ if(!force) showAudioBlockedHint(); }
 }
 
 const RTEP_HOTSPOT_DURATION = 20; /* secondes — "série courte", ~8-12 passages */
