@@ -332,7 +332,7 @@
     <div class="control-group"><label><input type="checkbox" id="bls-audio" checked> Tonalité audio alternée</label></div>
     <div class="control-group"><label>Volume de la tonalité : <span id="vol-val">80</span> %</label><input type="range" id="bls-volume" min="0" max="100" value="80"></div>
     <div class="control-group"><label><input type="checkbox" id="bls-haptic"> Vibration alternée</label></div>
-    <div class="control-group"><button type="button" id="bls-test-btn" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px;">Tester le son et la vibration</button><p class="sub" id="bls-test-result" style="font-size:11.5px; margin:6px 0 0;"></p></div>
+    <div class="control-group"><button type="button" id="bls-test-btn" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px;">Tester le son et la vibration</button><p class="sub" id="bls-test-result" style="font-size:11.5px; margin:6px 0 0;"></p><div id="bls-test-q"></div></div>
     <button id="settings-save" class="sel-add" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px; margin-top:4px;">Enregistrer</button>
   </div>
 
@@ -565,7 +565,7 @@ $('musicIcon').addEventListener('click', ()=>{
 });
 $('music-panel').addEventListener('keydown', e=> e.stopPropagation());
 
-let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false, volume:0.8, musicVolume:0.6 };
+let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false, volume:0.8, musicVolume:0.6, soundEngine:'auto' };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
 function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); scheduleSync(); }
 
@@ -885,26 +885,63 @@ $('bls-audio').addEventListener('change',e=>{settings.audio=e.target.checked;sav
 $('bls-volume').addEventListener('input',e=>{settings.volume=(+e.target.value)/100;$('vol-val').textContent=e.target.value;saveSettings();});
 $('bls-volume').addEventListener('change',()=>{ playTick('L', true); });
 $('bls-haptic').addEventListener('change',e=>{settings.haptic=e.target.checked;saveSettings();});
-$('bls-test-btn').addEventListener('click',()=>{
-  const out = $('bls-test-result');
-  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-  const canVibrate = typeof navigator.vibrate==='function';
-  const vibOk = canVibrate ? navigator.vibrate(150) : false;
-  const ctx = ensureAudioCtx();
-  setTimeout(()=>{
-    playTick('L', true);
-    setTimeout(()=> playTick('R', true), 500);
-    const lines = [];
-    if(!ctx) lines.push('Son : ce navigateur ne gère pas l\'audio.');
-    else if(ctx.state==='running') lines.push('Son : prêt — tu devrais entendre deux tops (gauche puis droite). Si rien : vérifie le volume de l\'appareil, le volume de la tonalité ci-dessus' + (iOS && !navigator.audioSession ? ' et le mode silencieux de l\'iPhone.' : '.'));
-    else lines.push('Son : le contexte audio est « ' + ctx.state + ' » ; un son de secours est joué. Si tu n\'entends rien, touche l\'écran puis réessaie, et vérifie le volume de l\'appareil.');
-    if(!settings.audio) lines.push('La case « Tonalité audio alternée » est décochée : elle doit être cochée pour les séances.');
-    if(!canVibrate) lines.push('Vibration : impossible sur cet appareil/navigateur' + (iOS ? ' (iPhone et iPad ne la permettent pas depuis le web).' : '.'));
-    else lines.push(vibOk ? 'Vibration : envoyée.' : 'Vibration : refusée par le navigateur.');
-    if(canVibrate && !settings.haptic) lines.push('La case « Vibration alternée » est décochée : coche-la pour les séances.');
-    out.textContent = lines.join(' ');
-  }, 250);
-});
+$('bls-test-btn').addEventListener('click', ()=>{ guidedSoundTest(); });
+/* Test guidé : joue le son de deux façons différentes et te demande si tu l'entends. La méthode
+   qui marche chez toi est retenue automatiquement pour les séances. */
+let soundTestRunning = false;
+async function guidedSoundTest(){
+  if(soundTestRunning) return;
+  soundTestRunning = true;
+  const out = $('bls-test-result'), q = $('bls-test-q');
+  const say = t=>{ out.textContent = t; };
+  const wait = ms=> new Promise(r=> setTimeout(r, ms));
+  const btnCss = 'flex:1; border:1px solid var(--line); border-radius:8px; padding:7px;';
+  const ask = label=> new Promise(res=>{
+    q.innerHTML = `<p class="sub" style="font-size:12px; margin:8px 0 6px;">${label}</p>
+      <div style="display:flex; gap:8px;"><button type="button" data-a="y" class="sel-add" style="${btnCss}">Je l’entends</button>
+      <button type="button" data-a="n" class="sel-add" style="${btnCss}">Rien</button></div>`;
+    q.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ q.innerHTML = ''; res(b.dataset.a==='y'); }));
+  });
+  const vibLine = ()=>{
+    if(typeof navigator.vibrate!=='function') return ' Vibration : impossible sur cet appareil' + (IS_IOS ? ' (iPhone/iPad : non permis par le web).' : ' (les ordinateurs n’ont pas de vibreur).');
+    const ok = navigator.vibrate(150);
+    return ok ? ' Vibration : envoyée (coche « Vibration alternée » pour les séances).' : ' Vibration : refusée par le navigateur.';
+  };
+  try{
+    q.innerHTML = '';
+    if(!settings.audio){ settings.audio = true; $('bls-audio').checked = true; saveSettings(); }
+    /* 1) méthode standard (Web Audio) */
+    const ctx = ensureAudioCtx();
+    for(let i=0; i<10 && ctx && ctx.state!=='running'; i++) await wait(100);
+    if(ctx && ctx.state==='running' && !PREFER_MEDIA_TICKS){
+      say('Test 1/3 : écoute…');
+      buildTick(ctx, ctx.destination, 'L', ctx.currentTime+0.05, 0.8);
+      buildTick(ctx, ctx.destination, 'R', ctx.currentTime+0.75, 0.8);
+      await wait(1300);
+      if(await ask('Test 1/3 — As-tu entendu deux tops, un à gauche puis un à droite ?')){
+        settings.soundEngine = 'webaudio'; saveSettings();
+        say('Le son fonctionne ✓.' + vibLine()); return;
+      }
+    }
+    /* 2) méthode de secours (balise <audio>) */
+    say('Test 2/3 : écoute…');
+    await playTickMedia('L').catch(()=>{}); await wait(700);
+    await playTickMedia('R').catch(()=>{}); await wait(900);
+    if(await ask('Test 2/3 — Et maintenant, deux tops (gauche puis droite) ?')){
+      settings.soundEngine = 'media'; saveSettings();
+      say('Le son fonctionne avec la méthode de secours ✓ : c’est celle que j’utiliserai pour tes séances.' + vibLine()); return;
+    }
+    /* 3) bip long et fort : le problème est-il juste le volume ? */
+    say('Test 3/3 : écoute…');
+    const beep = new Audio(beepWavUrl()); beep.volume = 1;
+    await beep.play().catch(()=>{}); await wait(1300);
+    if(await ask('Test 3/3 — Un bip long, tu l’entends ?')){
+      settings.soundEngine = 'media'; settings.volume = 1; saveSettings(); refreshSettingsPanelInputs();
+      say('Les tops étaient trop faibles pour ton appareil : volume mis au maximum, méthode de secours activée.' + vibLine()); return;
+    }
+    say('Aucun son ne t’arrive : ça vient de l’appareil ou du navigateur, pas du site. À vérifier : 1) volume du système et sortie audio (casque, Bluetooth, écran ?) ; 2) l’onglet n’est pas coupé (haut-parleur barré sur l’onglet : clic droit > Réactiver le son) ; 3) autorisations du site — Chrome : cadenas à gauche de l’adresse > Paramètres du site > Son : Autoriser ; Safari : menu Safari > Réglages pour ce site > Lecture automatique : Autoriser tout ; 4) essaie un autre navigateur.' + vibLine());
+  } finally { soundTestRunning = false; }
+}
 $('settings-save').addEventListener('click',()=>{
   saveSettings();
   const dot = $('bls-dot');
@@ -2376,6 +2413,12 @@ function computeXY(t){
 }
 /* iOS : par défaut le son Web Audio est coupé par le bouton silencieux ; 'playback' l'en affranchit */
 try{ if(navigator.audioSession) navigator.audioSession.type = 'playback'; }catch(e){}
+/* Vieux Safari : le contexte ne se débloque que si un son (même muet) est lancé pendant le geste */
+let silentUnlocked = false;
+function unlockSilentBuffer(c){
+  if(silentUnlocked || !c) return;
+  try{ const b=c.createBuffer(1,1,22050), src=c.createBufferSource(); src.buffer=b; src.connect(c.destination); src.start(0); silentUnlocked = true; }catch(e){}
+}
 function ensureAudioCtx(){
   try{
     if(bls.audioCtx && bls.audioCtx.state==='closed') bls.audioCtx = null;
@@ -2389,7 +2432,7 @@ function ensureAudioCtx(){
    au lancement d'une série : certains navigateurs n'autorisent la lecture que si le contexte
    a été créé/repris tôt, au plus près d'un vrai geste utilisateur. */
 ['keydown','mousedown','pointerdown','touchstart','touchend','click'].forEach(evt=>{
-  document.addEventListener(evt, function unlockAudioOnFirstGesture(){ if(settings.audio) ensureAudioCtx(); }, {capture:true});
+  document.addEventListener(evt, function unlockAudioOnFirstGesture(){ if(settings.audio){ const c = ensureAudioCtx(); unlockSilentBuffer(c); } }, {capture:true});
 });
 /* Si le navigateur refuse de lancer le son (politique de lecture automatique), on le dit
    au lieu d'échouer en silence : un clic sur le message suffit à le débloquer. */
@@ -2429,20 +2472,30 @@ function buildTick(ctx, dest, side, when, vol){
    silencieux alors qu'une balise <audio> ne l'est pas. */
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 const PREFER_MEDIA_TICKS = IS_IOS && !navigator.audioSession;
-let tickWavUrls = {};
+function wavUrl(int16, channels, rate){
+  const bytes = 44 + int16.length*2, buf = new ArrayBuffer(bytes), dv = new DataView(buf);
+  const w = (o,str)=>{ for(let i=0;i<str.length;i++) dv.setUint8(o+i, str.charCodeAt(i)); };
+  w(0,'RIFF'); dv.setUint32(4,bytes-8,true); w(8,'WAVE'); w(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,channels,true);
+  dv.setUint32(24,rate,true); dv.setUint32(28,rate*channels*2,true); dv.setUint16(32,channels*2,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,int16.length*2,true);
+  for(let i=0;i<int16.length;i++) dv.setInt16(44+i*2, int16[i], true);
+  return URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
+}
+let tickWavUrls = {}, beepUrl = null;
 function tickWavUrl(side){
   if(tickWavUrls[side]) return tickWavUrls[side];
-  const rate=22050, n=Math.floor(rate*0.25), bytes=44+n*4, buf=new ArrayBuffer(bytes), dv=new DataView(buf);
-  const w=(o,str)=>{ for(let i=0;i<str.length;i++) dv.setUint8(o+i, str.charCodeAt(i)); };
-  w(0,'RIFF'); dv.setUint32(4,bytes-8,true); w(8,'WAVE'); w(12,'fmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,2,true);
-  dv.setUint32(24,rate,true); dv.setUint32(28,rate*4,true); dv.setUint16(32,4,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,n*4,true);
+  const rate=22050, n=Math.floor(rate*0.25), data=new Int16Array(n*2);
   for(let i=0;i<n;i++){
     const t=i/rate, env=Math.min(1,t/0.012)*Math.exp(-t*16);
     const v=Math.max(-1, Math.min(1, (Math.sin(2*Math.PI*523*t)+0.25*Math.sin(2*Math.PI*1046*t))*env*0.7))*32767;
-    dv.setInt16(44+i*4, side==='L' ? v : 0, true); dv.setInt16(46+i*4, side==='L' ? 0 : v, true);
+    data[i*2] = side==='L' ? v : 0; data[i*2+1] = side==='L' ? 0 : v;
   }
-  tickWavUrls[side] = URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
-  return tickWavUrls[side];
+  return (tickWavUrls[side] = wavUrl(data, 2, rate));
+}
+function beepWavUrl(){
+  if(beepUrl) return beepUrl;
+  const rate=22050, n=rate, data=new Int16Array(n);
+  for(let i=0;i<n;i++){ const t=i/rate, env=Math.min(1,t/0.02)*Math.min(1,(1-t)/0.05); data[i]=Math.sin(2*Math.PI*440*t)*env*0.9*32767; }
+  return (beepUrl = wavUrl(data, 1, rate));
 }
 function playTickMedia(side){
   const a = new Audio(tickWavUrl(side));
@@ -2452,7 +2505,7 @@ function playTickMedia(side){
 }
 function playTick(side, force){
   if(!settings.audio && !force) return;
-  if(PREFER_MEDIA_TICKS){ playTickMedia(side).catch(()=>{ if(!force) showAudioBlockedHint(); }); return; }
+  if(PREFER_MEDIA_TICKS || settings.soundEngine==='media'){ playTickMedia(side).catch(()=>{ if(!force) showAudioBlockedHint(); }); return; }
   try{
     const ctx=ensureAudioCtx();
     if(ctx && ctx.state==='running'){
