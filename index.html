@@ -3,14 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E181E">
 <title>SoloEMDR</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --bg:#EEF3F2; --bg-soft:#E3ECEA; --ink:#24313A; --ink-soft:#5B6B72;
-    --teal:#3E7371; --teal-deep:#2A5654; --clay:#C9825F; --clay-soft:#E7C3AC;
-    --line:#C9D6D3; --dusk:#0F1E27; --dusk-2:#16303B;
-    --bg-violet:#EFEDF6; --bg-soft-violet:#E5E0EF; --teal-soft:#CFE3E0; --folder-neutral:#D7DEE6;
+    color-scheme: dark;
+    --bg:#0E181E; --bg-soft:#16242C; --surface:#18272F; --ink:#E2DED4; --ink-soft:#97A5AB;
+    --teal:#3E8582; --teal-deep:#86CBC5; --clay:#C9825F; --clay-soft:#D9A98B;
+    --line:#2B3E47; --dusk:#0F1E27; --dusk-2:#16303B;
+    --bg-violet:#14121F; --bg-soft-violet:#1B1830; --teal-soft:#1E3B3B; --folder-neutral:#1F313A;
     --aurora-1:#4C8B88; --aurora-2:#E7A97C; --aurora-3:#B9A6D9; --aurora-4:#7FB0AC;
     --font-display: Georgia, 'Times New Roman', serif;
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
@@ -42,21 +44,21 @@
   .conn-dot.ok{ background:#5f9e7a; }
   .conn-dot.err{ background:#c0554a; }
   body.stage-dark .conn-dot{ border-color:var(--dusk,#0b0b0d); }
-  #account-panel{ position:absolute; top:34px; right:-6px; width:220px; background:white; border:1px solid var(--line);
+  #account-panel{ position:absolute; top:34px; right:-6px; width:220px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
   #account-panel.open{ display:block; }
   #account-panel .sub{ margin:0 0 10px; font-size:12.5px; max-width:none; }
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:140px; z-index:60; width:290px; background:white; border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:140px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
   .control-group{ margin-bottom:12px; }
   .control-group label{ font-size:12.5px; color:var(--ink-soft); display:block; margin-bottom:4px; }
   select, textarea, input[type=text], input[type=password]{ width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line);
-    font-family:var(--font-body); font-size:13.5px; background:white; color:var(--ink); }
+    font-family:var(--font-body); font-size:13.5px; background:var(--surface); color:var(--ink); }
   textarea{ resize:vertical; min-height:70px; }
   input[type=range]{ width:100%; accent-color:var(--teal); }
 
@@ -71,7 +73,7 @@
   #stage{ height:100%; width:100%; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
     text-align:center; padding:40px; overflow-y:auto; }
   .aurora-wrap{ position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
-  .aurora-blob{ position:absolute; border-radius:50%; filter:blur(min(9vw,70px)); opacity:.45;
+  .aurora-blob{ position:absolute; border-radius:50%; filter:blur(min(9vw,70px)); opacity:.28;
     animation:auroraFloat ease-in-out infinite alternate; }
   @keyframes auroraFloat{ from{ transform:translate(0,0) scale(1) rotate(0deg); } to{ transform:translate(var(--dx,40px), var(--dy,30px)) scale(var(--sc,1.1)) rotate(6deg); } }
   @media (prefers-reduced-motion: reduce){ .aurora-blob{ animation:none; } }
@@ -91,13 +93,13 @@
   .scale-wrap{ width:min(560px,90%); margin-top:6px; }
   .scale-label{ font-family:var(--font-display); font-size:22px; font-weight:600; color:var(--teal-deep); margin:4px 0 14px; min-height:28px; }
   .scale-numbers{ display:flex; gap:7px; justify-content:center; flex-wrap:wrap; }
-  .scale-num{ width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:white; color:var(--ink);
+  .scale-num{ width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink);
     font-family:var(--font-body); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .scale-num:hover{ border-color:var(--teal); }
   .scale-num.selected{ background:var(--teal); border-color:var(--teal); color:white; }
 
   .priority-picker{ display:flex; gap:7px; }
-  .priority-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:white; color:var(--ink);
+  .priority-btn{ width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink);
     font-family:var(--font-body); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .priority-btn:hover{ border-color:var(--teal); }
   .priority-btn.selected{ background:var(--teal); border-color:var(--teal); color:white; }
@@ -125,7 +127,7 @@
   #stage.select-view h2.instruction{ flex:0 0 auto; width:100%; margin:0 0 20px; }
   .sel-scroll{ flex:1 1 auto; min-height:0; width:100%; overflow-y:auto; display:flex; flex-direction:column; align-items:center; padding-bottom:12px; }
   .sel-list{ width:min(560px,92%); display:flex; flex-direction:column; gap:10px; margin-top:14px; }
-  .sel-card{ background:white; border:1px solid var(--line); border-radius:12px; padding:12px 16px; text-align:left; cursor:pointer;
+  .sel-card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 16px; text-align:left; cursor:pointer;
     display:flex; justify-content:space-between; align-items:center; }
   .sel-card:hover{ border-color:var(--teal); }
   .sel-card .t{ font-size:14.5px; font-weight:600; }
@@ -134,7 +136,7 @@
     font-size:12.5px; padding:7px 14px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft);
     color:var(--ink); font-family:var(--font-body); cursor:pointer; white-space:nowrap; transition:background-color .15s ease; }
   .pill-btn:hover, .sel-card .actions button:hover, .lib-toolbar-actions button:hover, .lib-add-top:hover, #account-panel button:hover{
-    background-color:color-mix(in srgb, var(--bg-soft), black 30%); }
+    background-color:color-mix(in srgb, var(--bg-soft), white 9%); }
   .sel-alt{ margin-top:18px; font-size:13.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; background:none; border:none; }
   .lib-toolbar-actions .toggle-folders-btn{ font-size:11px; padding:0; border:none; background:none; color:var(--ink-soft); text-decoration:underline; }
   .lib-toolbar-actions .toggle-folders-btn:hover{ color:var(--ink); background:none; }
@@ -179,14 +181,14 @@
     border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); }
   .lib-toolbar input::placeholder{ color:var(--ink-soft); }
   .lib-toolbar input:hover{ border-color:var(--teal); }
-  .lib-toolbar input:focus{ outline:none; border-color:var(--teal); background:white; }
+  .lib-toolbar input:focus{ outline:none; border-color:var(--teal); background:var(--surface); }
   .lib-toolbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .toolbar-icon-btn{ background:var(--bg-soft); border:1px solid var(--line); border-radius:8px; padding:8px; cursor:pointer;
     color:var(--ink); display:flex; align-items:center; justify-content:center; transition:background-color .15s ease; }
-  .toolbar-icon-btn:hover{ background-color:color-mix(in srgb, var(--bg-soft), black 30%); }
+  .toolbar-icon-btn:hover{ background-color:color-mix(in srgb, var(--bg-soft), white 9%); }
   .toolbar-icon-btn svg{ display:block; }
   .lib-sort-wrap{ position:relative; }
-  .lib-sort-panel{ position:absolute; top:44px; left:0; z-index:40; width:210px; background:white; border:1px solid var(--line);
+  .lib-sort-panel{ position:absolute; top:44px; left:0; z-index:40; width:210px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:8px; box-shadow:0 10px 30px rgba(0,0,0,.12); display:none; text-align:left; }
   .lib-sort-panel.open{ display:block; }
   .lib-sort-panel button{ display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left;
@@ -208,13 +210,14 @@
   .folder-tile{ position:relative; cursor:pointer; min-height:104px; border-radius:14px; padding:14px; text-align:left;
     background:var(--folder-neutral); display:flex; flex-direction:column; justify-content:flex-start; }
   .folder-tile.all-done{ background:var(--teal-soft); }
+  .folder-tile.folder-colored{ filter:brightness(.82) saturate(.92); }
   .folder-name{ font-weight:600; font-size:14px; color:var(--ink); word-break:break-word; }
   .folder-count{ font-size:11.5px; color:var(--ink-soft); margin-top:3px; }
   .folder-actions{ position:absolute; bottom:8px; right:8px; display:flex; gap:4px; opacity:0; transition:opacity .15s ease; }
   .folder-tile:hover .folder-actions{ opacity:1; }
-  .folder-actions button{ width:24px; height:24px; border-radius:50%; border:1px solid rgba(0,0,0,.08); background:rgba(255,255,255,.75);
+  .folder-actions button{ width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,.12); background:rgba(14,24,30,.75);
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
-  .folder-actions button:hover{ background:white; color:var(--ink); }
+  .folder-actions button:hover{ background:var(--surface); color:var(--ink); }
 
   .skip-link{ position:fixed; bottom:24px; right:24px; z-index:45; background:none; border:none; color:rgba(239,232,218,0.5);
     font-size:12.5px; cursor:pointer; text-decoration:underline; }
@@ -222,7 +225,7 @@
   .audio-hint{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:45; background:rgba(239,232,218,0.12);
     border:1px solid rgba(239,232,218,0.3); color:#EFE8DA; border-radius:20px; padding:8px 16px; font-size:13px; cursor:pointer; font-family:var(--font-body); }
 
-  .form-error{ color:#B3423E; font-size:12.5px; margin-top:10px; min-height:16px; max-width:420px; }
+  .form-error{ color:#E8908A; font-size:12.5px; margin-top:10px; min-height:16px; max-width:420px; }
 </style>
 </head>
 <body>
@@ -1094,10 +1097,10 @@ function folderTileHtml(f){
   const allDone = items.length>0 && items.every(t=>t.status==='traite');
   const dark = f.color && isDarkColor(f.color);
   const bgStyle = f.color ? ` style="background:${f.color};"` : '';
-  const textStyle = dark ? ' style="color:#F5F2E8;"' : '';
-  const countStyle = dark ? ' style="color:rgba(245,242,232,.75);"' : '';
+  const textStyle = f.color ? (dark ? ' style="color:#F5F2E8;"' : ' style="color:#24313A;"') : '';
+  const countStyle = f.color ? (dark ? ' style="color:rgba(245,242,232,.75);"' : ' style="color:#5B6B72;"') : '';
   return `
-    <div class="folder-tile ${!f.color && allDone ? 'all-done' : ''}" data-folder-id="${f.id}"${bgStyle}>
+    <div class="folder-tile ${!f.color && allDone ? 'all-done' : ''}${f.color ? ' folder-colored' : ''}" data-folder-id="${f.id}"${bgStyle}>
       <div class="folder-name"${textStyle}>${escapeHtml(f.name)}</div>
       <div class="folder-count"${countStyle}>${items.length} souvenir${items.length>1?'s':''}</div>
       <div class="folder-actions">
@@ -2548,7 +2551,7 @@ function renderRecoveryPhraseReveal(phrase, returnPhase, returnFn){
   s.innerHTML = `
     <h2 class="instruction fs">Ta phrase de récupération</h2>
     <p class="sub fs" style="animation-delay:.3s">Note-la maintenant dans un endroit sûr (gestionnaire de mots de passe, papier...). Elle ne sera plus jamais affichée. Sans elle et sans ton mot de passe, tes souvenirs seraient perdus définitivement.</p>
-    <div class="fs" style="animation-delay:.4s; font-family:monospace; font-size:17px; letter-spacing:1px; background:white; border:1px solid var(--line);
+    <div class="fs" style="animation-delay:.4s; font-family:monospace; font-size:17px; letter-spacing:1px; background:var(--surface); border:1px solid var(--line);
       border-radius:12px; padding:16px 20px; margin:8px auto 0; width:min(420px,90%); word-break:break-all;">${escapeHtml(phrase)}</div>
     <div class="check-row fs" style="animation-delay:.6s"><input type="checkbox" id="phrase-ack"> <label for="phrase-ack">J'ai noté ma phrase de récupération en lieu sûr</label></div>
     <button class="sel-add fs" id="phrase-continue" style="animation-delay:.7s; opacity:.4;">Continuer</button>
