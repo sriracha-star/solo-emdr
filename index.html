@@ -36,10 +36,11 @@
   #homeIcon{ left:14px; }
   #libraryIcon{ left:56px; }
   #embodimentIcon{ left:98px; }
-  #recentLibraryIcon{ left:140px; }
-  #settingsIcon{ left:182px; }
+  #sosIcon{ left:140px; }
+  #recentLibraryIcon{ left:182px; }
+  #settingsIcon{ left:224px; }
   body.no-rtep #recentLibraryIcon{ display:none; }
-  body.no-rtep #settingsIcon{ left:140px; }
+  body.no-rtep #settingsIcon{ left:182px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -54,7 +55,7 @@
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:182px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:224px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
   #settings-panel h3{ font-size:13px; margin:0 0 10px; }
@@ -222,7 +223,15 @@
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
   .folder-actions button:hover{ background:var(--surface); color:var(--ink); }
 
-  body.no-rtep #settings-panel{ left:140px; }
+  body.no-rtep #settings-panel{ left:182px; }
+
+  /* SOS */
+  .sos-quote{ margin:0 0 18px; padding:12px 16px; border-left:2px solid var(--teal); color:var(--ink-soft); font-size:15px; line-height:1.5; text-align:left; white-space:pre-wrap; width:min(560px,90%); max-height:30vh; overflow:auto; }
+  .sos-checks{ width:min(620px,92%); max-height:38vh; overflow:auto; text-align:left; margin:6px 0 16px; display:flex; flex-direction:column; gap:10px; }
+  .sos-check{ display:flex; gap:10px; align-items:flex-start; font-size:14.5px; color:var(--ink); cursor:pointer; line-height:1.45; }
+  .sos-check input{ margin-top:4px; }
+  .sos-row{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+  .sos-big{ font-family:var(--font-display); font-size:clamp(22px,3.6vw,32px); line-height:1.4; max-width:620px; margin:0 0 10px; }
 
   /* embodiment */
   .emb-edit-btn{ position:absolute; top:18px; right:64px; }
@@ -263,6 +272,9 @@
   </button>
   <button id="embodimentIcon" class="icon-btn" title="Embodiment">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h2.2c1 0 1.3-4.5 2.7-4.5s1.3 8.5 2.7 8.5S10.8 3 12.1 3s1.1 18 2.6 18 1.1-13 2.5-13 1.4 6.5 2.4 6.5c.7 0 .8-2.5 2-2.5H22"/></svg>
+  </button>
+  <button id="sosIcon" class="icon-btn" title="SOS">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M18.4 5.6l-3.9 3.9M9.5 14.5l-3.9 3.9"/></svg>
   </button>
   <button id="recentLibraryIcon" class="icon-btn" title="Traumas récents (R-TEP)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2l1 6 5-3-3 5 6 1-6 1 3 5-5-3-1 6-1-6-5 3 3-5-6-1 6-1-3-5 5 3z"/></svg>
@@ -322,6 +334,12 @@ const LS_EMBODIMENT = 'soloemdr_embodiment';
 function loadEmbodiment(){ try{ const a = JSON.parse(localStorage.getItem(LS_EMBODIMENT)); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
 function saveEmbodiment(list){ localStorage.setItem(LS_EMBODIMENT, JSON.stringify(list)); scheduleSync(); }
 let embodimentItems = loadEmbodiment();
+/* SOS : seules les affirmations positives sont gardées (liste modifiable). Ce qui est écrit
+   pendant le protocole (vidage, pleine présence) reste en mémoire le temps de la séance, jamais enregistré. */
+const LS_SOS_AFF = 'soloemdr_sos_affirmations';
+function loadSosAff(){ try{ const a = JSON.parse(localStorage.getItem(LS_SOS_AFF)); return Array.isArray(a) ? a.filter(x=> typeof x==='string') : []; }catch(e){ return []; } }
+function saveSosAff(list){ localStorage.setItem(LS_SOS_AFF, JSON.stringify(list)); scheduleSync(); }
+let sosAffirmations = loadSosAff();
 
 let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
@@ -493,7 +511,7 @@ window.addEventListener('pagehide', flushPendingSync);
 async function vaultPush(){
   if(!vaultReady()) return;
   try{
-    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems});
+    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations});
     const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
     const {error} = await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
     if(error) throw error;
@@ -509,6 +527,7 @@ async function vaultPull(row){
   traumas = parsed.traumas||[]; folders = parsed.folders||[];
   recentTraumas = parsed.recentTraumas||[];
   if(Array.isArray(parsed.embodiment)){ embodimentItems = parsed.embodiment; localStorage.setItem(LS_EMBODIMENT, JSON.stringify(embodimentItems)); }
+  if(Array.isArray(parsed.sosAffirmations)){ sosAffirmations = parsed.sosAffirmations; localStorage.setItem(LS_SOS_AFF, JSON.stringify(sosAffirmations)); }
   settings = Object.assign(settings, parsed.settings||{});
   localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
   localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
@@ -528,7 +547,7 @@ async function ensureVaultCreated(userId, email, password){
   const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), saltRec);
   const wrapPw = await wrapDEK(dek, kekPw);
   const wrapRec = await wrapDEK(dek, kekRec);
-  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems});
+  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations});
   const {ivB64, ctB64} = await encryptWithDEK(dek, payload);
   const newRow = { user_id:userId, salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64,
     salt_rec:saltRec, iv_rec:wrapRec.ivB64, wrapped_dek_rec:wrapRec.wrappedB64, data_iv:ivB64, ciphertext:ctB64 };
@@ -579,8 +598,9 @@ async function vaultLogout(){
   if(supa) supa.auth.signOut({scope:'local'});
   vault = {dek:null, userId:null, email:null};
   await clearSessionDEK();
-  traumas = []; folders = []; recentTraumas = []; embodimentItems = [];
+  traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = [];
   localStorage.removeItem(LS_EMBODIMENT);
+  localStorage.removeItem(LS_SOS_AFF);
   localStorage.removeItem(LS_TRAUMAS);
   localStorage.removeItem(LS_FOLDERS);
   localStorage.removeItem(LS_RECENT_TRAUMAS);
@@ -665,6 +685,7 @@ $('settings-save').addEventListener('click',()=>{
 $('settingsIcon').addEventListener('click',()=>$('settings-panel').classList.toggle('open'));
 $('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
 $('embodimentIcon').addEventListener('click',()=> goTo('embodiment', renderEmbodiment));
+$('sosIcon').addEventListener('click',()=> goTo('sos', renderSos));
 $('recentLibraryIcon').addEventListener('click',()=> goTo('recentlibrary', renderRecentLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
@@ -713,7 +734,7 @@ let forwardAction=null, spaceAction=null;
    dont l'état ne peut pas être reconstruit sans risque. */
 const SS_LAST_PHASE = 'soloemdr_last_phase';
 const RESTORABLE_PHASES = {
-  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, recentlibrary: renderRecentLibrary,
+  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, sos: renderSos, recentlibrary: renderRecentLibrary,
   select: renderSelect, rtep_select: renderRtepSelect, modechoice: renderModeChoice
 };
 function restorableTargetForPhase(phase){
@@ -937,7 +958,11 @@ function currentEmbodimentItem(){
   }
   return null;
 }
-function endEmbodiment(){ session = null; history = []; currentPhase = null; goTo('embodiment', renderEmbodiment); }
+function endEmbodiment(){
+  /* lancé depuis le protocole SOS : on poursuit avec la dernière étape */
+  if(session && session.sos){ navWith({kind:'sos', step:sosIdx('presence'), vent:'', presence:'', affIndex:0, ball:''}, 'sos_step', renderSosStep); return; }
+  session = null; history = []; currentPhase = null; goTo('embodiment', renderEmbodiment);
+}
 
 function renderEmbodimentPoint(){
   const it = currentEmbodimentItem();
@@ -978,6 +1003,141 @@ function renderEmbodimentChoice(){
   s.querySelector('#emb-next').addEventListener('click', next);
   const q = s.querySelector('#emb-quit'); if(q) q.addEventListener('click', endEmbodiment);
   forwardAction = next;
+}
+
+/* ================= SOS ================= */
+/* Navigue vers un nouvel écran avec un nouvel état de session. L'état n'est appliqué qu'au premier
+   affichage : le retour arrière restaure l'ancien instantané sans le réécraser. */
+function navWith(next, phase, render){
+  let applied = false;
+  goTo(phase, ()=>{ if(!applied){ session = next; applied = true; } render(); });
+}
+const SOS_T = {
+  ressens:'Ressens-le, ne fuis pas', vent:'Vide tout, exprime tout', respire:'Respire, reste avec toi-même',
+  aff:'Rappels d’affirmations positives'
+};
+const SOS_STEPS = [
+  {id:'intro'},
+  {id:'isole', title:'Isole-toi', body:'Si tu peux. Mets-toi au calme. Loin du trigger s’il y en a un extérieur.'},
+  {id:'ressens', title:SOS_T.ressens, body:'Laisse tes émotions pénétrer ton corps. Tu n’es pas elles, mais elles sont là. Ressens-les à fond.', bls:'Ressens à fond.'},
+  {id:'ou', title:SOS_T.ressens, body:'Elles sont où ? Plexus ? Crâne ? Ventre ? Ressens à fond.', bls:'Ressens à fond.'},
+  {id:'extra', title:SOS_T.ressens, body:'S’il le faut, extrapole-les physiquement : trembler de peur, pleurer de tristesse ou de colère, serrer les dents, hurler…', bls:'Laisse ton corps s’exprimer.'},
+  {id:'vent', type:'text', field:'vent', title:SOS_T.vent, body:'Ne te juge pas, ne te bride pas. Dis les horreurs que tu penses, formule toutes les pensées limitantes, dis-le :', placeholder:'JE SUIS NULLE BORDEL, J’EN PEUX PLUS, À QUOI BON???'},
+  {id:'ventbls', title:SOS_T.vent, body:'Rien, rien de tout ça n’est honteux. Sors-le. Sans réfléchir, instinctivement.', recall:'vent', bls:'Sors-le.'},
+  {id:'respire', title:SOS_T.respire, body:'Envoie-toi de l’affection et de l’amour. Envoie de l’amour à l’endroit où t’avais mal. Si tu veux, enlace-toi.', bls:'Envoie-toi de l’amour.'},
+  {id:'racines', title:'Racines', body:'Ne te juge pas. D’où ça vient ? Tout ça n’est pas ton identité. Ça va passer. Tout passe.', bls:'Tout passe.'},
+  {id:'affedit', type:'affedit'},
+  {id:'affloop', type:'affloop'},
+  {id:'ancrage', type:'anchor'},
+  {id:'presence', type:'text', field:'presence', title:'Pleine présence', body:'De quoi tu as envie ? Comment tu te sens ? Qu’est-ce que ton corps a envie de faire ?', placeholder:'Écris ici...'},
+  {id:'fin', type:'end'}
+];
+function sosIdx(id){ return SOS_STEPS.findIndex(x=> x.id===id); }
+function sosCoarse(){ return !!(window.matchMedia && matchMedia('(pointer:coarse)').matches); }
+function sosNext(patch){
+  navWith(Object.assign({}, session, {ball:'', affIndex:0}, patch), 'sos_step', renderSosStep);
+}
+function renderSos(){
+  session = {kind:'sos', step:0, vent:'', presence:'', affIndex:0, ball:''};
+  renderSosStep();
+}
+function endSos(){ session = null; history = []; currentPhase = null; goTo('home', renderHome); }
+
+function renderSosStep(){
+  if(!session || session.kind!=='sos'){ renderSos(); return; }
+  const st = SOS_STEPS[session.step];
+  if(!st){ endSos(); return; }
+  const s = stageBase();
+  const head = t=> `<h2 class="instruction fs">${escapeHtml(t)}</h2>`;
+  const sub = (t,d)=> `<p class="sub fs" style="animation-delay:${d||.25}s; max-width:560px;">${escapeHtml(t)}</p>`;
+  const btn = (id,label,d)=> `<button class="pill-btn fs" id="${id}" style="animation-delay:${d}s; font-size:14px; padding:10px 26px;">${label}</button>`;
+  const next = ()=> sosNext({step: session.step+1});
+  let go = next;
+  const type = st.type || (st.bls ? 'bls' : 'info');
+
+  if(st.id==='intro'){
+    s.innerHTML = head('SOS') + sub('L’objectif n’est pas de te sentir SUPER BIEN, mais de ne pas te perdre. De te sentir au moins 10 % mieux. Tu n’as peut-être pas envie ou la possibilité d’aller bien tout de suite et c’est complètement acceptable.') + btn('sos-go','Commencer',.6);
+  } else if(type==='info'){
+    s.innerHTML = head(st.title) + sub(st.body) + btn('sos-go','Continuer',.6);
+  } else if(type==='bls'){
+    s.innerHTML = head(st.title) + sub(st.body)
+      + (st.recall && session[st.recall] ? `<div class="sos-quote fs" style="animation-delay:.4s">${escapeHtml(session[st.recall])}</div>` : '')
+      + btn('sos-go','Commencer la stimulation',.7);
+    go = ()=> navWith(Object.assign({}, session, {ball:st.bls}), 'sos_ball', ()=> showBall('sos'));
+  } else if(type==='text'){
+    s.innerHTML = head(st.title) + sub(st.body)
+      + `<div class="free-text-wrap fs" style="animation-delay:.4s"><textarea id="sos-ta" placeholder="${escapeHtml(st.placeholder)}"></textarea></div>`
+      + btn('sos-go','Continuer',.6);
+    const ta = s.querySelector('#sos-ta');
+    ta.value = session[st.field] || '';
+    if(sosCoarse()) ta.addEventListener('keydown', e=>{ if(e.key==='Enter') e.stopPropagation(); }); /* mobile : Entrée = saut de ligne */
+    setTimeout(()=>{ try{ ta.focus(); }catch(e){} }, 120);
+    go = ()=>{ session[st.field] = ta.value.trim(); sosNext({step: session.step+1}); };
+  } else if(type==='affedit'){
+    s.innerHTML = head(SOS_T.aff) + sub('Écris-les sous forme de liste, une par ligne. Elles seront gardées pour la prochaine fois.')
+      + `<div class="free-text-wrap fs" style="animation-delay:.4s"><textarea id="sos-ta" style="min-height:150px" placeholder="Je suis en sécurité.&#10;Ça va passer.&#10;..."></textarea></div>`
+      + btn('sos-go','Continuer',.6);
+    const ta = s.querySelector('#sos-ta');
+    ta.value = sosAffirmations.join('\n');
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter') e.stopPropagation(); }); /* ici Entrée = nouvelle ligne */
+    go = ()=>{
+      sosAffirmations = ta.value.split(/\r?\n/).map(l=> l.trim().replace(/^[*•\-–]\s+/,'')).filter(Boolean);
+      saveSosAff(sosAffirmations);
+      sosNext({step: session.step + (sosAffirmations.length ? 1 : 2)});
+    };
+  } else if(type==='affloop'){
+    const a = sosAffirmations[session.affIndex];
+    if(!a){ sosNext({step: session.step+1}); return; }
+    s.innerHTML = head(SOS_T.aff) + `<p class="sos-big fs" style="animation-delay:.3s">${escapeHtml(a).replace(/\n/g,'<br>')}</p>` + btn('sos-go','Commencer la stimulation',.7);
+    go = ()=> navWith(Object.assign({}, session, {ball:a}), 'sos_ball', ()=> showBall('sos'));
+  } else if(type==='anchor'){
+    const hasEmb = embodimentItems.some(x=> x.text.trim());
+    if(!hasEmb){
+      s.innerHTML = head('Ancrage') + sub('Redirige ta pensée. Réaligne-toi sur tes valeurs profondes.') + btn('sos-go','Continuer',.6);
+    } else {
+      s.innerHTML = head('Ancrage') + sub('Redirige ta pensée. Réaligne-toi sur tes valeurs profondes.')
+        + sub('Décoche les états qui ne sont pas pertinents maintenant, puis lance la routine « Embodiment ».', .35)
+        + `<div class="sos-checks fs" style="animation-delay:.45s">${embodimentItems.filter(x=>x.text.trim()).map(x=>
+            `<label class="sos-check"><input type="checkbox" checked data-id="${x.id}"><span>${escapeHtml(x.text).replace(/\n/g,'<br>')}</span></label>`).join('')}</div>`
+        + `<div class="sos-row fs" style="animation-delay:.6s">${btn('sos-go','Lancer l’embodiment',0).replace(' fs"','"').replace('animation-delay:0s;','')}</div>`
+        + `<button class="sel-alt fs" id="sos-skip" style="animation-delay:.7s">Passer cette étape</button>`;
+      s.querySelector('#sos-skip').addEventListener('click', next);
+      go = ()=>{
+        const ids = [...s.querySelectorAll('.sos-check input:checked')].map(i=> i.dataset.id);
+        if(!ids.length){ next(); return; }
+        navWith({kind:'embodiment', ids, index:0, sos:true}, 'emb_point', renderEmbodimentPoint);
+      };
+    }
+  } else if(type==='end'){
+    s.innerHTML = `<p class="sos-big fs">Ce qui compte, c’est toi.</p>`
+      + `<p class="sos-big fs" style="animation-delay:.8s">Ça va passer.</p>`
+      + `<p class="sos-big fs" style="animation-delay:1.6s">Je te le promets ♥</p>`
+      + btn('sos-go','Terminer',2.6);
+    go = endSos;
+  }
+  const g = s.querySelector('#sos-go');
+  if(g) g.addEventListener('click', ()=> go());
+  forwardAction = ()=> go();
+}
+
+function renderSosAfter(){
+  if(!session || session.kind!=='sos'){ renderSos(); return; }
+  const s = stageBase();
+  s.innerHTML = `
+    <h2 class="instruction fs">Encore un peu, ou on continue ?</h2>
+    <div class="sos-row fs" style="animation-delay:.4s">
+      <button class="pill-btn" id="sos-again" style="font-size:14px; padding:10px 22px;">Encore un peu</button>
+      <button class="pill-btn" id="sos-continue" style="font-size:14px; padding:10px 22px;">Continuer</button>
+    </div>`;
+  const again = ()=> navWith(Object.assign({}, session), 'sos_ball', ()=> showBall('sos'));
+  const cont = ()=>{
+    const st = SOS_STEPS[session.step];
+    if(st && st.type==='affloop' && session.affIndex+1 < sosAffirmations.length) sosNext({step: session.step, affIndex: session.affIndex+1});
+    else sosNext({step: session.step+1});
+  };
+  s.querySelector('#sos-again').addEventListener('click', again);
+  s.querySelector('#sos-continue').addEventListener('click', cont);
+  forwardAction = cont;
 }
 
 function renderModeChoice(){
@@ -1997,6 +2157,7 @@ function showBall(mode, resp){
     : mode==='rtep_hotspot' ? 'Plongez dans ce point chaud.'
     : mode==='rtep_worst' ? 'Plongez dans ce moment.'
     : mode==='embodiment' ? 'Incarnez cet état.'
+    : mode==='sos' ? escapeHtml((session && session.ball) || 'Suivez le point des yeux.')
     : mode==='bodyscan' ? 'Scannez votre corps.' : 'Suivez le point des yeux.';
   const count = mode==='neg' ? session.negSets
     : mode==='pos' ? session.posSets
@@ -2082,6 +2243,10 @@ function afterStop(){
   if(mode==='embodiment'){
     /* l'animation d'arrêt peut finir après qu'on a quitté l'écran : on ne force pas le choix dans ce cas */
     if(currentPhase==='emb_ball' && session && session.kind==='embodiment') goTo('emb_choice', renderEmbodimentChoice);
+    return;
+  }
+  if(mode==='sos'){
+    if(currentPhase==='sos_ball' && session && session.kind==='sos') goTo('sos_after', renderSosAfter);
     return;
   }
   if(mode==='bodyscan'){ $('bls-stage').style.display='none'; $('stage').style.display='flex'; document.body.classList.remove('hide-l','hide-r'); renderBodyScan(); return; }
@@ -2657,7 +2822,7 @@ function accountBackupHtml(){
 
 function wireBackupControls(panel){
   panel.querySelector('#acc-export-btn').addEventListener('click', ()=>{
-    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems};
+    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems, sosAffirmations};
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2682,6 +2847,7 @@ function wireBackupControls(panel){
       folders = data.folders || [];
       recentTraumas = data.recentTraumas || [];
       if(Array.isArray(data.embodiment)){ embodimentItems = data.embodiment; saveEmbodiment(embodimentItems); }
+      if(Array.isArray(data.sosAffirmations)){ sosAffirmations = data.sosAffirmations; saveSosAff(sosAffirmations); }
       if(data.settings) settings = Object.assign(settings, data.settings);
       saveTraumas(traumas);
       saveFolders(folders);
