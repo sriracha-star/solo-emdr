@@ -23,6 +23,7 @@
     color:var(--ink); font-family:var(--font-body); overflow:hidden; animation:tide 40s ease-in-out infinite; }
   body.phase-positive{ background-image:linear-gradient(120deg,var(--bg-violet) 0%,var(--bg-soft-violet) 50%,var(--bg-violet) 100%); }
   @media (prefers-reduced-motion: reduce){ body{ animation:none; } }
+  body.stage-dark{ animation:none; }
   @keyframes tide{ 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
   #app{ height:100vh; width:100vw; position:relative; display:flex; flex-direction:column; }
 
@@ -135,7 +136,7 @@
 
   #bls-stage{ height:100%; width:100%; background:radial-gradient(ellipse at center, var(--dusk-2), var(--dusk)); position:relative; display:none; }
   #bls-inner{ height:100%; width:100%; position:relative; transition:opacity .35s ease; }
-  #bls-dot{ position:absolute; width:34px; height:34px; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%);
+  #bls-dot{ position:absolute; width:34px; height:34px; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); will-change:transform;
     border:1px solid rgba(0,0,0,0.12); }
   #bls-instruction{ position:absolute; top:16%; left:50%; transform:translate(-50%,0); color:#EFE8DA; font-family:var(--font-display);
     font-size:19px; text-align:center; width:80%; max-width:520px; transition:opacity .5s ease; }
@@ -2494,9 +2495,13 @@ function beepWavUrl(){
   for(let i=0;i<n;i++){ const t=i/rate, env=Math.min(1,t/0.02)*Math.min(1,(1-t)/0.05); data[i]=Math.sin(2*Math.PI*440*t)*env*0.9*32767; }
   return (beepUrl = wavUrl(data, 1, rate));
 }
+const tickPool = {};
 function playTickMedia(side){
-  const a = new Audio(tickWavUrl(side));
+  /* éléments <audio> créés une fois et réutilisés : en créer un par top faisait saccader la balle */
+  const pool = tickPool[side] || (tickPool[side] = {i:0, els:[0,1].map(()=>{ const e=new Audio(tickWavUrl(side)); e.preload='auto'; return e; })});
+  const a = pool.els[pool.i++ % pool.els.length];
   a.volume = Math.min(1, tickPeak(soundVolume())/0.7); /* le fichier a un pic de 0,7 */
+  try{ a.currentTime = 0; }catch(e){}
   const p = a.play();
   return p && p.catch ? p : Promise.resolve();
 }
@@ -2581,7 +2586,9 @@ function runLoop(){
     const t = (elapsed%periodMs)/periodMs;
     const {x,y} = computeXY(t);
     const w=bstage.clientWidth, h=bstage.clientHeight;
-    dot.style.left=(x*w)+'px'; dot.style.top=(y*h)+'px';
+    /* déplacement par transform (pas de recalcul de mise en page à chaque image) */
+    dot._dx=(x-0.5)*w; dot._dy=(y-0.5)*h;
+    dot.style.transform='translate3d('+dot._dx+'px,'+dot._dy+'px,0) translate(-50%,-50%)';
     const side = x<0.5?'L':'R';
     if(side!==bls.lastSide){
       if(bls.lastSide!==null){ playTick(side); if(settings.haptic && navigator.vibrate) navigator.vibrate(25); }
@@ -2598,11 +2605,10 @@ function requestStop(){
   if(bls.timer) clearTimeout(bls.timer);
   if(bls.anim) cancelAnimationFrame(bls.anim);
   const dot=$('bls-dot'), bstage=$('bls-stage');
-  const startLeft=parseFloat(dot.style.left)||bstage.clientWidth/2, startTop=parseFloat(dot.style.top)||bstage.clientHeight/2;
-  const cx=bstage.clientWidth/2, cy=bstage.clientHeight/2, dur=1200, t0=performance.now();
+  const startX=dot._dx||0, startY=dot._dy||0, dur=1200, t0=performance.now();
   function decel(now){
     let p=Math.min(1,(now-t0)/dur); const ease=1-Math.pow(1-p,3);
-    dot.style.left=(startLeft+(cx-startLeft)*ease)+'px'; dot.style.top=(startTop+(cy-startTop)*ease)+'px';
+    dot.style.transform='translate3d('+(startX*(1-ease))+'px,'+(startY*(1-ease))+'px,0) translate(-50%,-50%)';
     if(p<1) requestAnimationFrame(decel); else afterStop();
   }
   requestAnimationFrame(decel);
