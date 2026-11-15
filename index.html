@@ -254,6 +254,19 @@
 
   /* SOS */
   .sos-quote{ margin:0 0 18px; padding:12px 16px; border-left:2px solid var(--teal); color:var(--ink-soft); font-size:15px; line-height:1.5; text-align:left; white-space:pre-wrap; width:min(560px,90%); max-height:30vh; overflow:auto; }
+  .emb-sel-tools{ display:flex; gap:10px; justify-content:center; margin:4px 0 8px; }
+  .emb-sel-list{ max-height:46vh; overflow:auto; text-align:left; display:flex; flex-direction:column; gap:8px; padding:2px; }
+  .emb-sel-row{ display:flex; align-items:flex-start; gap:10px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
+  .emb-sel-row.off{ opacity:.45; }
+  .emb-sel-row.dragging{ opacity:.35; }
+  .emb-sel-row.over{ border-color:var(--teal-deep); }
+  .emb-sel-grip{ cursor:grab; opacity:.5; user-select:none; padding-top:2px; }
+  .emb-sel-text{ flex:1; display:flex; gap:10px; align-items:flex-start; font-size:14px; line-height:1.45; color:var(--ink); cursor:pointer; }
+  .emb-sel-text input{ margin-top:4px; }
+  .emb-sel-mv{ display:flex; flex-direction:row; gap:4px; }
+  .emb-sel-mv button{ background:none; border:1px solid var(--line); color:var(--ink); border-radius:6px; width:28px; height:24px; cursor:pointer; font-size:13px; line-height:1; }
+  .emb-sel-mv button:disabled{ opacity:.25; cursor:default; }
+  #es-go:disabled{ opacity:.4; cursor:default; }
   .sos-checks{ width:min(620px,92%); max-height:38vh; overflow:auto; text-align:left; margin:6px 0 16px; display:flex; flex-direction:column; gap:10px; }
   .sos-check{ display:flex; gap:10px; align-items:flex-start; font-size:14.5px; color:var(--ink); cursor:pointer; line-height:1.45; }
   .sos-check input{ margin-top:4px; }
@@ -1128,7 +1141,11 @@ function renderEmbodiment(){
   document.body.classList.add('hide-l','hide-r');
   s.querySelector('#emb-edit').addEventListener('click', ()=> openEmbodimentModal(()=> renderEmbodiment()));
   if(n){
-    const start = ()=>{ session = {kind:'embodiment', ids: embodimentItems.map(x=>x.id), index:0}; goTo('emb_point', renderEmbodimentPoint); };
+    const start = ()=>{
+      /* étape intermédiaire : la sélection/l'ordre ne vivent que dans la séance, la liste enregistrée n'est pas touchée */
+      session = {kind:'embodiment', sel: embodimentItems.filter(x=> x.text.trim()).map(x=>({id:x.id, on:true})), ids:[], index:0};
+      goTo('emb_select', renderEmbodimentSelect);
+    };
     s.querySelector('#emb-start').addEventListener('click', start);
     forwardAction = start;
   }
@@ -1230,6 +1247,78 @@ function openListModal(cfg, onClose){
     ta.value = ''; importBox.style.display = 'none'; draw();
     listEl.scrollTop = listEl.scrollHeight;
   });
+}
+
+function renderEmbodimentSelect(){
+  if(!session || session.kind!=='embodiment' || !session.sel){ renderEmbodiment(); return; }
+  const s = stageBase();
+  s.innerHTML = `
+    <div style="margin:auto; width:min(640px,94%);">
+      <h2 class="instruction fs" style="font-size:24px;">Choisir les états de la séance</h2>
+      <p class="sub fs" style="animation-delay:.2s">Décochez ceux que vous ne souhaitez pas traiter et changez l'ordre. Cela ne modifie pas votre liste enregistrée.</p>
+      <div class="emb-sel-tools fs" style="animation-delay:.3s">
+        <button type="button" class="sel-alt" id="es-all">Tout cocher</button>
+        <button type="button" class="sel-alt" id="es-none">Tout décocher</button>
+      </div>
+      <div class="emb-sel-list fs" id="es-list" style="animation-delay:.35s"></div>
+      <button class="pill-btn fs" id="es-go" style="animation-delay:.5s; margin-top:18px; font-size:14px; padding:10px 26px;">Commencer</button>
+    </div>`;
+  const listEl = s.querySelector('#es-list'), goBtn = s.querySelector('#es-go');
+  const sel = session.sel;
+  const textOf = id=>{ const it = embodimentItems.find(x=>x.id===id); return it ? it.text : null; };
+  session.sel = sel.filter(x=> textOf(x.id)!==null);
+  const list = ()=> session.sel;
+  let dragId = null;
+  function draw(){
+    const L = list();
+    listEl.innerHTML = L.map((x,i)=>`
+      <div class="emb-sel-row${x.on?'':' off'}" draggable="true" data-id="${x.id}">
+        <span class="emb-sel-grip" title="Glisser pour réordonner">⠿</span>
+        <label class="emb-sel-text"><input type="checkbox" ${x.on?'checked':''} data-id="${x.id}"><span>${escapeHtml(textOf(x.id)).replace(/\n/g,'<br>')}</span></label>
+        <span class="emb-sel-mv">
+          <button type="button" data-up="${x.id}" title="Monter" ${i===0?'disabled':''}>↑</button>
+          <button type="button" data-down="${x.id}" title="Descendre" ${i===L.length-1?'disabled':''}>↓</button>
+        </span>
+      </div>`).join('');
+    const n = L.filter(x=>x.on).length;
+    goBtn.disabled = !n;
+    goBtn.textContent = n ? `Commencer (${n})` : 'Aucun état sélectionné';
+    listEl.querySelectorAll('input[type=checkbox]').forEach(c=> c.addEventListener('change', ()=>{
+      const x = L.find(y=>y.id===c.dataset.id); if(x){ x.on = c.checked; draw(); }
+    }));
+    const move = (id,dir)=>{
+      const i = L.findIndex(x=>x.id===id), j = i+dir;
+      if(i<0 || j<0 || j>=L.length) return;
+      [L[i], L[j]] = [L[j], L[i]]; draw();
+      const b = listEl.querySelector(`[data-${dir<0?'up':'down'}="${id}"]`); if(b && !b.disabled) b.focus();
+    };
+    listEl.querySelectorAll('[data-up]').forEach(b=> b.addEventListener('click', ()=> move(b.dataset.up,-1)));
+    listEl.querySelectorAll('[data-down]').forEach(b=> b.addEventListener('click', ()=> move(b.dataset.down,1)));
+    listEl.querySelectorAll('.emb-sel-row').forEach(r=>{
+      r.addEventListener('dragstart', e=>{ dragId = r.dataset.id; r.classList.add('dragging'); try{ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain', dragId); }catch(_){} });
+      r.addEventListener('dragend', ()=>{ dragId = null; r.classList.remove('dragging'); listEl.querySelectorAll('.over').forEach(o=>o.classList.remove('over')); });
+      r.addEventListener('dragover', e=>{ if(dragId){ e.preventDefault(); r.classList.add('over'); } });
+      r.addEventListener('dragleave', ()=> r.classList.remove('over'));
+      r.addEventListener('drop', e=>{
+        e.preventDefault();
+        if(!dragId || dragId===r.dataset.id) return;
+        const from = L.findIndex(x=>x.id===dragId), to = L.findIndex(x=>x.id===r.dataset.id);
+        if(from<0 || to<0) return;
+        const [m] = L.splice(from,1); L.splice(to,0,m); dragId = null; draw();
+      });
+    });
+  }
+  draw();
+  s.querySelector('#es-all').addEventListener('click', ()=>{ list().forEach(x=> x.on=true); draw(); });
+  s.querySelector('#es-none').addEventListener('click', ()=>{ list().forEach(x=> x.on=false); draw(); });
+  const start = ()=>{
+    const ids = list().filter(x=>x.on).map(x=>x.id);
+    if(!ids.length) return;
+    session.ids = ids; session.index = 0;
+    goTo('emb_point', renderEmbodimentPoint);
+  };
+  goBtn.addEventListener('click', start);
+  forwardAction = start;
 }
 
 function currentEmbodimentItem(){
