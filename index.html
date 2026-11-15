@@ -138,6 +138,7 @@
   #bls-inner{ height:100%; width:100%; position:relative; transition:opacity .35s ease; }
   #bls-dot{ position:absolute; width:34px; height:34px; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); will-change:transform;
     border:1px solid rgba(0,0,0,0.12); }
+  #bls-keep{ position:absolute; top:11%; left:50%; transform:translateX(-50%); width:min(680px,90%); max-height:33%; overflow:hidden; text-align:center; color:#EFE8DA; opacity:.82; font-family:var(--font-display); line-height:1.45; pointer-events:none; }
   #bls-instruction{ position:absolute; top:16%; left:50%; transform:translate(-50%,0); color:#EFE8DA; font-family:var(--font-display);
     font-size:19px; text-align:center; width:80%; max-width:520px; transition:opacity .5s ease; }
   .dark-form{ height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; }
@@ -2630,8 +2631,14 @@ function showBall(mode, resp){
     : mode==='rtep_pos' ? session.posSets
     : mode==='rtep_hotspot' ? (currentHotspot ? (session.hotspotWork[currentHotspot.id]?.sets||0) : 0)
     : 1;
+  /* embodiment : l'état reste affiché pendant tout le mouvement de la balle (difficile à retenir sinon) */
+  let keepText = '';
+  if(mode==='embodiment' && typeof currentEmbodimentItem==='function'){ const it = currentEmbodimentItem(); if(it) keepText = it.text; }
+  else if(mode==='sos' && session && session.ball) keepText = session.ball;
+  const keepSize = keepText.length>400 ? 15 : keepText.length>180 ? 17 : keepText.length>80 ? 20 : 24;
   inner.innerHTML = `
-    ${isFirst ? `<div id="bls-instruction">${txt}</div>` : ''}
+    ${keepText ? `<div id="bls-keep" style="font-size:${keepSize}px">${escapeHtml(keepText).replace(/\n/g,'<br>')}</div>`
+      : isFirst ? `<div id="bls-instruction">${txt}</div>` : ''}
     <div id="bls-dot"></div>
     ${count>=1 && (mode==='neg'||mode==='pos') ? `<button class="skip-link" id="skip-link">passer</button>` : ''}
   `;
