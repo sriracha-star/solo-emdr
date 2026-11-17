@@ -1838,6 +1838,7 @@ function renderGroupChat(){
       /* garder le menu dans l'écran */
       const pr = pick.getBoundingClientRect(), tr = thread.getBoundingClientRect();
       if(pr.left < tr.left+4){ pick.style.right = 'auto'; pick.style.left = '0'; }
+      if(pr.top < tr.top+4){ pick.style.bottom = 'auto'; pick.style.top = '17px'; } /* en haut de la conversation : sous la barre d'actions */
       return;
     }
     const rp = t.closest('[data-reply]');
