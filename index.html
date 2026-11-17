@@ -261,7 +261,7 @@
   .gc-search{ display:flex; align-items:center; gap:8px; padding:0 0 8px; }
   .gc-search input{ flex:1; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:8px 12px; font-size:14px; font-family:inherit; }
   #gc-count{ font-size:12px; color:var(--ink-soft); white-space:nowrap; }
-  .gc-thread{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:6px 2px 10px; display:flex; flex-direction:column; }
+  .gc-thread{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:40px 2px 10px; display:flex; flex-direction:column; }
   .gc-empty{ margin:auto; max-width:380px; text-align:center; color:var(--ink-soft); font-size:14px; line-height:1.5; }
   .gc-more{ align-self:center; margin:4px 0 10px; }
   .gc-day{ text-align:center; margin:14px 0 8px; } .gc-day span{ font-size:11.5px; color:var(--ink-soft); background:var(--bg-soft); border-radius:10px; padding:3px 10px; text-transform:capitalize; }
@@ -278,7 +278,6 @@
   .gc-quote b{ color:var(--qc,var(--teal-deep)); font-size:11.5px; } .gc-quote span{ color:var(--ink-soft); }
   .gc-quote-gone{ cursor:default; font-style:italic; }
   .gc-actions{ position:absolute; top:-15px; right:8px; display:none; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:2px; z-index:2; }
-  .gc-msg.part .gc-actions{ left:8px; right:auto; }
   .gc-bubble:hover .gc-actions, .gc-consensus:hover .gc-actions, .gc-bubble.open .gc-actions, .gc-consensus.open .gc-actions{ display:flex; }
   .gc-actions button{ background:none; border:none; color:var(--ink); cursor:pointer; font-size:13px; padding:3px 8px; border-radius:6px; }
   .gc-actions button:hover{ background:var(--bg-soft); }
@@ -306,6 +305,43 @@
   #gc-shake{ color:var(--teal-deep); }
   @media (max-width:560px){ .gc-head-actions button span{ display:none; } .gc-head h2{ font-size:19px; } }
   .gc-compose{ position:relative; }
+  .gc-join{ text-align:center; margin:10px 0; } .gc-join span{ font-size:12px; color:var(--ink-soft); background:var(--bg-soft); border-radius:10px; padding:4px 12px; }
+  .gc-drift-wrap{ justify-content:center; margin:14px 0; }
+  .gc-drift{ position:relative; width:min(88%,580px); text-align:center; border:2px solid var(--gcred,#E0675A); border-radius:14px; background:color-mix(in srgb, #E0675A 14%, var(--bg)); padding:10px 16px 8px; }
+  .gc-drift-label{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:#E0675A; font-weight:700; margin-bottom:6px; }
+  .gc-drift-who{ display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; font-size:14.5px; margin-bottom:2px; }
+  .gc-drift-arrow{ color:var(--ink-soft); font-size:12.5px; }
+  .gc-drift-tag{ background:#E0675A; color:#fff; border-radius:12px; padding:1px 10px; font-size:13px; font-weight:600; }
+  .gc-drift-tag mark{ background:rgba(255,255,255,.35); color:inherit; }
+  .gc-drift-by{ font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .gc-drift-new{ animation:gcShake .7s ease, gcGlow 1.6s ease 2; }
+  @keyframes gcShake{ 0%,100%{ transform:translateX(0); } 15%{ transform:translateX(-7px); } 30%{ transform:translateX(6px); } 45%{ transform:translateX(-5px); } 60%{ transform:translateX(4px); } 75%{ transform:translateX(-2px); } }
+  @keyframes gcGlow{ 0%,100%{ box-shadow:0 0 0 0 rgba(224,103,90,0); } 50%{ box-shadow:0 0 22px 4px rgba(224,103,90,.55); } }
+  .gc-alert-fx{ position:fixed; inset:0; z-index:95; pointer-events:none; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at center, rgba(224,103,90,0) 35%, rgba(224,103,90,.38) 100%); animation:gcAlertBg 2.2s ease forwards; }
+  @keyframes gcAlertBg{ 0%{ opacity:0; } 12%{ opacity:1; } 30%{ opacity:.45; } 45%{ opacity:1; } 60%{ opacity:.45; } 75%{ opacity:1; } 100%{ opacity:0; } }
+  .gc-alert-box{ text-align:center; border:2px solid #E0675A; background:rgba(20,14,14,.92); border-radius:16px; padding:18px 30px; box-shadow:0 0 40px rgba(224,103,90,.55); animation:gcPop .5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes gcPop{ from{ transform:scale(.4); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .gc-alert-ico{ font-size:34px; color:#E0675A; animation:gcBlink .55s ease 3; }
+  @keyframes gcBlink{ 50%{ transform:scale(1.25); } }
+  .gc-alert-t{ font-family:var(--font-display); font-size:22px; font-weight:700; color:#E0675A; margin:2px 0 4px; }
+  .gc-alert-s{ font-size:14px; color:#EFE8DA; }
+  @media (prefers-reduced-motion:reduce){ .gc-drift-new, .gc-alert-fx, .gc-alert-box, .gc-alert-ico{ animation-duration:.01s !important; } }
+  .gc-row .gc-drift-btn{ width:auto; min-width:42px; padding:0 12px; gap:6px; color:#E0675A; border-color:color-mix(in srgb, #E0675A 55%, var(--line)); font-size:13px; }
+  .gc-drift-btn b{ font-size:17px; font-weight:400; }
+  @media (max-width:560px){ .gc-drift-btn span{ display:none; } .gc-row .gc-drift-btn{ padding:0; width:42px; } }
+  .gd-l{ margin:6px 0 2px; font-size:12.5px; color:var(--ink-soft); text-align:left; }
+  .gd-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .gd-tag{ background:var(--bg-soft); border:1.5px solid var(--line); color:var(--ink); border-radius:14px; padding:4px 12px; font-size:13px; cursor:pointer; }
+  .gd-tag.on{ border-color:#E0675A; background:color-mix(in srgb, #E0675A 28%, var(--bg-soft)); }
+  .gd-input{ width:100%; box-sizing:border-box; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:9px 12px; font-size:14px; font-family:inherit; }
+  textarea.gd-input{ min-height:90px; resize:vertical; line-height:1.45; }
+  .gp-tags{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .gp-dl{ font-size:11.5px; color:var(--ink-soft); }
+  .gp-tag{ display:inline-flex; align-items:center; gap:4px; background:color-mix(in srgb, #E0675A 22%, var(--bg-soft)); border:1px solid color-mix(in srgb, #E0675A 50%, var(--line)); border-radius:12px; padding:1px 4px 1px 10px; font-size:12.5px; }
+  .gp-tag.ro{ padding:1px 10px; }
+  .gp-tag button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:11px; padding:2px 4px; }
+  .gp-tagin{ background:none; border:1px dashed var(--line); color:var(--ink); border-radius:12px; padding:2px 10px; font-size:12.5px; width:130px; font-family:inherit; }
+  .gc-card-l{ margin:6px 0 0 !important; font-size:11.5px !important; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); }
   .gc-mention-box{ position:absolute; left:0; bottom:calc(100% - 4px); z-index:5; flex-direction:column; min-width:200px; max-width:min(320px,90%); max-height:200px; overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:4px; box-shadow:0 8px 22px rgba(0,0,0,.35); }
   .gc-men{ display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--ink); padding:6px 8px; border-radius:8px; cursor:pointer; font-size:13.5px; text-align:left; }
   .gc-men.on, .gc-men:hover{ background:var(--bg-soft); }
@@ -314,8 +350,7 @@
   .gc-react{ background:rgba(0,0,0,.22); border:1px solid var(--line); color:var(--ink); border-radius:12px; padding:1px 8px; font-size:13px; cursor:pointer; line-height:1.5; }
   .gc-react i{ font-style:normal; font-size:11px; color:var(--ink-soft); }
   .gc-react.mine{ border-color:var(--teal-deep); background:color-mix(in srgb, var(--teal) 28%, transparent); }
-  .gc-picker{ position:absolute; top:calc(100% + 4px); left:0; z-index:3; display:flex; flex-wrap:wrap; gap:2px; width:max-content; min-width:230px; max-width:min(300px,80vw); background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:5px; box-shadow:0 8px 22px rgba(0,0,0,.35); }
-  .gc-msg.me .gc-picker{ left:auto; right:0; }
+  .gc-picker{ position:absolute; bottom:calc(100% + 19px); right:8px; z-index:3; display:flex; flex-wrap:wrap; gap:2px; width:max-content; min-width:230px; max-width:min(300px,80vw); background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:5px; box-shadow:0 8px 22px rgba(0,0,0,.35); }
   .gc-pick-who{ flex:1 0 100%; font-size:10.5px; color:var(--ink-soft); padding:0 4px 2px; }
   .gc-picker button{ background:none; border:none; font-size:20px; cursor:pointer; padding:3px 5px; border-radius:8px; }
   .gc-picker button:hover{ background:var(--bg-soft); }
@@ -492,7 +527,17 @@ function loadRules(){ try{ const a = JSON.parse(localStorage.getItem(LS_RULES));
 function saveRules(list){ localStorage.setItem(LS_RULES, JSON.stringify(list)); scheduleSync(); }
 let rulesItems = loadRules();
 const LS_GC = 'soloemdr_groupchat';
-function loadGC(){ try{ const o = JSON.parse(localStorage.getItem(LS_GC)); if(o && Array.isArray(o.parts) && Array.isArray(o.messages)) return o; }catch(e){} return {parts:[], messages:[]}; }
+function gcFix(g){
+  if(!g || !Array.isArray(g.parts) || !Array.isArray(g.messages)) return null;
+  g.parts.forEach(p=>{
+    if(p.description && !p.role) p.role = p.description; /* ancienne « description » → « Rôle » */
+    delete p.description;
+    if(typeof p.role!=='string') p.role = '';
+    if(!Array.isArray(p.drifts)) p.drifts = [];
+  });
+  return g;
+}
+function loadGC(){ try{ const o = gcFix(JSON.parse(localStorage.getItem(LS_GC))); if(o) return o; }catch(e){} return {parts:[], messages:[]}; }
 function saveGC(){ localStorage.setItem(LS_GC, JSON.stringify(groupchat)); scheduleSync(); }
 let groupchat = loadGC();
 
@@ -679,7 +724,7 @@ $('musicIcon').addEventListener('click', ()=>{
 });
 $('music-panel').addEventListener('keydown', e=> e.stopPropagation());
 
-let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false, volume:0.8, musicVolume:0.6, soundEngine:'auto' };
+let settings = { speed:30, size:34, color:'#F4E3C1', duration:90, audio:true, haptic:false, volume:0.8, musicVolume:0.6, soundEngine:'auto', firstName:'' };
 try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)); if(s) settings=Object.assign(settings,s); }catch(e){}
 function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); scheduleSync(); }
 
@@ -865,7 +910,7 @@ async function vaultPull(row){
   traumas = parsed.traumas||[]; folders = parsed.folders||[];
   recentTraumas = parsed.recentTraumas||[];
   if(Array.isArray(parsed.embodiment)){ embodimentItems = parsed.embodiment; localStorage.setItem(LS_EMBODIMENT, JSON.stringify(embodimentItems)); }
-  if(parsed.groupchat && Array.isArray(parsed.groupchat.parts) && Array.isArray(parsed.groupchat.messages)){ groupchat = parsed.groupchat; localStorage.setItem(LS_GC, JSON.stringify(groupchat)); }
+  if(parsed.groupchat && Array.isArray(parsed.groupchat.parts) && Array.isArray(parsed.groupchat.messages)){ groupchat = gcFix(parsed.groupchat); localStorage.setItem(LS_GC, JSON.stringify(groupchat)); }
   if(Array.isArray(parsed.commandments)){ rulesItems = parsed.commandments; localStorage.setItem(LS_RULES, JSON.stringify(rulesItems)); }
   if(Array.isArray(parsed.sosAffirmations)){ sosAffirmations = parsed.sosAffirmations; localStorage.setItem(LS_SOS_AFF, JSON.stringify(sosAffirmations)); }
   settings = Object.assign(settings, parsed.settings||{});
@@ -937,6 +982,7 @@ async function vaultLogout(){
      sessions du compte, sur les autres appareils et dans Parts Mapping aussi) */
   if(supa) supa.auth.signOut({scope:'local'});
   vault = {dek:null, userId:null, email:null};
+  settings.firstName = ''; try{ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }catch(e){}
   await clearSessionDEK();
   traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = []; rulesItems = []; groupchat = {parts:[], messages:[]};
   localStorage.removeItem(LS_RULES);
@@ -1482,13 +1528,24 @@ function renderEmbodimentChoice(){
 /* ================= GROUPCHAT (dialogue entre parts, façon messagerie) ================= */
 const GC_PALETTE = ['#E7A97C','#B9A6D9','#7FB0AC','#D98BA0','#8FB8E8','#C9D98B','#E5C16F','#9AD1A7'];
 const GC_SHAKE = (n)=> `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`;
-const GC_EMOJIS = ['👍','❤️','🤗','🙏','💪','😂','😮','😢','🌱','✨'];
+const GC_EMOJIS = ['👍','❤️','🤗','🙏','💪','😂','😮','😢','😡','😒','✨'];
+const GC_RED = '#E0675A';
+let gcJustAlert = null;
 let gcSender = 'me', gcReplyTo = null, gcEditing = null, gcQuery = '', gcLimit = 200, gcDraft = '';
 
+document.addEventListener('click', e=>{ if(!e.target.closest('.gc-picker, [data-react]')) document.querySelectorAll('.gc-picker').forEach(x=>x.remove()); });
+function gcAlertAnim(m){
+  const tw = gcWho(m.target);
+  const el = document.createElement('div'); el.className = 'gc-alert-fx';
+  el.innerHTML = `<div class="gc-alert-box"><div class="gc-alert-ico">⚠</div><div class="gc-alert-t">Alerte dérive !</div><div class="gc-alert-s">${escapeHtml(tw.name)} · ${escapeHtml(m.tag)}</div></div>`;
+  document.body.appendChild(el); setTimeout(()=> el.remove(), 2300);
+}
 function gcNewId(){ return 'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function gcPart(id){ return groupchat.parts.find(p=>p.id===id) || null; }
+function gcMeName(){ return ((typeof settings!=='undefined' && settings.firstName)||'').trim() || 'Moi'; }
+function gcQWho(r){ return r.kind==='consensus' ? {name:'Consensus', color:null} : r.kind==='drift' ? {name:'Alerte dérive', color:GC_RED} : gcWho(r.from); }
 function gcWho(from){
-  if(from==='me') return {name:'Moi', color:null, photo:null, me:true};
+  if(from==='me') return {name:gcMeName(), color:null, photo:null, me:true};
   const p = gcPart(from);
   return p ? {name:p.name, color:p.color, photo:p.photo, me:false} : {name:'Part supprimée', color:'#7d8a90', photo:null, me:false, gone:true};
 }
@@ -1516,7 +1573,9 @@ function gcMatches(text, q){
 }
 function gcMentionRanges(text){
   const names = groupchat.parts.filter(p=>p.name.trim()).map(p=>({id:p.id, color:p.color, fn:gcFold(p.name.trim()).n}))
-    .concat([{id:'me', color:null, fn:'moi'}]).sort((x,y)=>y.fn.length-x.fn.length);
+    .concat([{id:'me', color:null, fn:'moi', alias:true}]);
+  const mn = gcFold(gcMeName()).n; if(mn && mn!=='moi') names.push({id:'me', color:null, fn:mn});
+  names.sort((x,y)=>y.fn.length-x.fn.length);
   const f = gcFold(text), out = [];
   for(let i=0;i<f.n.length;i++){
     if(f.n[i]!=='@') continue;
@@ -1524,7 +1583,7 @@ function gcMentionRanges(text){
       if(!nm.fn || !f.n.startsWith(nm.fn, i+1)) continue;
       const end = i+1+nm.fn.length, nx = f.n[end];
       if(nx && /[\p{L}\p{N}_]/u.test(nx)) continue;
-      out.push({a:f.map[i], b:f.map[end-1]+1, id:nm.id, color:nm.color});
+      out.push({a:f.map[i], b:f.map[end-1]+1, id:nm.id, color:nm.color, alias:!!nm.alias});
       i = end-1; break;
     }
   }
@@ -1541,7 +1600,7 @@ function gcHighlight(text, q){
     while(j<text.length && mi[j]===mi[i] && mm[j]===mm[i]) j++;
     let seg = escapeHtml(text.slice(i,j)).replace(/\n/g,'<br>');
     if(mm[i]) seg = '<mark>'+seg+'</mark>';
-    if(mi[i]>=0){ const r = men[mi[i]]; seg = `<span class="gc-mention" style="color:${r.color||'var(--teal-deep)'}"${r.id!=='me'?` data-card="${r.id}"`:''}>${seg}</span>`; }
+    if(mi[i]>=0){ const r = men[mi[i]]; if(r.id==='me' && r.alias && gcMeName()!=='Moi') seg = '@'+escapeHtml(gcMeName()); seg = `<span class="gc-mention" style="color:${r.color||'var(--teal-deep)'}"${r.id!=='me'?` data-card="${r.id}"`:''}>${seg}</span>`; }
     out += seg; i = j;
   }
   return out;
@@ -1589,6 +1648,7 @@ function renderGroupChat(){
         <div class="gc-senders" id="gc-senders"></div>
         <div class="gc-row">
           <button type="button" id="gc-shake" title="Rédiger un message de consensus" aria-label="Message de consensus">${GC_SHAKE(22)}</button>
+          <button type="button" id="gc-drift" class="gc-drift-btn" title="Signaler une dérive" aria-label="Alerte dérive"><b>⚠</b><span>Alerte dérive !</span></button>
           <textarea id="gc-text" rows="1"></textarea>
           <button type="button" id="gc-send" title="Envoyer" aria-label="Envoyer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-7-7-1z"/></svg></button>
         </div>
@@ -1600,11 +1660,12 @@ function renderGroupChat(){
   s.addEventListener('keydown', e=>{ if(e.target.matches('input,textarea')) e.stopPropagation(); });
   forwardAction = null; spaceAction = null;
 
-  const autoGrow = ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight,140)+'px'; };
+  const autoGrow = ()=>{ if(!ta.value){ ta.style.height=''; return; } ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight,140)+'px'; };
   const toBottom = ()=>{ thread.scrollTop = thread.scrollHeight; };
   const msgById = id=> groupchat.messages.find(m=>m.id===id);
 
   function msgHtml(m, q){
+    if(m.kind==='join'){ const jp = gcPart(m.from); return `<div class="gc-join" data-id="${m.id}"><span>${escapeHtml(jp ? jp.name : (m.name||'Une part'))} a rejoint la conversation</span></div>`; }
     const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-react="${m.id}" title="Réagir">☺</button><button type="button" data-edit="${m.id}" title="Modifier">✎</button><button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
     const reacts = (()=>{
       const rs = m.reactions||[]; if(!rs.length) return '';
@@ -1619,13 +1680,25 @@ function renderGroupChat(){
     if(m.replyTo){
       const r = msgById(m.replyTo);
       if(r){
-        const rw = r.kind==='consensus' ? {name:'Consensus', color:null} : gcWho(r.from);
+        const rw = gcQWho(r);
         quote = `<div class="gc-quote" data-jump="${r.id}" style="--qc:${rw.color||'var(--teal-deep)'}"><b>${escapeHtml(rw.name)}</b><span>${escapeHtml(gcSnippet(r,120))}</span></div>`;
       } else quote = `<div class="gc-quote gc-quote-gone"><span>Message supprimé</span></div>`;
     }
     if(m.kind==='consensus'){
       return `<div class="gc-msg gc-cons-wrap" data-id="${m.id}"><div class="gc-consensus">
         <div class="gc-cons-label">${GC_SHAKE(16)}<span>Consensus du groupe</span></div>
+        ${quote}
+        <div class="gc-cons-text">${gcHighlight(m.text, q)}</div>
+        ${reacts}
+        <div class="gc-meta">${gcDateTime(m.ts)}${m.edited?' · modifié':''}</div>
+        ${goto}${acts}</div></div>`;
+    }
+    if(m.kind==='drift'){
+      const tw = gcWho(m.target), aw = gcWho(m.from);
+      return `<div class="gc-msg gc-drift-wrap" data-id="${m.id}"><div class="gc-drift${gcJustAlert===m.id?' gc-drift-new':''}">
+        <div class="gc-drift-label">⚠ Alerte dérive</div>
+        <div class="gc-drift-who"><span class="gc-av-btn" data-card="${m.target}">${gcAvatar(tw,26)}</span><b style="color:${tw.color||'var(--ink)'}" data-card="${m.target}">${escapeHtml(tw.name)}</b><span class="gc-drift-arrow">dérive vers</span><span class="gc-drift-tag">${gcHighlight(m.tag||'', q)}</span></div>
+        <div class="gc-drift-by">signalé par ${escapeHtml(aw.name)}</div>
         ${quote}
         <div class="gc-cons-text">${gcHighlight(m.text, q)}</div>
         ${reacts}
@@ -1651,7 +1724,7 @@ function renderGroupChat(){
     const q = gcQuery.trim();
     const all = groupchat.messages;
     let list = all, more = false;
-    if(q){ list = all.filter(m=> gcMatches(m.text,q).length || (m.kind!=='consensus' && gcMatches(gcWho(m.from).name,q).length)); }
+    if(q){ list = all.filter(m=> m.kind!=='join' && (gcMatches(m.text||'',q).length || (m.tag && gcMatches(m.tag,q).length) || (m.kind==='msg' && gcMatches(gcWho(m.from).name,q).length))); }
     else if(all.length>gcLimit){ list = all.slice(all.length-gcLimit); more = true; }
     $q('#gc-count').textContent = q ? (list.length+' résultat'+(list.length>1?'s':'')) : '';
     const prevH = thread.scrollHeight, prevTop = thread.scrollTop;
@@ -1667,7 +1740,7 @@ function renderGroupChat(){
       if(d!==lastDay){ html += `<div class="gc-day"><span>${escapeHtml(d)}</span></div>`; lastDay = d; }
       html += msgHtml(m, q);
     });
-    thread.innerHTML = html;
+    thread.innerHTML = html; gcJustAlert = null;
     if(keepScroll) thread.scrollTop = prevTop + (thread.scrollHeight - prevH);
   }
 
@@ -1696,9 +1769,12 @@ function renderGroupChat(){
     const opts = [{id:'me', w:gcWho('me')}].concat(groupchat.parts.map(p=>({id:p.id, w:gcWho(p.id)})));
     $q('#gc-senders').innerHTML = opts.map(o=>{
       const c = o.w.me ? 'var(--teal)' : o.w.color;
-      return `<button type="button" class="gc-chip${gcSender===o.id?' on':''}" data-sender="${o.id}" style="--c:${c}" title="Écrire en tant que ${escapeHtml(o.w.name)}${gcPart(o.id)&&gcPart(o.id).description?' — '+escapeHtml(gcPart(o.id).description):''}">${gcAvatar(o.w,22)}<span>${escapeHtml(o.w.name)}</span></button>`;
+      return `<button type="button" class="gc-chip${gcSender===o.id?' on':''}" data-sender="${o.id}" style="--c:${c}" title="Écrire en tant que ${escapeHtml(o.w.name)}${gcPart(o.id)&&gcPart(o.id).role?' — '+escapeHtml(gcPart(o.id).role):''}">${gcAvatar(o.w,22)}<span>${escapeHtml(o.w.name)}</span></button>`;
     }).join('');
-    ta.placeholder = gcEditing ? 'Modifier le message…' : 'Écrire en tant que '+gcWho(gcSender).name+'…';
+    const rpl = gcReplyTo && msgById(gcReplyTo);
+    ta.placeholder = gcEditing ? 'Modifier le message…'
+      : (rpl && rpl.kind==='drift' && rpl.target===gcSender) ? gcWho(gcSender).name+', explique pourquoi tu agis ainsi…'
+      : 'Écrire en tant que '+gcWho(gcSender).name+'…';
   }
   function drawReply(){
     const box = $q('#gc-reply');
@@ -1708,7 +1784,7 @@ function renderGroupChat(){
     } else if(gcReplyTo){
       const r = msgById(gcReplyTo);
       if(!r){ gcReplyTo = null; box.style.display='none'; return; }
-      const rw = r.kind==='consensus' ? {name:'Consensus', color:null} : gcWho(r.from);
+      const rw = gcQWho(r);
       box.style.display='flex'; box.style.setProperty('--qc', rw.color||'var(--teal-deep)');
       box.innerHTML = `<div><b>Réponse à ${escapeHtml(rw.name)}</b><span>${escapeHtml(gcSnippet(r,100))}</span></div><button type="button" id="gc-reply-x" title="Annuler">✕</button>`;
     } else { box.style.display='none'; box.innerHTML=''; return; }
@@ -1754,6 +1830,9 @@ function renderGroupChat(){
       const pick = document.createElement('div'); pick.className = 'gc-picker';
       pick.innerHTML = `<span class="gc-pick-who">en tant que ${escapeHtml(gcWho(gcSender).name)}</span>` + GC_EMOJIS.map(e=>`<button type="button" data-pick="${rc.dataset.react}|${e}">${e}</button>`).join('');
       box.appendChild(pick); box.classList.add('open');
+      /* garder le menu dans l'écran */
+      const pr = pick.getBoundingClientRect(), tr = thread.getBoundingClientRect();
+      if(pr.left < tr.left+4){ pick.style.right = 'auto'; pick.style.left = '0'; }
       return;
     }
     const rp = t.closest('[data-reply]');
@@ -1762,6 +1841,7 @@ function renderGroupChat(){
     if(ed){
       const m = msgById(ed.dataset.edit); if(!m) return;
       if(m.kind==='consensus'){ openConsensusModal(m); return; }
+      if(m.kind==='drift'){ openDriftModal(m); return; }
       gcEditing = m.id; gcReplyTo = null; gcSender = m.from;
       ta.value = m.text; autoGrow(); drawReply(); drawSenders(); ta.focus();
       return;
@@ -1795,7 +1875,7 @@ function renderGroupChat(){
   const menBox = $q('#gc-mention'); let menItems = [], menIdx = 0, menStart = -1;
   const menClose = ()=>{ menBox.style.display='none'; menBox.innerHTML=''; menItems = []; menStart = -1; };
   function menDraw(){
-    menBox.innerHTML = menItems.map((p,i)=>`<button type="button" class="gc-men${i===menIdx?' on':''}" data-men="${i}">${gcAvatar(p,22)}<span style="color:${p.color}">${escapeHtml(p.name)}</span></button>`).join('');
+    menBox.innerHTML = menItems.map((p,i)=>`<button type="button" class="gc-men${i===menIdx?' on':''}" data-men="${i}">${gcAvatar(p,22)}<span style="color:${p.color||'var(--teal-deep)'}">${escapeHtml(p.name)}</span></button>`).join('');
     menBox.style.display = 'flex';
   }
   function menUpdate(){
@@ -1803,7 +1883,8 @@ function renderGroupChat(){
     const m = /(?:^|\s)@([^\s@]*(?:\s[^\s@]*)?)$/.exec(before);
     if(!m){ menClose(); return; }
     const frag = gcFold(m[1]).n;
-    const list = groupchat.parts.filter(p=>{
+    const members = groupchat.parts.map(p=>({id:p.id, name:p.name, color:p.color, photo:p.photo})).concat([{id:'me', name:gcMeName(), color:null, photo:null}]);
+    const list = members.filter(p=>{
       const fn = gcFold(p.name).n;
       return !frag || fn.startsWith(frag) || fn.split(/\s+/).some(w=>w.startsWith(frag));
     });
@@ -1833,8 +1914,9 @@ function renderGroupChat(){
   });
   $q('#gc-send').addEventListener('click', send);
   $q('#gc-shake').addEventListener('click', ()=> openConsensusModal(null));
+  $q('#gc-drift').addEventListener('click', ()=> openDriftModal(null));
   $q('#gc-hist-btn').addEventListener('click', ()=> openConsensusHistory());
-  $q('#gc-parts-btn').addEventListener('click', ()=> openPartsModal(()=>{ drawSenders(); drawThread(true); }));
+  $q('#gc-parts-btn').addEventListener('click', ()=> openPartsModal(()=>{ drawSenders(); drawThread(); toBottom(); }));
 
   const searchBox = $q('#gc-search');
   $q('#gc-search-btn').addEventListener('click', ()=>{
@@ -1850,13 +1932,13 @@ function renderGroupChat(){
   function openConsensusModal(existing){
     const ov = document.createElement('div'); ov.className = 'modal-overlay';
     const lastCons = [...groupchat.messages].reverse().find(m=>m.kind==='consensus' && (!existing || m.ts < existing.ts));
-    const since = groupchat.messages.filter(m=> m.kind!=='consensus' && (!lastCons || m.ts>lastCons.ts) && (!existing || m.ts<existing.ts));
+    const since = groupchat.messages.filter(m=> (m.kind==='msg' || m.kind==='drift') && (!lastCons || m.ts>lastCons.ts) && (!existing || m.ts<existing.ts));
     ov.innerHTML = `
       <div class="modal-panel" role="dialog" aria-label="Message de consensus">
         <div class="modal-head"><h3>${GC_SHAKE(16)} Message de consensus</h3></div>
         <div class="modal-body">
           <p class="sub" style="margin:0;text-align:left;">Rédigez une synthèse au nom de tous les membres du groupe pour conclure ce dialogue.</p>
-          ${since.length ? `<details class="gc-recap"><summary>Relire les ${since.length} message${since.length>1?'s':''} depuis le dernier consensus</summary><div class="gc-recap-list">${since.map(m=>{const w=gcWho(m.from);return `<p><b style="color:${w.color||'var(--teal-deep)'}">${escapeHtml(w.name)}</b> ${escapeHtml(gcSnippet(m,400))}</p>`;}).join('')}</div></details>` : ''}
+          ${since.length ? `<details class="gc-recap"><summary>Relire les ${since.length} message${since.length>1?'s':''} depuis le dernier consensus</summary><div class="gc-recap-list">${since.map(m=>{if(m.kind==='drift'){ const tw=gcWho(m.target); return `<p><b style="color:${GC_RED}">⚠ Alerte</b> ${escapeHtml(tw.name)} → ${escapeHtml(m.tag)} : ${escapeHtml(gcSnippet(m,300))}</p>`; } const w=gcWho(m.from);return `<p><b style="color:${w.color||'var(--teal-deep)'}">${escapeHtml(w.name)}</b> ${escapeHtml(gcSnippet(m,400))}</p>`;}).join('')}</div></details>` : ''}
           <textarea id="gc-cons-text" rows="6" placeholder="Ensemble, nous avons conclu que…"></textarea>
         </div>
         <div class="modal-foot"><button type="button" id="gc-cons-cancel">Annuler</button><button type="button" id="gc-cons-ok" class="primary">${existing?'Enregistrer':'Insérer dans la conversation'}</button></div>
@@ -1876,6 +1958,67 @@ function renderGroupChat(){
       drawThread(); toBottom();
     });
     cta.focus();
+  }
+  function openDriftModal(existing){
+    if(!groupchat.parts.length){ alert('Créez d’abord des profils avec le bouton « Profils ».'); return; }
+    let target = existing && gcPart(existing.target) ? existing.target : (groupchat.parts.find(p=>p.id!==gcSender)||groupchat.parts[0]).id;
+    let author = existing ? existing.from : (gcSender===target ? 'me' : gcSender);
+    let tag = existing ? existing.tag : '';
+    const ov = document.createElement('div'); ov.className = 'modal-overlay';
+    ov.innerHTML = `
+      <div class="modal-panel" role="dialog" aria-label="Alerte dérive">
+        <div class="modal-head"><h3 style="color:${GC_RED}">⚠ Alerte dérive !</h3></div>
+        <div class="modal-body">
+          <p class="gd-l">Qui est en train de dériver ?</p><div class="gd-chips" id="gd-target"></div>
+          <p class="gd-l">Quelle dérive ?</p><div class="gd-chips" id="gd-tags"></div>
+          <input type="text" id="gd-newtag" class="gd-input" placeholder="…ou proposer un nouveau tag" maxlength="40">
+          <p class="gd-l">Signalé par</p><div class="gd-chips" id="gd-author"></div>
+          <p class="gd-l">Pourquoi pense-t-on qu'il y a dérive ?</p>
+          <textarea id="gd-text" class="gd-input" rows="4" placeholder="Explique ce que tu observes…"></textarea>
+        </div>
+        <div class="modal-foot"><button type="button" id="gd-cancel">Annuler</button><button type="button" id="gd-ok" class="primary" style="background:${GC_RED};border-color:${GC_RED};">${existing?'Enregistrer':'Lancer l’alerte'}</button></div>
+      </div>`;
+    document.body.appendChild(ov);
+    const el = sel=> ov.querySelector(sel), nt = el('#gd-newtag'), tx = el('#gd-text');
+    nt.value = ''; tx.value = existing ? existing.text : '';
+    const chip = (attr, id, w, on)=> `<button type="button" class="gc-chip${on?' on':''}" ${attr}="${id}" style="--c:${w.color||'var(--teal)'}">${gcAvatar(w,22)}<span>${escapeHtml(w.name)}</span></button>`;
+    function draw(){
+      el('#gd-target').innerHTML = groupchat.parts.map(p=> chip('data-t', p.id, gcWho(p.id), p.id===target)).join('');
+      const tp = gcPart(target), tags = (tp && tp.drifts) || [];
+      el('#gd-tags').innerHTML = tags.length ? tags.map((t,i)=>`<button type="button" class="gd-tag${t===tag && !nt.value.trim()?' on':''}" data-tag="${i}">${escapeHtml(t)}</button>`).join('')
+        : `<span class="sub" style="font-size:12.5px;">Aucune dérive enregistrée pour cette part : proposez-en une ci-dessous (elle sera ajoutée à son profil).</span>`;
+      el('#gd-author').innerHTML = [chip('data-a','me',gcWho('me'),author==='me')].concat(groupchat.parts.filter(p=>p.id!==target).map(p=> chip('data-a', p.id, gcWho(p.id), p.id===author))).join('');
+    }
+    draw();
+    ov.addEventListener('click', e=>{
+      if(e.target===ov){ ov.remove(); return; }
+      const t = e.target.closest('[data-t]'); if(t){ target = t.dataset.t; tag = ''; if(author===target) author = 'me'; draw(); return; }
+      const g = e.target.closest('[data-tag]'); if(g){ const tp = gcPart(target); tag = tp.drifts[+g.dataset.tag]; nt.value = ''; draw(); return; }
+      const a = e.target.closest('[data-a]'); if(a){ author = a.dataset.a; draw(); }
+    });
+    nt.addEventListener('input', draw);
+    ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') ov.remove(); });
+    el('#gd-cancel').addEventListener('click', ()=> ov.remove());
+    el('#gd-ok').addEventListener('click', ()=>{
+      const finalTag = nt.value.trim() || tag, text = tx.value.trim();
+      if(!finalTag){ nt.focus(); return; }
+      if(!text){ tx.focus(); return; }
+      const tp = gcPart(target);
+      if(tp && !tp.drifts.some(t=>t.toLowerCase()===finalTag.toLowerCase())) tp.drifts.push(finalTag);
+      const canon = (tp && tp.drifts.find(t=>t.toLowerCase()===finalTag.toLowerCase())) || finalTag;
+      if(existing){
+        Object.assign(existing, {target, tag:canon, from:author, text}); existing.edited = true;
+        saveGC(); ov.remove(); drawThread(true); return;
+      }
+      const m = {id:gcNewId(), kind:'drift', target, tag:canon, from:author, text, replyTo:null, ts:Date.now()};
+      groupchat.messages.push(m); saveGC(); ov.remove();
+      if(gcQuery){ gcQuery=''; qInput.value=''; searchBox.style.display='none'; }
+      /* la part visée doit se défendre : on prépare sa réponse */
+      gcSender = target; gcReplyTo = m.id; gcEditing = null; gcJustAlert = m.id;
+      drawReply(); drawSenders(); drawThread(); toBottom(); gcAlertAnim(m);
+      if(!sosCoarse()) ta.focus();
+    });
+    (existing ? tx : nt).focus();
   }
   function openConsensusHistory(){
     const ov = document.createElement('div'); ov.className = 'modal-overlay';
@@ -1910,7 +2053,10 @@ function openPartCard(id, onClose){
       <div class="gc-card-body" style="--c:${p.color}">
         ${gcAvatar(p,96)}
         <h3 style="color:${p.color}">${escapeHtml(p.name)}</h3>
-        <p>${p.description && p.description.trim() ? escapeHtml(p.description).replace(/\n/g,'<br>') : '<span class="sub">Pas encore de description.</span>'}</p>
+        <p class="gc-card-l">Rôle</p>
+        <p>${p.role && p.role.trim() ? escapeHtml(p.role).replace(/\n/g,'<br>') : '<span class="sub">Pas encore défini.</span>'}</p>
+        <p class="gc-card-l">Dérives</p>
+        ${(p.drifts||[]).length ? `<div class="gp-tags">${p.drifts.map(t=>`<span class="gp-tag ro">${escapeHtml(t)}</span>`).join('')}</div>` : '<p><span class="sub">Aucune dérive enregistrée.</span></p>'}
       </div>
       <div class="modal-foot"><button type="button" id="gcard-edit">Modifier</button><button type="button" id="gcard-done" class="primary">Fermer</button></div>
     </div>`;
@@ -1951,8 +2097,8 @@ function openPartsModal(onClose){
     </div>`;
   document.body.appendChild(ov);
   const listEl = ov.querySelector('#gp-list'), file = ov.querySelector('#gp-file');
-  let photoFor = null;
-  function draw(focusId){
+  let photoFor = null; const newIds = [];
+  function draw(focusId, kind){
     const ps = groupchat.parts;
     if(!ps.length){ listEl.innerHTML = `<p class="emb-empty">Aucun profil. Ajoutez une première part : nom, couleur, photo.</p>`; return; }
     listEl.innerHTML = ps.map((p,i)=>`
@@ -1962,7 +2108,8 @@ function openPartsModal(onClose){
           <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom de la part" maxlength="40">
           <div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
             <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>
-          <textarea class="gp-desc" data-desc="${p.id}" rows="2" maxlength="600" placeholder="Petite description : son rôle, ce qu'elle protège, ce dont elle a besoin…">${escapeHtml(p.description||'')}</textarea>
+          <input type="text" class="gp-name gp-role" data-role="${p.id}" value="${escapeHtml(p.role||'')}" placeholder="Rôle (ex. : me protège de l'abandon)" maxlength="160">
+          <div class="gp-tags"><span class="gp-dl">Dérives</span>${(p.drifts||[]).map((t,i)=>`<span class="gp-tag">${escapeHtml(t)}<button type="button" data-rmtag="${p.id}|${i}" title="Retirer">✕</button></span>`).join('')}<input type="text" class="gp-tagin" data-tagin="${p.id}" placeholder="+ ajouter (Entrée)" maxlength="40"></div>
           ${p.photo ? `<button type="button" class="gp-rm" data-rmphoto="${p.id}">Retirer la photo</button>` : ''}
         </div>
         <div class="emb-row-actions">
@@ -1971,22 +2118,35 @@ function openPartsModal(onClose){
           <button type="button" data-delpart="${p.id}" title="Supprimer">✕</button>
         </div>
       </div>`).join('');
-    if(focusId){ const t = listEl.querySelector(`[data-name="${focusId}"]`); if(t){ t.focus(); t.select(); t.scrollIntoView({block:'nearest'}); } }
+    if(focusId){ const t = listEl.querySelector(`[data-${kind||'name'}="${focusId}"]`); if(t){ t.focus(); if(!kind) t.select(); t.scrollIntoView({block:'nearest'}); } }
   }
   draw();
   listEl.addEventListener('input', e=>{
     const n = e.target.closest('[data-name]');
     if(n){ const p = gcPart(n.dataset.name); if(p){ p.name = n.value; saveGC(); } return; }
-    const dsc = e.target.closest('[data-desc]');
-    if(dsc){ const p = gcPart(dsc.dataset.desc); if(p){ p.description = dsc.value; saveGC(); } return; }
+    const rl = e.target.closest('[data-role]');
+    if(rl){ const p = gcPart(rl.dataset.role); if(p){ p.role = rl.value; saveGC(); } return; }
     const c = e.target.closest('[data-cpick]');
     if(c){ const p = gcPart(c.dataset.cpick); if(p){ p.color = c.value; saveGC(); } }
   });
-  listEl.addEventListener('change', e=>{ if(e.target.closest('[data-cpick]')) draw(); });
+  const addTag = (id, val, refocus)=>{
+    const p = gcPart(id), v = (val||'').trim().replace(/,+$/,'').trim(); if(!p || !v) return false;
+    if(!p.drifts.some(t=>t.toLowerCase()===v.toLowerCase())){ p.drifts.push(v); saveGC(); }
+    draw(refocus ? id : undefined, refocus ? 'tagin' : undefined); return true;
+  };
+  listEl.addEventListener('keydown', e=>{
+    const ti = e.target.closest('[data-tagin]');
+    if(ti && (e.key==='Enter' || e.key===',')){ e.preventDefault(); addTag(ti.dataset.tagin, ti.value, true); }
+  });
+  listEl.addEventListener('change', e=>{
+    if(e.target.closest('[data-cpick]')){ draw(); return; }
+    const ti = e.target.closest('[data-tagin]'); if(ti && ti.value.trim()) addTag(ti.dataset.tagin, ti.value, false);
+  });
   listEl.addEventListener('click', e=>{
     const t = e.target;
     const col = t.closest('[data-color]');
     if(col){ const [id,c] = col.dataset.color.split('|'); const p = gcPart(id); if(p){ p.color = c; saveGC(); draw(); } return; }
+    const rt = t.closest('[data-rmtag]'); if(rt){ const [id,i] = rt.dataset.rmtag.split('|'); const p = gcPart(id); if(p){ p.drifts.splice(+i,1); saveGC(); draw(); } return; }
     const ph = t.closest('[data-photo]'); if(ph){ photoFor = ph.dataset.photo; file.value=''; file.click(); return; }
     const rm = t.closest('[data-rmphoto]'); if(rm){ const p = gcPart(rm.dataset.rmphoto); if(p){ p.photo = null; saveGC(); draw(); } return; }
     const mv = (id,dir)=>{ const ps = groupchat.parts, i = ps.findIndex(x=>x.id===id), j = i+dir; if(i<0||j<0||j>=ps.length) return; [ps[i],ps[j]] = [ps[j],ps[i]]; saveGC(); draw(); };
@@ -2009,12 +2169,13 @@ function openPartsModal(onClose){
     catch(e){ alert('Impossible de lire cette image.'); }
   });
   ov.querySelector('#gp-add').addEventListener('click', ()=>{
-    const p = {id:gcNewId(), name:'Nouvelle part', color:GC_PALETTE[groupchat.parts.length % GC_PALETTE.length], photo:null};
-    groupchat.parts.push(p); saveGC(); draw(p.id);
+    const p = {id:gcNewId(), name:'Nouvelle part', color:GC_PALETTE[groupchat.parts.length % GC_PALETTE.length], photo:null, role:'', drifts:[]};
+    groupchat.parts.push(p); newIds.push(p.id); saveGC(); draw(p.id);
     listEl.scrollTop = listEl.scrollHeight;
   });
   const close = ()=>{
     groupchat.parts.forEach(p=>{ if(!p.name.trim()) p.name = 'Sans nom'; });
+    newIds.forEach(id=>{ const p = gcPart(id); if(p) groupchat.messages.push({id:gcNewId(), kind:'join', from:id, name:p.name, ts:Date.now()}); });
     saveGC(); ov.remove(); if(onClose) onClose();
   };
   ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
@@ -3965,7 +4126,7 @@ function wireBackupControls(panel){
       folders = data.folders || [];
       recentTraumas = data.recentTraumas || [];
       if(Array.isArray(data.embodiment)){ embodimentItems = data.embodiment; saveEmbodiment(embodimentItems); }
-      if(data.groupchat && Array.isArray(data.groupchat.parts) && Array.isArray(data.groupchat.messages)){ groupchat = data.groupchat; saveGC(); }
+      if(data.groupchat && Array.isArray(data.groupchat.parts) && Array.isArray(data.groupchat.messages)){ groupchat = gcFix(data.groupchat); saveGC(); }
       if(Array.isArray(data.commandments)){ rulesItems = data.commandments; saveRules(rulesItems); }
       if(Array.isArray(data.sosAffirmations)){ sosAffirmations = data.sosAffirmations; saveSosAff(sosAffirmations); }
       if(data.settings) settings = Object.assign(settings, data.settings);
@@ -3994,10 +4155,16 @@ function renderAccountPanel(){
   if(vault.userId){
     panel.innerHTML = `
       <p class="sub">Connecté·e : ${escapeHtml(vault.email)}</p>
+      <label class="sub" for="acc-firstname" style="display:block;margin:8px 0 3px;">Prénom (affiché dans GroupChat)</label>
+      <input type="text" id="acc-firstname" value="${escapeHtml(settings.firstName||'')}" placeholder="Votre prénom" maxlength="40" style="width:100%;box-sizing:border-box;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:13.5px;font-family:inherit;margin-bottom:8px;">
       ${lastSyncError ? `<p class="sub" style="color:#c0554a;">La dernière synchronisation a échoué. Vos changements récents ne sont peut-être pas enregistrés sur votre compte.</p>` : ''}
       <button id="acc-panel-logout">Se déconnecter</button>
       ${accountBackupHtml()}
     `;
+    const fn = panel.querySelector('#acc-firstname');
+    fn.addEventListener('keydown', e=> e.stopPropagation());
+    fn.addEventListener('input', ()=>{ settings.firstName = fn.value.trim(); saveSettings(); });
+    fn.addEventListener('change', ()=>{ if(currentPhase==='groupchat') renderGroupChat(); });
     panel.querySelector('#acc-panel-logout').addEventListener('click', ()=>{
       vaultLogout();
       panel.classList.remove('open');
