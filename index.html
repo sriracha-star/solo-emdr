@@ -39,14 +39,15 @@
   #embodimentIcon{ left:98px; }
   #sosIcon{ left:140px; }
   #rulesIcon{ left:182px; }
-  #recentLibraryIcon{ left:224px; }
-  #settingsIcon{ left:266px; }
-  #musicIcon{ left:308px; display:none; }
+  #groupchatIcon{ left:224px; }
+  #recentLibraryIcon{ left:266px; }
+  #settingsIcon{ left:308px; }
+  #musicIcon{ left:350px; display:none; }
   body.stage-dark.music-ctx #musicIcon{ display:block; }
   body.music-on #musicIcon{ color:var(--teal); opacity:1; }
   body.no-rtep #recentLibraryIcon{ display:none; }
-  body.no-rtep #settingsIcon{ left:224px; }
-  body.no-rtep #musicIcon{ left:266px; }
+  body.no-rtep #settingsIcon{ left:266px; }
+  body.no-rtep #musicIcon{ left:308px; }
 
   .account-wrap{ position:fixed; top:14px; right:14px; z-index:60; }
   .account-wrap #accountIcon{ position:static; }
@@ -61,12 +62,12 @@
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
 
-  #settings-panel{ position:fixed; top:56px; left:266px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
+  #settings-panel{ position:fixed; top:56px; left:308px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
   #settings-panel.open{ display:block; }
-  #music-panel{ position:fixed; top:56px; left:308px; z-index:60; width:310px; max-width:calc(100vw - 24px); background:var(--surface); border:1px solid var(--line);
+  #music-panel{ position:fixed; top:56px; left:350px; z-index:60; width:310px; max-width:calc(100vw - 24px); background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:none; text-align:left; }
-  body.no-rtep #music-panel{ left:266px; }
+  body.no-rtep #music-panel{ left:308px; }
   #music-panel.open{ display:block; }
   body:not(.stage-dark) #music-panel, body:not(.music-ctx) #music-panel{ display:none; }
   #music-panel h3, .music-box-title{ font-size:13px; margin:0 0 10px; }
@@ -246,7 +247,80 @@
     cursor:pointer; font-size:11px; line-height:1; display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
   .folder-actions button:hover{ background:var(--surface); color:var(--ink); }
 
-  body.no-rtep #settings-panel{ left:224px; }
+  body.no-rtep #settings-panel{ left:266px; }
+
+
+  /* groupchat */
+  #stage.gc-view{ padding:54px 0 0; justify-content:flex-start; align-items:stretch; overflow:hidden; text-align:left; }
+  .gc-wrap{ flex:1 1 auto; min-height:0; width:min(780px,100%); margin:0 auto; display:flex; flex-direction:column; padding:0 12px; }
+  .gc-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 2px 8px; }
+  .gc-head h2{ margin:0; font-family:var(--font-display); font-size:22px; font-weight:600; }
+  .gc-head-actions{ display:flex; gap:6px; }
+  .gc-head-actions button, .gc-search button, .gc-more, .gc-goto{ background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; cursor:pointer; font-size:12.5px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px; }
+  .gc-head-actions button:hover, .gc-more:hover{ background:color-mix(in srgb, var(--bg-soft), white 9%); }
+  .gc-search{ display:flex; align-items:center; gap:8px; padding:0 0 8px; }
+  .gc-search input{ flex:1; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:8px 12px; font-size:14px; font-family:inherit; }
+  #gc-count{ font-size:12px; color:var(--ink-soft); white-space:nowrap; }
+  .gc-thread{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:6px 2px 10px; display:flex; flex-direction:column; }
+  .gc-empty{ margin:auto; max-width:380px; text-align:center; color:var(--ink-soft); font-size:14px; line-height:1.5; }
+  .gc-more{ align-self:center; margin:4px 0 10px; }
+  .gc-day{ text-align:center; margin:14px 0 8px; } .gc-day span{ font-size:11.5px; color:var(--ink-soft); background:var(--bg-soft); border-radius:10px; padding:3px 10px; text-transform:capitalize; }
+  .gc-msg{ display:flex; gap:8px; align-items:flex-end; margin:3px 0; }
+  .gc-msg.me{ justify-content:flex-end; } .gc-msg.part{ justify-content:flex-start; }
+  .gc-av{ border-radius:50%; object-fit:cover; flex:0 0 auto; display:block; }
+  .gc-av-i{ display:inline-flex; align-items:center; justify-content:center; font-weight:600; color:var(--ink); }
+  .gc-bubble{ position:relative; max-width:min(78%,520px); padding:7px 12px 5px; border-radius:16px; font-size:14.5px; line-height:1.45; background:var(--bc); border:1px solid color-mix(in srgb, var(--c) 65%, transparent); word-break:break-word; color:var(--ink); }
+  .gc-msg.me .gc-bubble{ border-bottom-right-radius:5px; } .gc-msg.part .gc-bubble{ border-bottom-left-radius:5px; }
+  .gc-name{ font-size:12px; font-weight:600; margin-bottom:2px; }
+  .gc-meta{ font-size:10.5px; color:var(--ink-soft); text-align:right; margin-top:2px; }
+  .gc-text mark{ background:rgba(231,169,124,.55); color:inherit; border-radius:3px; padding:0 1px; }
+  .gc-quote{ border-left:3px solid var(--qc,var(--teal-deep)); background:rgba(0,0,0,.2); border-radius:6px; padding:4px 8px; margin:2px 0 5px; font-size:12.5px; cursor:pointer; display:flex; flex-direction:column; gap:1px; }
+  .gc-quote b{ color:var(--qc,var(--teal-deep)); font-size:11.5px; } .gc-quote span{ color:var(--ink-soft); }
+  .gc-quote-gone{ cursor:default; font-style:italic; }
+  .gc-actions{ position:absolute; top:-15px; right:8px; display:none; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:2px; z-index:2; }
+  .gc-msg.part .gc-actions{ left:8px; right:auto; }
+  .gc-bubble:hover .gc-actions, .gc-consensus:hover .gc-actions, .gc-bubble.open .gc-actions, .gc-consensus.open .gc-actions{ display:flex; }
+  .gc-actions button{ background:none; border:none; color:var(--ink); cursor:pointer; font-size:13px; padding:3px 8px; border-radius:6px; }
+  .gc-actions button:hover{ background:var(--bg-soft); }
+  .gc-actions button.armed{ background:var(--clay); color:#fff; }
+  .gc-goto{ margin-top:6px; font-size:11.5px; padding:3px 8px; }
+  .gc-cons-wrap{ justify-content:center; margin:14px 0; }
+  .gc-consensus{ position:relative; width:min(86%,560px); text-align:center; border:1.5px solid var(--teal); border-radius:14px; background:color-mix(in srgb, var(--teal) 14%, var(--bg)); padding:10px 16px 8px; }
+  .gc-cons-label{ display:flex; align-items:center; justify-content:center; gap:6px; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--teal-deep); margin-bottom:6px; }
+  .gc-cons-text{ font-size:14.5px; line-height:1.5; }
+  .gc-consensus .gc-meta{ text-align:center; }
+  .gc-flash{ animation:gcFlash 1.6s ease; }
+  @keyframes gcFlash{ 0%,60%{ filter:brightness(1.7); } 100%{ filter:none; } }
+  .gc-compose{ flex:0 0 auto; padding:6px 0 12px; border-top:1px solid var(--line); }
+  .gc-reply{ display:flex; align-items:center; justify-content:space-between; gap:8px; border-left:3px solid var(--qc,var(--teal-deep)); background:var(--bg-soft); border-radius:6px; padding:5px 10px; margin-bottom:6px; font-size:12.5px; }
+  .gc-reply div{ display:flex; flex-direction:column; min-width:0; } .gc-reply b{ color:var(--qc,var(--teal-deep)); font-size:11.5px; }
+  .gc-reply span{ color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gc-reply button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:14px; }
+  .gc-senders{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 8px; scrollbar-width:thin; }
+  .gc-chip{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; background:var(--bg-soft); border:1.5px solid transparent; color:var(--ink); border-radius:18px; padding:3px 10px 3px 4px; font-size:12.5px; cursor:pointer; opacity:.65; }
+  .gc-chip.on{ opacity:1; border-color:var(--c); background:color-mix(in srgb, var(--c) 25%, var(--bg-soft)); }
+  .gc-row{ display:flex; gap:8px; align-items:flex-end; }
+  .gc-row textarea{ flex:1; resize:none; min-height:42px; box-sizing:border-box; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:18px; padding:10px 14px; font-size:14.5px; font-family:inherit; line-height:1.4; max-height:140px; }
+  .gc-row button{ flex:0 0 auto; width:42px; height:42px; border-radius:50%; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  #gc-send{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  #gc-shake{ color:var(--teal-deep); }
+  @media (max-width:560px){ .gc-head-actions button span{ display:none; } .gc-head h2{ font-size:19px; } }
+  .gc-recap{ font-size:12.5px; color:var(--ink-soft); text-align:left; } .gc-recap summary{ cursor:pointer; }
+  .gc-recap-list{ max-height:26vh; overflow:auto; margin-top:6px; } .gc-recap-list p{ margin:4px 0; color:var(--ink); }
+  #gc-cons-text{ width:100%; box-sizing:border-box; resize:vertical; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px 12px; font-size:14.5px; font-family:inherit; line-height:1.45; }
+  .gc-hist-item{ border:1px solid var(--line); border-radius:10px; padding:10px 12px; text-align:left; }
+  .gc-hist-date{ font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; } .gc-hist-text{ font-size:14px; line-height:1.5; margin-bottom:8px; }
+  .gc-hist-item button{ font-size:12px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; }
+  .gp-row{ display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .gp-photo{ position:relative; background:none; border:none; padding:0; cursor:pointer; flex:0 0 auto; }
+  .gp-cam{ position:absolute; right:-4px; bottom:-4px; font-size:12px; background:var(--surface); border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); }
+  .gp-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; }
+  .gp-name{ background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:7px 10px; font-size:14px; font-family:inherit; width:100%; box-sizing:border-box; }
+  .gp-colors{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .gp-sw{ width:22px; height:22px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0; }
+  .gp-sw.on{ border-color:var(--ink); }
+  .gp-cpick{ width:28px; height:26px; padding:0; border:1px solid var(--line); border-radius:6px; background:none; cursor:pointer; }
+  .gp-rm{ align-self:flex-start; background:none; border:none; color:var(--ink-soft); font-size:12px; text-decoration:underline; cursor:pointer; padding:0; }
 
   /* commandements */
   .rules-list{ width:min(680px,92%); margin-top:14px; padding:0 0 24px; list-style:none; counter-reset:rule; text-align:left; display:flex; flex-direction:column; gap:16px; }
@@ -319,6 +393,9 @@
   </button>
   <button id="rulesIcon" class="icon-btn" title="Commandements">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19M9 12h7M9 16h7"/></svg>
+  </button>
+  <button id="groupchatIcon" class="icon-btn" title="GroupChat">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h10a2 2 0 012 2v5a2 2 0 01-2 2H8.5L5 16v-2.5H4a2 2 0 01-2-2v-5a2 2 0 012-2z"/><path d="M18.5 9H20a2 2 0 012 2v4.5a2 2 0 01-2 2v2.3l-3.2-2.3H11a2 2 0 01-1.7-1"/></svg>
   </button>
   <button id="recentLibraryIcon" class="icon-btn" title="Traumas récents (R-TEP)">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2l1 6 5-3-3 5 6 1-6 1 3 5-5-3-1 6-1-6-5 3 3-5-6-1 6-1-3-5 5 3z"/></svg>
@@ -396,6 +473,10 @@ const LS_RULES = 'soloemdr_commandments';
 function loadRules(){ try{ const a = JSON.parse(localStorage.getItem(LS_RULES)); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
 function saveRules(list){ localStorage.setItem(LS_RULES, JSON.stringify(list)); scheduleSync(); }
 let rulesItems = loadRules();
+const LS_GC = 'soloemdr_groupchat';
+function loadGC(){ try{ const o = JSON.parse(localStorage.getItem(LS_GC)); if(o && Array.isArray(o.parts) && Array.isArray(o.messages)) return o; }catch(e){} return {parts:[], messages:[]}; }
+function saveGC(){ localStorage.setItem(LS_GC, JSON.stringify(groupchat)); scheduleSync(); }
+let groupchat = loadGC();
 
 /* ================= MUSIQUE (MP3 par souvenir) =================
    Les fichiers sont gardés sur CET appareil (IndexedDB) : trop lourds pour le coffre chiffré.
@@ -750,7 +831,7 @@ window.addEventListener('pagehide', flushPendingSync);
 async function vaultPush(){
   if(!vaultReady()) return;
   try{
-    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems});
+    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems, groupchat});
     const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
     const {error} = await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
     if(error) throw error;
@@ -766,6 +847,7 @@ async function vaultPull(row){
   traumas = parsed.traumas||[]; folders = parsed.folders||[];
   recentTraumas = parsed.recentTraumas||[];
   if(Array.isArray(parsed.embodiment)){ embodimentItems = parsed.embodiment; localStorage.setItem(LS_EMBODIMENT, JSON.stringify(embodimentItems)); }
+  if(parsed.groupchat && Array.isArray(parsed.groupchat.parts) && Array.isArray(parsed.groupchat.messages)){ groupchat = parsed.groupchat; localStorage.setItem(LS_GC, JSON.stringify(groupchat)); }
   if(Array.isArray(parsed.commandments)){ rulesItems = parsed.commandments; localStorage.setItem(LS_RULES, JSON.stringify(rulesItems)); }
   if(Array.isArray(parsed.sosAffirmations)){ sosAffirmations = parsed.sosAffirmations; localStorage.setItem(LS_SOS_AFF, JSON.stringify(sosAffirmations)); }
   settings = Object.assign(settings, parsed.settings||{});
@@ -787,7 +869,7 @@ async function ensureVaultCreated(userId, email, password){
   const kekRec = await deriveKekFromPassphrase(normalizeRecoveryPhrase(recoveryPhrase), saltRec);
   const wrapPw = await wrapDEK(dek, kekPw);
   const wrapRec = await wrapDEK(dek, kekRec);
-  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems});
+  const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems, groupchat});
   const {ivB64, ctB64} = await encryptWithDEK(dek, payload);
   const newRow = { user_id:userId, salt_pw:saltPw, iv_pw:wrapPw.ivB64, wrapped_dek_pw:wrapPw.wrappedB64,
     salt_rec:saltRec, iv_rec:wrapRec.ivB64, wrapped_dek_rec:wrapRec.wrappedB64, data_iv:ivB64, ciphertext:ctB64 };
@@ -838,8 +920,9 @@ async function vaultLogout(){
   if(supa) supa.auth.signOut({scope:'local'});
   vault = {dek:null, userId:null, email:null};
   await clearSessionDEK();
-  traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = []; rulesItems = [];
+  traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = []; rulesItems = []; groupchat = {parts:[], messages:[]};
   localStorage.removeItem(LS_RULES);
+  localStorage.removeItem(LS_GC);
   localStorage.removeItem(LS_EMBODIMENT);
   localStorage.removeItem(LS_SOS_AFF);
   localStorage.removeItem(LS_TRAUMAS);
@@ -968,6 +1051,7 @@ $('libraryIcon').addEventListener('click',()=> goTo('library', renderLibrary));
 $('embodimentIcon').addEventListener('click',()=> goTo('embodiment', renderEmbodiment));
 $('sosIcon').addEventListener('click',()=> goTo('sos', renderSos));
 $('rulesIcon').addEventListener('click',()=> goTo('rules', renderRules));
+$('groupchatIcon').addEventListener('click',()=> goTo('groupchat', renderGroupChat));
 $('recentLibraryIcon').addEventListener('click',()=> goTo('recentlibrary', renderRecentLibrary));
 $('homeIcon').addEventListener('click',()=> goTo('home', renderHome));
 $('accountIcon').addEventListener('click', ()=> $('account-panel').classList.toggle('open'));
@@ -1019,7 +1103,7 @@ let forwardAction=null, spaceAction=null;
    dont l'état ne peut pas être reconstruit sans risque. */
 const SS_LAST_PHASE = 'soloemdr_last_phase';
 const RESTORABLE_PHASES = {
-  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, sos: renderSos, rules: renderRules, recentlibrary: renderRecentLibrary,
+  home: renderHome, library: renderLibrary, embodiment: renderEmbodiment, sos: renderSos, rules: renderRules, groupchat: renderGroupChat, recentlibrary: renderRecentLibrary,
   select: renderSelect, rtep_select: renderRtepSelect, modechoice: renderModeChoice
 };
 function restorableTargetForPhase(phase){
@@ -1375,6 +1459,431 @@ function renderEmbodimentChoice(){
   s.querySelector('#emb-next').addEventListener('click', next);
   const q = s.querySelector('#emb-quit'); if(q) q.addEventListener('click', endEmbodiment);
   forwardAction = next;
+}
+
+/* ================= GROUPCHAT (dialogue entre parts, façon messagerie) ================= */
+const GC_PALETTE = ['#E7A97C','#B9A6D9','#7FB0AC','#D98BA0','#8FB8E8','#C9D98B','#E5C16F','#9AD1A7'];
+const GC_SHAKE = (n)=> `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`;
+let gcSender = 'me', gcReplyTo = null, gcEditing = null, gcQuery = '', gcLimit = 200, gcDraft = '';
+
+function gcNewId(){ return 'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function gcPart(id){ return groupchat.parts.find(p=>p.id===id) || null; }
+function gcWho(from){
+  if(from==='me') return {name:'Moi', color:null, photo:null, me:true};
+  const p = gcPart(from);
+  return p ? {name:p.name, color:p.color, photo:p.photo, me:false} : {name:'Part supprimée', color:'#7d8a90', photo:null, me:false, gone:true};
+}
+function gcAvatar(w, size){
+  const st = `width:${size}px;height:${size}px;`;
+  if(w.photo) return `<img class="gc-av" style="${st}" src="${w.photo}" alt="">`;
+  const c = w.color || 'var(--teal)';
+  return `<span class="gc-av gc-av-i" style="${st}background:color-mix(in srgb, ${c} 55%, var(--bg));font-size:${Math.round(size*.45)}px">${escapeHtml((w.name||'?').trim().charAt(0).toUpperCase()||'?')}</span>`;
+}
+function gcFold(str){
+  let n = '', map = [];
+  for(let i=0;i<str.length;i++){
+    const f = str[i].normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+    for(const ch of f){ n += ch; map.push(i); }
+  }
+  return {n, map};
+}
+function gcMatches(text, q){
+  if(!q) return [];
+  const f = gcFold(text), fq = gcFold(q).n;
+  if(!fq) return [];
+  const out = []; let i = f.n.indexOf(fq);
+  while(i>=0){ out.push([f.map[i], f.map[i+fq.length-1]+1]); i = f.n.indexOf(fq, i+fq.length); }
+  return out;
+}
+function gcHighlight(text, q){
+  const ms = gcMatches(text, q);
+  if(!ms.length) return escapeHtml(text).replace(/\n/g,'<br>');
+  let out = '', pos = 0;
+  ms.forEach(([a,b])=>{ if(a<pos) return; out += escapeHtml(text.slice(pos,a)) + '<mark>' + escapeHtml(text.slice(a,b)) + '</mark>'; pos = b; });
+  out += escapeHtml(text.slice(pos));
+  return out.replace(/\n/g,'<br>');
+}
+function gcTime(ts){ return new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function gcDay(ts){
+  const d = new Date(ts), t = new Date(); const k = x=> x.getFullYear()*400+x.getMonth()*32+x.getDate();
+  const y = new Date(t); y.setDate(t.getDate()-1);
+  if(k(d)===k(t)) return 'Aujourd’hui';
+  if(k(d)===k(y)) return 'Hier';
+  return d.toLocaleDateString('fr-FR',{weekday:'long', day:'numeric', month:'long', year: d.getFullYear()!==t.getFullYear() ? 'numeric' : undefined});
+}
+function gcDateTime(ts){ return new Date(ts).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})+' · '+gcTime(ts); }
+function gcSnippet(m, n){
+  const t = (m.text||'').replace(/\s+/g,' ').trim();
+  return t.length>n ? t.slice(0,n-1)+'…' : t;
+}
+
+function renderGroupChat(){
+  if(!vault.userId){ renderOfflineGate(null, false, 'Connectez-vous pour accéder à votre GroupChat.'); return; }
+  const s = stageBase();
+  s.className = 'gc-view';
+  document.body.classList.add('hide-l','hide-r');
+  gcReplyTo = null; gcEditing = null; gcQuery = ''; gcLimit = 200;
+  if(gcSender!=='me' && !gcPart(gcSender)) gcSender = 'me';
+  s.innerHTML = `
+    <div class="gc-wrap fs">
+      <div class="gc-head">
+        <h2>GroupChat</h2>
+        <div class="gc-head-actions">
+          <button type="button" id="gc-search-btn" title="Rechercher" aria-label="Rechercher"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+          <button type="button" id="gc-hist-btn" title="Historique des consensus" aria-label="Historique des consensus">${GC_SHAKE(18)}<span>Consensus</span></button>
+          <button type="button" id="gc-parts-btn" title="Profils des parts" aria-label="Profils des parts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M17 13.8c2.4 0 4 1.7 4 4.2"/></svg><span>Profils</span></button>
+        </div>
+      </div>
+      <div class="gc-search" id="gc-search" style="display:none;">
+        <input type="search" id="gc-q" placeholder="Rechercher dans la conversation…" autocomplete="off">
+        <span id="gc-count"></span>
+        <button type="button" id="gc-q-close" title="Fermer la recherche">✕</button>
+      </div>
+      <div class="gc-thread" id="gc-thread"></div>
+      <div class="gc-compose">
+        <div class="gc-reply" id="gc-reply" style="display:none;"></div>
+        <div class="gc-senders" id="gc-senders"></div>
+        <div class="gc-row">
+          <button type="button" id="gc-shake" title="Rédiger un message de consensus" aria-label="Message de consensus">${GC_SHAKE(22)}</button>
+          <textarea id="gc-text" rows="1"></textarea>
+          <button type="button" id="gc-send" title="Envoyer" aria-label="Envoyer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-7-7-1z"/></svg></button>
+        </div>
+      </div>
+    </div>`;
+  const $q = sel=> s.querySelector(sel);
+  const thread = $q('#gc-thread'), ta = $q('#gc-text'), qInput = $q('#gc-q');
+  /* le clavier ne doit pas piloter l'écran (flèches = retour, Entrée = suivant) */
+  s.addEventListener('keydown', e=>{ if(e.target.matches('input,textarea')) e.stopPropagation(); });
+  forwardAction = null; spaceAction = null;
+
+  const autoGrow = ()=>{ ta.style.height='auto'; ta.style.height = Math.min(ta.scrollHeight,140)+'px'; };
+  const toBottom = ()=>{ thread.scrollTop = thread.scrollHeight; };
+  const msgById = id=> groupchat.messages.find(m=>m.id===id);
+
+  function msgHtml(m, q){
+    const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-edit="${m.id}" title="Modifier">✎</button><button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
+    const goto = q ? `<button type="button" class="gc-goto" data-goto="${m.id}">Voir dans la conversation</button>` : '';
+    let quote = '';
+    if(m.replyTo){
+      const r = msgById(m.replyTo);
+      if(r){
+        const rw = r.kind==='consensus' ? {name:'Consensus', color:null} : gcWho(r.from);
+        quote = `<div class="gc-quote" data-jump="${r.id}" style="--qc:${rw.color||'var(--teal-deep)'}"><b>${escapeHtml(rw.name)}</b><span>${escapeHtml(gcSnippet(r,120))}</span></div>`;
+      } else quote = `<div class="gc-quote gc-quote-gone"><span>Message supprimé</span></div>`;
+    }
+    if(m.kind==='consensus'){
+      return `<div class="gc-msg gc-cons-wrap" data-id="${m.id}"><div class="gc-consensus">
+        <div class="gc-cons-label">${GC_SHAKE(16)}<span>Consensus du groupe</span></div>
+        ${quote}
+        <div class="gc-cons-text">${gcHighlight(m.text, q)}</div>
+        <div class="gc-meta">${gcDateTime(m.ts)}${m.edited?' · modifié':''}</div>
+        ${goto}${acts}</div></div>`;
+    }
+    const w = gcWho(m.from);
+    const c = w.me ? 'var(--teal)' : w.color;
+    const bg = `color-mix(in srgb, ${c} ${w.me?42:30}%, var(--bg))`;
+    return `<div class="gc-msg ${w.me?'me':'part'}" data-id="${m.id}">
+      ${w.me ? '' : gcAvatar(w, 30)}
+      <div class="gc-bubble" style="--c:${c};--bc:${bg}">
+        ${w.me ? '' : `<div class="gc-name" style="color:${c}">${escapeHtml(w.name)}</div>`}
+        ${quote}
+        <div class="gc-text">${gcHighlight(m.text, q)}</div>
+        <div class="gc-meta">${gcTime(m.ts)}${m.edited?' · modifié':''}</div>
+        ${goto}${acts}
+      </div></div>`;
+  }
+
+  function drawThread(keepScroll){
+    const q = gcQuery.trim();
+    const all = groupchat.messages;
+    let list = all, more = false;
+    if(q){ list = all.filter(m=> gcMatches(m.text,q).length || (m.kind!=='consensus' && gcMatches(gcWho(m.from).name,q).length)); }
+    else if(all.length>gcLimit){ list = all.slice(all.length-gcLimit); more = true; }
+    $q('#gc-count').textContent = q ? (list.length+' résultat'+(list.length>1?'s':'')) : '';
+    const prevH = thread.scrollHeight, prevTop = thread.scrollTop;
+    if(!all.length){
+      thread.innerHTML = `<p class="gc-empty">${groupchat.parts.length ? 'La conversation est vide. Choisissez un profil en bas et écrivez le premier message.' : 'Commencez par créer les profils de vos parts avec le bouton « Profils » en haut. Vous écrirez ensuite tous les messages en choisissant à chaque fois qui parle.'}</p>`;
+      return;
+    }
+    if(q && !list.length){ thread.innerHTML = `<p class="gc-empty">Aucun message ne correspond à « ${escapeHtml(q)} ».</p>`; return; }
+    let html = more ? `<button type="button" class="gc-more" id="gc-more">Afficher les messages précédents</button>` : '';
+    let lastDay = '';
+    list.forEach(m=>{
+      const d = gcDay(m.ts);
+      if(d!==lastDay){ html += `<div class="gc-day"><span>${escapeHtml(d)}</span></div>`; lastDay = d; }
+      html += msgHtml(m, q);
+    });
+    thread.innerHTML = html;
+    if(keepScroll) thread.scrollTop = prevTop + (thread.scrollHeight - prevH);
+  }
+
+  function jump(id){
+    if(gcQuery){ gcQuery = ''; qInput.value = ''; $q('#gc-search').style.display='none'; }
+    const idx = groupchat.messages.findIndex(m=>m.id===id);
+    if(idx<0) return;
+    const needed = groupchat.messages.length - idx;
+    if(needed>gcLimit) gcLimit = needed + 20;
+    drawThread();
+    const el = thread.querySelector(`[data-id="${id}"]`);
+    if(!el) return;
+    el.scrollIntoView({block:'center'});
+    el.classList.remove('gc-flash'); void el.offsetWidth; el.classList.add('gc-flash');
+  }
+
+  function drawSenders(){
+    const opts = [{id:'me', w:gcWho('me')}].concat(groupchat.parts.map(p=>({id:p.id, w:gcWho(p.id)})));
+    $q('#gc-senders').innerHTML = opts.map(o=>{
+      const c = o.w.me ? 'var(--teal)' : o.w.color;
+      return `<button type="button" class="gc-chip${gcSender===o.id?' on':''}" data-sender="${o.id}" style="--c:${c}" title="Écrire en tant que ${escapeHtml(o.w.name)}">${gcAvatar(o.w,22)}<span>${escapeHtml(o.w.name)}</span></button>`;
+    }).join('');
+    ta.placeholder = gcEditing ? 'Modifier le message…' : 'Écrire en tant que '+gcWho(gcSender).name+'…';
+  }
+  function drawReply(){
+    const box = $q('#gc-reply');
+    if(gcEditing){
+      box.style.display='flex'; box.style.setProperty('--qc','var(--clay)');
+      box.innerHTML = `<div><b>Modification du message</b></div><button type="button" id="gc-reply-x" title="Annuler">✕</button>`;
+    } else if(gcReplyTo){
+      const r = msgById(gcReplyTo);
+      if(!r){ gcReplyTo = null; box.style.display='none'; return; }
+      const rw = r.kind==='consensus' ? {name:'Consensus', color:null} : gcWho(r.from);
+      box.style.display='flex'; box.style.setProperty('--qc', rw.color||'var(--teal-deep)');
+      box.innerHTML = `<div><b>Réponse à ${escapeHtml(rw.name)}</b><span>${escapeHtml(gcSnippet(r,100))}</span></div><button type="button" id="gc-reply-x" title="Annuler">✕</button>`;
+    } else { box.style.display='none'; box.innerHTML=''; return; }
+    $q('#gc-reply-x').addEventListener('click', ()=>{
+      if(gcEditing){ ta.value = gcDraft = ''; autoGrow(); }
+      gcEditing = null; gcReplyTo = null; drawReply(); drawSenders();
+    });
+  }
+
+  function send(){
+    const text = ta.value.trim();
+    if(!text) return;
+    if(gcEditing){
+      const m = msgById(gcEditing);
+      if(m){ if(m.text!==text){ m.text = text; m.edited = true; } if(m.kind!=='consensus') m.from = gcSender; saveGC(); }
+      gcEditing = null;
+    } else {
+      groupchat.messages.push({id:gcNewId(), kind:'msg', from:gcSender, text, replyTo:gcReplyTo||null, ts:Date.now()});
+      saveGC();
+    }
+    gcReplyTo = null; ta.value = ''; gcDraft = ''; autoGrow();
+    drawReply(); drawSenders();
+    if(gcQuery){ gcQuery=''; qInput.value=''; $q('#gc-search').style.display='none'; }
+    drawThread(); toBottom();
+    if(!sosCoarse()) ta.focus();
+  }
+
+  /* --- fil de conversation : actions déléguées --- */
+  thread.addEventListener('click', e=>{
+    const t = e.target;
+    const more = t.closest('#gc-more'); if(more){ gcLimit += 200; drawThread(true); return; }
+    const g = t.closest('[data-goto]'); if(g){ jump(g.dataset.goto); return; }
+    const jp = t.closest('[data-jump]'); if(jp){ jump(jp.dataset.jump); return; }
+    const rp = t.closest('[data-reply]');
+    if(rp){ gcEditing = null; gcReplyTo = rp.dataset.reply; drawReply(); drawSenders(); ta.focus(); return; }
+    const ed = t.closest('[data-edit]');
+    if(ed){
+      const m = msgById(ed.dataset.edit); if(!m) return;
+      if(m.kind==='consensus'){ openConsensusModal(m); return; }
+      gcEditing = m.id; gcReplyTo = null; gcSender = m.from;
+      ta.value = m.text; autoGrow(); drawReply(); drawSenders(); ta.focus();
+      return;
+    }
+    const dl = t.closest('[data-del]');
+    if(dl){
+      if(!dl.classList.contains('armed')){
+        dl.classList.add('armed'); dl.textContent = 'Supprimer ?';
+        setTimeout(()=>{ if(dl.isConnected){ dl.classList.remove('armed'); dl.textContent = '✕'; } }, 3000);
+        return;
+      }
+      const id = dl.dataset.del;
+      groupchat.messages = groupchat.messages.filter(m=>m.id!==id);
+      if(gcReplyTo===id) gcReplyTo = null;
+      if(gcEditing===id){ gcEditing = null; ta.value=''; autoGrow(); }
+      saveGC(); drawReply(); drawSenders(); drawThread(true);
+      return;
+    }
+    /* toucher une bulle affiche ses actions (mobile) */
+    const msg = t.closest('.gc-msg, .gc-consensus');
+    thread.querySelectorAll('.open').forEach(x=>{ if(x!==msg && !(msg && msg.contains(x))) x.classList.remove('open'); });
+    const box = t.closest('.gc-bubble, .gc-consensus');
+    if(box && !t.closest('button')) box.classList.toggle('open');
+  });
+  $q('#gc-senders').addEventListener('click', e=>{
+    const b = e.target.closest('[data-sender]'); if(!b) return;
+    gcSender = b.dataset.sender; drawSenders(); ta.focus();
+  });
+  ta.value = gcDraft;
+  ta.addEventListener('input', ()=>{ gcDraft = ta.value; autoGrow(); });
+  ta.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey && !sosCoarse() && !e.isComposing){ e.preventDefault(); send(); }
+  });
+  $q('#gc-send').addEventListener('click', send);
+  $q('#gc-shake').addEventListener('click', ()=> openConsensusModal(null));
+  $q('#gc-hist-btn').addEventListener('click', ()=> openConsensusHistory());
+  $q('#gc-parts-btn').addEventListener('click', ()=> openPartsModal(()=>{ drawSenders(); drawThread(true); }));
+
+  const searchBox = $q('#gc-search');
+  $q('#gc-search-btn').addEventListener('click', ()=>{
+    const open = searchBox.style.display==='none';
+    searchBox.style.display = open ? 'flex' : 'none';
+    if(open) qInput.focus(); else { gcQuery=''; qInput.value=''; drawThread(); toBottom(); }
+  });
+  qInput.addEventListener('input', ()=>{ gcQuery = qInput.value; drawThread(); if(!gcQuery.trim()) toBottom(); else thread.scrollTop = 0; });
+  qInput.addEventListener('keydown', e=>{ if(e.key==='Escape') $q('#gc-q-close').click(); });
+  $q('#gc-q-close').addEventListener('click', ()=>{ searchBox.style.display='none'; gcQuery=''; qInput.value=''; drawThread(); toBottom(); });
+
+  /* modales exposées à l'écran pour pouvoir le redessiner */
+  function openConsensusModal(existing){
+    const ov = document.createElement('div'); ov.className = 'modal-overlay';
+    const lastCons = [...groupchat.messages].reverse().find(m=>m.kind==='consensus' && (!existing || m.ts < existing.ts));
+    const since = groupchat.messages.filter(m=> m.kind!=='consensus' && (!lastCons || m.ts>lastCons.ts) && (!existing || m.ts<existing.ts));
+    ov.innerHTML = `
+      <div class="modal-panel" role="dialog" aria-label="Message de consensus">
+        <div class="modal-head"><h3>${GC_SHAKE(16)} Message de consensus</h3></div>
+        <div class="modal-body">
+          <p class="sub" style="margin:0;text-align:left;">Rédigez une synthèse au nom de tous les membres du groupe pour conclure ce dialogue.</p>
+          ${since.length ? `<details class="gc-recap"><summary>Relire les ${since.length} message${since.length>1?'s':''} depuis le dernier consensus</summary><div class="gc-recap-list">${since.map(m=>{const w=gcWho(m.from);return `<p><b style="color:${w.color||'var(--teal-deep)'}">${escapeHtml(w.name)}</b> ${escapeHtml(gcSnippet(m,400))}</p>`;}).join('')}</div></details>` : ''}
+          <textarea id="gc-cons-text" rows="6" placeholder="Ensemble, nous avons conclu que…"></textarea>
+        </div>
+        <div class="modal-foot"><button type="button" id="gc-cons-cancel">Annuler</button><button type="button" id="gc-cons-ok" class="primary">${existing?'Enregistrer':'Insérer dans la conversation'}</button></div>
+      </div>`;
+    document.body.appendChild(ov);
+    const cta = ov.querySelector('#gc-cons-text'); cta.value = existing ? existing.text : '';
+    const close = ()=> ov.remove();
+    ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+    ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+    ov.querySelector('#gc-cons-cancel').addEventListener('click', close);
+    ov.querySelector('#gc-cons-ok').addEventListener('click', ()=>{
+      const text = cta.value.trim(); if(!text) return;
+      if(existing){ if(existing.text!==text){ existing.text = text; existing.edited = true; } saveGC(); close(); drawThread(true); return; }
+      const m = {id:gcNewId(), kind:'consensus', text, replyTo:null, ts:Date.now()};
+      groupchat.messages.push(m); saveGC(); close();
+      if(gcQuery){ gcQuery=''; qInput.value=''; searchBox.style.display='none'; }
+      drawThread(); toBottom();
+    });
+    cta.focus();
+  }
+  function openConsensusHistory(){
+    const ov = document.createElement('div'); ov.className = 'modal-overlay';
+    const list = groupchat.messages.filter(m=>m.kind==='consensus').slice().reverse();
+    ov.innerHTML = `
+      <div class="modal-panel" role="dialog" aria-label="Historique des consensus">
+        <div class="modal-head"><h3>${GC_SHAKE(16)} Historique des consensus</h3></div>
+        <div class="modal-body">${list.length ? list.map(m=>`
+          <div class="gc-hist-item"><div class="gc-hist-date">${gcDateTime(m.ts)}</div><div class="gc-hist-text">${escapeHtml(m.text).replace(/\n/g,'<br>')}</div>
+          <button type="button" data-go="${m.id}">Voir dans la conversation</button></div>`).join('')
+          : `<p class="emb-empty">Aucun consensus pour l'instant. Utilisez le bouton ${GC_SHAKE(14)} dans la conversation pour en rédiger un.</p>`}</div>
+        <div class="modal-foot"><button type="button" id="gc-hist-done" class="primary">Fermer</button></div>
+      </div>`;
+    document.body.appendChild(ov);
+    const close = ()=> ov.remove();
+    ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+    ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+    ov.querySelector('#gc-hist-done').addEventListener('click', close);
+    ov.querySelectorAll('[data-go]').forEach(b=> b.addEventListener('click', ()=>{ close(); jump(b.dataset.go); }));
+  }
+
+  drawSenders(); drawReply(); drawThread(); toBottom(); autoGrow();
+  if(!vaultRestoreDone) vaultRestorePromise.then(()=>{ if(currentPhase==='groupchat') renderGroupChat(); });
+}
+
+/* --- profils des parts --- */
+function gcResizePhoto(file){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = ()=>{
+      try{
+        const N = 160, c = document.createElement('canvas'); c.width = c.height = N;
+        const x = c.getContext('2d'); x.fillStyle = '#16242C'; x.fillRect(0,0,N,N);
+        const side = Math.min(img.width, img.height);
+        x.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, N, N);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.82));
+      }catch(e){ reject(e); }
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('image')); };
+    img.src = url;
+  });
+}
+function openPartsModal(onClose){
+  const ov = document.createElement('div'); ov.className = 'modal-overlay';
+  ov.innerHTML = `
+    <div class="modal-panel" role="dialog" aria-label="Profils des parts">
+      <div class="modal-head"><h3>Profils des parts</h3></div>
+      <div class="modal-body" id="gp-list"></div>
+      <div class="modal-foot"><button type="button" id="gp-add">+ Ajouter un profil</button><button type="button" id="gp-done" class="primary">Terminer</button></div>
+      <input type="file" id="gp-file" accept="image/*" style="display:none;">
+    </div>`;
+  document.body.appendChild(ov);
+  const listEl = ov.querySelector('#gp-list'), file = ov.querySelector('#gp-file');
+  let photoFor = null;
+  function draw(focusId){
+    const ps = groupchat.parts;
+    if(!ps.length){ listEl.innerHTML = `<p class="emb-empty">Aucun profil. Ajoutez une première part : nom, couleur, photo.</p>`; return; }
+    listEl.innerHTML = ps.map((p,i)=>`
+      <div class="gp-row" data-id="${p.id}">
+        <button type="button" class="gp-photo" data-photo="${p.id}" title="Choisir une photo">${gcAvatar(p,48)}<span class="gp-cam">📷</span></button>
+        <div class="gp-main">
+          <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom de la part" maxlength="40">
+          <div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
+            <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>
+          ${p.photo ? `<button type="button" class="gp-rm" data-rmphoto="${p.id}">Retirer la photo</button>` : ''}
+        </div>
+        <div class="emb-row-actions">
+          <button type="button" data-up="${p.id}" ${i===0?'disabled':''} title="Monter">↑</button>
+          <button type="button" data-down="${p.id}" ${i===ps.length-1?'disabled':''} title="Descendre">↓</button>
+          <button type="button" data-delpart="${p.id}" title="Supprimer">✕</button>
+        </div>
+      </div>`).join('');
+    if(focusId){ const t = listEl.querySelector(`[data-name="${focusId}"]`); if(t){ t.focus(); t.select(); t.scrollIntoView({block:'nearest'}); } }
+  }
+  draw();
+  listEl.addEventListener('input', e=>{
+    const n = e.target.closest('[data-name]');
+    if(n){ const p = gcPart(n.dataset.name); if(p){ p.name = n.value; saveGC(); } return; }
+    const c = e.target.closest('[data-cpick]');
+    if(c){ const p = gcPart(c.dataset.cpick); if(p){ p.color = c.value; saveGC(); } }
+  });
+  listEl.addEventListener('change', e=>{ if(e.target.closest('[data-cpick]')) draw(); });
+  listEl.addEventListener('click', e=>{
+    const t = e.target;
+    const col = t.closest('[data-color]');
+    if(col){ const [id,c] = col.dataset.color.split('|'); const p = gcPart(id); if(p){ p.color = c; saveGC(); draw(); } return; }
+    const ph = t.closest('[data-photo]'); if(ph){ photoFor = ph.dataset.photo; file.value=''; file.click(); return; }
+    const rm = t.closest('[data-rmphoto]'); if(rm){ const p = gcPart(rm.dataset.rmphoto); if(p){ p.photo = null; saveGC(); draw(); } return; }
+    const mv = (id,dir)=>{ const ps = groupchat.parts, i = ps.findIndex(x=>x.id===id), j = i+dir; if(i<0||j<0||j>=ps.length) return; [ps[i],ps[j]] = [ps[j],ps[i]]; saveGC(); draw(); };
+    const up = t.closest('[data-up]'); if(up){ mv(up.dataset.up,-1); return; }
+    const dn = t.closest('[data-down]'); if(dn){ mv(dn.dataset.down,1); return; }
+    const dl = t.closest('[data-delpart]');
+    if(dl){
+      if(!dl.classList.contains('armed')){
+        dl.classList.add('armed'); dl.textContent = 'Supprimer ? (ses messages restent)';
+        setTimeout(()=>{ if(dl.isConnected){ dl.classList.remove('armed'); dl.textContent = '✕'; } }, 3500);
+        return;
+      }
+      groupchat.parts = groupchat.parts.filter(x=>x.id!==dl.dataset.delpart); saveGC(); draw();
+    }
+  });
+  file.addEventListener('change', async ()=>{
+    const f = file.files[0]; const p = photoFor && gcPart(photoFor);
+    if(!f || !p) return;
+    try{ p.photo = await gcResizePhoto(f); saveGC(); draw(); }
+    catch(e){ alert('Impossible de lire cette image.'); }
+  });
+  ov.querySelector('#gp-add').addEventListener('click', ()=>{
+    const p = {id:gcNewId(), name:'Nouvelle part', color:GC_PALETTE[groupchat.parts.length % GC_PALETTE.length], photo:null};
+    groupchat.parts.push(p); saveGC(); draw(p.id);
+    listEl.scrollTop = listEl.scrollHeight;
+  });
+  const close = ()=>{
+    groupchat.parts.forEach(p=>{ if(!p.name.trim()) p.name = 'Sans nom'; });
+    saveGC(); ov.remove(); if(onClose) onClose();
+  };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  ov.querySelector('#gp-done').addEventListener('click', close);
 }
 
 /* ================= COMMANDEMENTS ================= */
@@ -3295,7 +3804,7 @@ function accountBackupHtml(){
 
 function wireBackupControls(panel){
   panel.querySelector('#acc-export-btn').addEventListener('click', ()=>{
-    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems};
+    const data = {traumas, folders, recentTraumas, settings, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems, groupchat};
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -3320,6 +3829,7 @@ function wireBackupControls(panel){
       folders = data.folders || [];
       recentTraumas = data.recentTraumas || [];
       if(Array.isArray(data.embodiment)){ embodimentItems = data.embodiment; saveEmbodiment(embodimentItems); }
+      if(data.groupchat && Array.isArray(data.groupchat.parts) && Array.isArray(data.groupchat.messages)){ groupchat = data.groupchat; saveGC(); }
       if(Array.isArray(data.commandments)){ rulesItems = data.commandments; saveRules(rulesItems); }
       if(Array.isArray(data.sosAffirmations)){ sosAffirmations = data.sosAffirmations; saveSosAff(sosAffirmations); }
       if(data.settings) settings = Object.assign(settings, data.settings);
