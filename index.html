@@ -305,6 +305,19 @@
   #gc-send{ background:var(--teal); border-color:var(--teal); color:#fff; }
   #gc-shake{ color:var(--teal-deep); }
   @media (max-width:560px){ .gc-head-actions button span{ display:none; } .gc-head h2{ font-size:19px; } }
+  .gc-reacts{ display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+  .gc-react{ background:rgba(0,0,0,.22); border:1px solid var(--line); color:var(--ink); border-radius:12px; padding:1px 8px; font-size:13px; cursor:pointer; line-height:1.5; }
+  .gc-react i{ font-style:normal; font-size:11px; color:var(--ink-soft); }
+  .gc-react.mine{ border-color:var(--teal-deep); background:color-mix(in srgb, var(--teal) 28%, transparent); }
+  .gc-picker{ position:absolute; top:calc(100% + 4px); left:0; z-index:3; display:flex; flex-wrap:wrap; gap:2px; width:max-content; min-width:230px; max-width:min(300px,80vw); background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:5px; box-shadow:0 8px 22px rgba(0,0,0,.35); }
+  .gc-msg.me .gc-picker{ left:auto; right:0; }
+  .gc-pick-who{ flex:1 0 100%; font-size:10.5px; color:var(--ink-soft); padding:0 4px 2px; }
+  .gc-picker button{ background:none; border:none; font-size:20px; cursor:pointer; padding:3px 5px; border-radius:8px; }
+  .gc-picker button:hover{ background:var(--bg-soft); }
+  .gc-av-btn{ cursor:pointer; display:flex; } .gc-name[data-card]{ cursor:pointer; }
+  .gc-card-body{ padding:22px 22px 8px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .gc-card-body h3{ margin:6px 0 0; font-family:var(--font-display); font-size:20px; } .gc-card-body p{ margin:4px 0 8px; font-size:14.5px; line-height:1.55; }
+  .gp-desc{ min-height:44px !important; resize:none; font-size:13px; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:7px 10px; font-family:inherit; line-height:1.4; width:100%; box-sizing:border-box; }
   .gc-recap{ font-size:12.5px; color:var(--ink-soft); text-align:left; } .gc-recap summary{ cursor:pointer; }
   .gc-recap-list{ max-height:26vh; overflow:auto; margin-top:6px; } .gc-recap-list p{ margin:4px 0; color:var(--ink); }
   #gc-cons-text{ width:100%; box-sizing:border-box; resize:vertical; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px 12px; font-size:14.5px; font-family:inherit; line-height:1.45; }
@@ -1464,6 +1477,7 @@ function renderEmbodimentChoice(){
 /* ================= GROUPCHAT (dialogue entre parts, façon messagerie) ================= */
 const GC_PALETTE = ['#E7A97C','#B9A6D9','#7FB0AC','#D98BA0','#8FB8E8','#C9D98B','#E5C16F','#9AD1A7'];
 const GC_SHAKE = (n)=> `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`;
+const GC_EMOJIS = ['👍','❤️','🤗','🙏','💪','😂','😮','😢','🌱','✨'];
 let gcSender = 'me', gcReplyTo = null, gcEditing = null, gcQuery = '', gcLimit = 200, gcDraft = '';
 
 function gcNewId(){ return 'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -1561,7 +1575,15 @@ function renderGroupChat(){
   const msgById = id=> groupchat.messages.find(m=>m.id===id);
 
   function msgHtml(m, q){
-    const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-edit="${m.id}" title="Modifier">✎</button><button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
+    const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-react="${m.id}" title="Réagir">☺</button><button type="button" data-edit="${m.id}" title="Modifier">✎</button><button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
+    const reacts = (()=>{
+      const rs = m.reactions||[]; if(!rs.length) return '';
+      const by = {}; rs.forEach(r=>{ (by[r.e] = by[r.e]||[]).push(r.by); });
+      return '<div class="gc-reacts">'+Object.keys(by).map(e=>{
+        const names = by[e].map(id=>gcWho(id).name).join(', ');
+        return `<button type="button" class="gc-react${by[e].includes(gcSender)?' mine':''}" data-chip="${m.id}|${e}" title="${escapeHtml(names)}">${e}${by[e].length>1?' <i>'+by[e].length+'</i>':''}</button>`;
+      }).join('')+'</div>';
+    })();
     const goto = q ? `<button type="button" class="gc-goto" data-goto="${m.id}">Voir dans la conversation</button>` : '';
     let quote = '';
     if(m.replyTo){
@@ -1576,6 +1598,7 @@ function renderGroupChat(){
         <div class="gc-cons-label">${GC_SHAKE(16)}<span>Consensus du groupe</span></div>
         ${quote}
         <div class="gc-cons-text">${gcHighlight(m.text, q)}</div>
+        ${reacts}
         <div class="gc-meta">${gcDateTime(m.ts)}${m.edited?' · modifié':''}</div>
         ${goto}${acts}</div></div>`;
     }
@@ -1583,11 +1606,12 @@ function renderGroupChat(){
     const c = w.me ? 'var(--teal)' : w.color;
     const bg = `color-mix(in srgb, ${c} ${w.me?42:30}%, var(--bg))`;
     return `<div class="gc-msg ${w.me?'me':'part'}" data-id="${m.id}">
-      ${w.me ? '' : gcAvatar(w, 30)}
+      ${w.me ? '' : `<span class="gc-av-btn" data-card="${m.from}" title="Voir le profil">${gcAvatar(w, 30)}</span>`}
       <div class="gc-bubble" style="--c:${c};--bc:${bg}">
-        ${w.me ? '' : `<div class="gc-name" style="color:${c}">${escapeHtml(w.name)}</div>`}
+        ${w.me ? '' : `<div class="gc-name" style="color:${c}" data-card="${m.from}">${escapeHtml(w.name)}</div>`}
         ${quote}
         <div class="gc-text">${gcHighlight(m.text, q)}</div>
+        ${reacts}
         <div class="gc-meta">${gcTime(m.ts)}${m.edited?' · modifié':''}</div>
         ${goto}${acts}
       </div></div>`;
@@ -1617,6 +1641,14 @@ function renderGroupChat(){
     if(keepScroll) thread.scrollTop = prevTop + (thread.scrollHeight - prevH);
   }
 
+  function toggleReaction(id, e){
+    const m = msgById(id); if(!m) return;
+    m.reactions = m.reactions||[];
+    const i = m.reactions.findIndex(r=>r.e===e && r.by===gcSender);
+    if(i>=0) m.reactions.splice(i,1); else m.reactions.push({e, by:gcSender});
+    if(!m.reactions.length) delete m.reactions;
+    saveGC(); drawThread(true);
+  }
   function jump(id){
     if(gcQuery){ gcQuery = ''; qInput.value = ''; $q('#gc-search').style.display='none'; }
     const idx = groupchat.messages.findIndex(m=>m.id===id);
@@ -1634,7 +1666,7 @@ function renderGroupChat(){
     const opts = [{id:'me', w:gcWho('me')}].concat(groupchat.parts.map(p=>({id:p.id, w:gcWho(p.id)})));
     $q('#gc-senders').innerHTML = opts.map(o=>{
       const c = o.w.me ? 'var(--teal)' : o.w.color;
-      return `<button type="button" class="gc-chip${gcSender===o.id?' on':''}" data-sender="${o.id}" style="--c:${c}" title="Écrire en tant que ${escapeHtml(o.w.name)}">${gcAvatar(o.w,22)}<span>${escapeHtml(o.w.name)}</span></button>`;
+      return `<button type="button" class="gc-chip${gcSender===o.id?' on':''}" data-sender="${o.id}" style="--c:${c}" title="Écrire en tant que ${escapeHtml(o.w.name)}${gcPart(o.id)&&gcPart(o.id).description?' — '+escapeHtml(gcPart(o.id).description):''}">${gcAvatar(o.w,22)}<span>${escapeHtml(o.w.name)}</span></button>`;
     }).join('');
     ta.placeholder = gcEditing ? 'Modifier le message…' : 'Écrire en tant que '+gcWho(gcSender).name+'…';
   }
@@ -1680,6 +1712,20 @@ function renderGroupChat(){
     const more = t.closest('#gc-more'); if(more){ gcLimit += 200; drawThread(true); return; }
     const g = t.closest('[data-goto]'); if(g){ jump(g.dataset.goto); return; }
     const jp = t.closest('[data-jump]'); if(jp){ jump(jp.dataset.jump); return; }
+    const cd = t.closest('[data-card]'); if(cd && gcPart(cd.dataset.card)){ openPartCard(cd.dataset.card, ()=>{ drawSenders(); drawThread(true); }); return; }
+    const chip = t.closest('[data-chip]'); if(chip){ const [id,e] = chip.dataset.chip.split('|'); toggleReaction(id,e); return; }
+    const pk = t.closest('[data-pick]'); if(pk){ const [id,e] = pk.dataset.pick.split('|'); toggleReaction(id,e); return; }
+    const rc = t.closest('[data-react]');
+    if(rc){
+      const box = rc.closest('.gc-bubble, .gc-consensus');
+      const had = box.querySelector('.gc-picker');
+      thread.querySelectorAll('.gc-picker').forEach(x=>x.remove());
+      if(had) return;
+      const pick = document.createElement('div'); pick.className = 'gc-picker';
+      pick.innerHTML = `<span class="gc-pick-who">en tant que ${escapeHtml(gcWho(gcSender).name)}</span>` + GC_EMOJIS.map(e=>`<button type="button" data-pick="${rc.dataset.react}|${e}">${e}</button>`).join('');
+      box.appendChild(pick); box.classList.add('open');
+      return;
+    }
     const rp = t.closest('[data-reply]');
     if(rp){ gcEditing = null; gcReplyTo = rp.dataset.reply; drawReply(); drawSenders(); ta.focus(); return; }
     const ed = t.closest('[data-edit]');
@@ -1708,7 +1754,7 @@ function renderGroupChat(){
     const msg = t.closest('.gc-msg, .gc-consensus');
     thread.querySelectorAll('.open').forEach(x=>{ if(x!==msg && !(msg && msg.contains(x))) x.classList.remove('open'); });
     const box = t.closest('.gc-bubble, .gc-consensus');
-    if(box && !t.closest('button')) box.classList.toggle('open');
+    if(box && !t.closest('button, .gc-picker')){ box.classList.toggle('open'); box.querySelectorAll('.gc-picker').forEach(x=>x.remove()); }
   });
   $q('#gc-senders').addEventListener('click', e=>{
     const b = e.target.closest('[data-sender]'); if(!b) return;
@@ -1789,6 +1835,27 @@ function renderGroupChat(){
   if(!vaultRestoreDone) vaultRestorePromise.then(()=>{ if(currentPhase==='groupchat') renderGroupChat(); });
 }
 
+/* --- fiche d'une part --- */
+function openPartCard(id, onClose){
+  const p = gcPart(id); if(!p) return;
+  const ov = document.createElement('div'); ov.className = 'modal-overlay';
+  ov.innerHTML = `
+    <div class="modal-panel gc-card" role="dialog" aria-label="Profil de ${escapeHtml(p.name)}" style="width:min(420px,100%);">
+      <div class="gc-card-body" style="--c:${p.color}">
+        ${gcAvatar(p,96)}
+        <h3 style="color:${p.color}">${escapeHtml(p.name)}</h3>
+        <p>${p.description && p.description.trim() ? escapeHtml(p.description).replace(/\n/g,'<br>') : '<span class="sub">Pas encore de description.</span>'}</p>
+      </div>
+      <div class="modal-foot"><button type="button" id="gcard-edit">Modifier</button><button type="button" id="gcard-done" class="primary">Fermer</button></div>
+    </div>`;
+  document.body.appendChild(ov);
+  const close = ()=>{ ov.remove(); if(onClose) onClose(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  ov.querySelector('#gcard-done').addEventListener('click', close);
+  ov.querySelector('#gcard-edit').addEventListener('click', ()=>{ ov.remove(); openPartsModal(onClose); });
+}
+
 /* --- profils des parts --- */
 function gcResizePhoto(file){
   return new Promise((resolve, reject)=>{
@@ -1829,6 +1896,7 @@ function openPartsModal(onClose){
           <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom de la part" maxlength="40">
           <div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
             <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>
+          <textarea class="gp-desc" data-desc="${p.id}" rows="2" maxlength="600" placeholder="Petite description : son rôle, ce qu'elle protège, ce dont elle a besoin…">${escapeHtml(p.description||'')}</textarea>
           ${p.photo ? `<button type="button" class="gp-rm" data-rmphoto="${p.id}">Retirer la photo</button>` : ''}
         </div>
         <div class="emb-row-actions">
@@ -1843,6 +1911,8 @@ function openPartsModal(onClose){
   listEl.addEventListener('input', e=>{
     const n = e.target.closest('[data-name]');
     if(n){ const p = gcPart(n.dataset.name); if(p){ p.name = n.value; saveGC(); } return; }
+    const dsc = e.target.closest('[data-desc]');
+    if(dsc){ const p = gcPart(dsc.dataset.desc); if(p){ p.description = dsc.value; saveGC(); } return; }
     const c = e.target.closest('[data-cpick]');
     if(c){ const p = gcPart(c.dataset.cpick); if(p){ p.color = c.value; saveGC(); } }
   });
