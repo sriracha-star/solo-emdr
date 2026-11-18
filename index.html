@@ -314,6 +314,7 @@
   .gc-rule-label{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--teal-deep); margin-bottom:3px; }
   .gc-rule-pick{ display:flex; gap:12px; align-items:flex-start; text-align:left; width:100%; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px 12px; cursor:pointer; font-size:14px; line-height:1.45; font-family:inherit; }
   .gc-rule-pick:hover{ border-color:var(--teal-deep); } .gc-rule-pick b{ color:var(--teal-deep); min-width:22px; }
+  .gp-sleep-toggle{ align-self:center; background:none; border:none; color:var(--ink-soft); text-decoration:underline; cursor:pointer; font-size:13px; padding:6px; }
   .gp-row.asleep{ opacity:.65; } .gp-sleepbadge{ font-size:11.5px; color:var(--ink-soft); }
   .gc-hist-item-btn{ font-size:12px; padding:5px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; flex:0 0 auto; align-self:center; }
   .qb-time{ font-family:var(--font-display); font-size:38px; text-align:center; color:var(--teal-deep); margin:4px 0; }
@@ -1662,7 +1663,7 @@ function renderEmbodimentChoice(){
   forwardAction = next;
 }
 
-/* ================= GROUPCHAT (dialogue entre parts, façon messagerie) ================= */
+/* ================= GROUPCHAT (dialogue entre participants, façon messagerie) ================= */
 const GC_PALETTE = ['#E7A97C','#B9A6D9','#7FB0AC','#D98BA0','#8FB8E8','#C9D98B','#E5C16F','#9AD1A7'];
 const GC_SHAKE = (n)=> `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>`;
 const GC_EMOJIS = ['👍','❤️','🤗','🙏','💪','😂','😮','😢','😡','😒','✨'];
@@ -1685,7 +1686,7 @@ function gcQWho(r){ return r.kind==='consensus' ? {name:'Consensus', color:null}
 function gcWho(from){
   if(from==='me') return {name:gcMeName(), color:null, photo:null, me:true};
   const p = gcPart(from);
-  return p ? {name:p.name, color:p.color, photo:p.photo, me:false} : {name:'Part supprimée', color:'#7d8a90', photo:null, me:false, gone:true};
+  return p ? {name:p.name, color:p.color, photo:p.photo, me:false} : {name:'Participant supprimé', color:'#7d8a90', photo:null, me:false, gone:true};
 }
 function gcAvatar(w, size){
   const st = `width:${size}px;height:${size}px;`;
@@ -1770,10 +1771,10 @@ function renderGroupChat(){
         <h2>Conversation</h2>
         <div class="gc-head-actions">
           <button type="button" id="gc-search-btn" title="Rechercher" aria-label="Rechercher"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
-          <button type="button" id="gc-sleep-btn" title="Profils en veille" aria-label="Profils en veille" style="display:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg><span>En veille</span></button>
+          <button type="button" id="gc-sleep-btn" title="Participants en veille" aria-label="Participants en veille" style="display:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg><span>En veille</span></button>
           <button type="button" id="gc-bls-btn" title="BLS rapide (son uniquement)" aria-label="BLS rapide"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-3a8 8 0 0116 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg><span>BLS</span></button>
           <button type="button" id="gc-hist-btn" title="Historique des consensus" aria-label="Historique des consensus">${GC_SHAKE(18)}<span>Consensus</span></button>
-          <button type="button" id="gc-parts-btn" title="Profils des parts" aria-label="Profils des parts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M17 13.8c2.4 0 4 1.7 4 4.2"/></svg><span>Profils</span></button>
+          <button type="button" id="gc-parts-btn" title="Participants" aria-label="Participants"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M17 13.8c2.4 0 4 1.7 4 4.2"/></svg><span>Participants</span></button>
         </div>
       </div>
       <div class="gc-search" id="gc-search" style="display:none;">
@@ -1806,7 +1807,7 @@ function renderGroupChat(){
   const msgById = id=> groupchat.messages.find(m=>m.id===id);
 
   function msgHtml(m, q){
-    if(m.kind==='join'){ const jp = gcPart(m.from); return `<div class="gc-join" data-id="${m.id}"><span>${escapeHtml(jp ? jp.name : (m.name||'Une part'))} a rejoint la conversation</span></div>`; }
+    if(m.kind==='join'){ const jp = gcPart(m.from); return `<div class="gc-join" data-id="${m.id}"><span>${escapeHtml(jp ? jp.name : (m.name||'Un participant'))} a rejoint la conversation</span></div>`; }
     const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-react="${m.id}" title="Réagir">☺</button>${m.kind==='rule' ? '' : `<button type="button" data-edit="${m.id}" title="Modifier">✎</button>`}<button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
     const reacts = (()=>{
       const rs = m.reactions||[]; if(!rs.length) return '';
@@ -1871,7 +1872,7 @@ function renderGroupChat(){
     $q('#gc-count').textContent = q ? (list.length+' résultat'+(list.length>1?'s':'')) : '';
     const prevH = thread.scrollHeight, prevTop = thread.scrollTop;
     if(!all.length){
-      thread.innerHTML = `<p class="gc-empty">${groupchat.parts.length ? 'La conversation est vide. Choisissez un profil en bas et écrivez le premier message.' : 'Commencez par créer les profils de vos parts avec le bouton « Profils » en haut. Vous écrirez ensuite tous les messages en choisissant à chaque fois qui parle.'}</p>`;
+      thread.innerHTML = `<p class="gc-empty">${groupchat.parts.length ? 'La conversation est vide. Choisissez un participant en bas et écrivez le premier message.' : 'Commencez par ajouter des participants avec le bouton « Participants » en haut. Vous écrirez ensuite tous les messages en choisissant à chaque fois qui parle.'}</p>`;
       return;
     }
     if(q && !list.length){ thread.innerHTML = `<p class="gc-empty">Aucun message ne correspond à « ${escapeHtml(q)} ».</p>`; return; }
@@ -2109,7 +2110,7 @@ function renderGroupChat(){
     cta.focus();
   }
   function openDriftModal(existing){
-    if(!gcActive().length && !(existing && gcPart(existing.target))){ alert('Aucune part disponible : créez ou réveillez un profil avec les boutons « Profils » / « En veille ».'); return; }
+    if(!gcActive().length && !(existing && gcPart(existing.target))){ alert('Aucun participant disponible : ajoutez-en ou réveillez-en un avec les boutons « Participants » / « En veille ».'); return; }
     let target = existing && gcPart(existing.target) ? existing.target : (gcActive().find(p=>p.id!==gcSender)||gcActive()[0]).id;
     const pool = ()=> groupchat.parts.filter(p=>!p.asleep || p.id===target);
     let author = existing ? existing.from : (gcSender===target ? 'me' : gcSender);
@@ -2136,7 +2137,7 @@ function renderGroupChat(){
       el('#gd-target').innerHTML = pool().map(p=> chip('data-t', p.id, gcWho(p.id), p.id===target)).join('');
       const tp = gcPart(target), tags = (tp && tp.drifts) || [];
       el('#gd-tags').innerHTML = tags.length ? tags.map((t,i)=>`<button type="button" class="gd-tag${t===tag && !nt.value.trim()?' on':''}" data-tag="${i}">${escapeHtml(t)}</button>`).join('')
-        : `<span class="sub" style="font-size:12.5px;">Aucune dérive enregistrée pour cette part : proposez-en une ci-dessous (elle sera ajoutée à son profil).</span>`;
+        : `<span class="sub" style="font-size:12.5px;">Aucune dérive enregistrée pour ce participant : proposez-en une ci-dessous (elle sera ajoutée à son profil).</span>`;
       el('#gd-author').innerHTML = [chip('data-a','me',gcWho('me'),author==='me')].concat(gcActive().filter(p=>p.id!==target).map(p=> chip('data-a', p.id, gcWho(p.id), p.id===author))).join('');
     }
     draw();
@@ -2220,15 +2221,15 @@ function renderGroupChat(){
 /* --- profils en veille --- */
 function openSleepModal(onClose){
   const ov = document.createElement('div'); ov.className = 'modal-overlay';
-  ov.innerHTML = `<div class="modal-panel" role="dialog" aria-label="Profils en veille" style="width:min(460px,100%);">
-    <div class="modal-head"><h3>☾ Profils en veille</h3></div><div class="modal-body" id="sl-list"></div>
+  ov.innerHTML = `<div class="modal-panel" role="dialog" aria-label="Participants en veille" style="width:min(460px,100%);">
+    <div class="modal-head"><h3>☾ Participants en veille</h3></div><div class="modal-body" id="sl-list"></div>
     <div class="modal-foot"><button type="button" id="sl-done" class="primary">Fermer</button></div></div>`;
   document.body.appendChild(ov);
   const list = ov.querySelector('#sl-list');
   function draw(){
     const ps = groupchat.parts.filter(p=>p.asleep);
     list.innerHTML = ps.length ? ps.map(p=>`<div class="gp-row"><span>${gcAvatar(p,40)}</span><div class="gp-main"><b style="color:${p.color}">${escapeHtml(p.name)}</b>${p.role?`<span class="sub" style="font-size:12.5px;text-align:left;">${escapeHtml(p.role)}</span>`:''}</div><button type="button" class="gc-hist-item-btn" data-wake="${p.id}">☀ Réafficher</button></div>`).join('')
-      : `<p class="emb-empty">Aucun profil en veille.</p>`;
+      : `<p class="emb-empty">Aucun participant en veille.</p>`;
   }
   draw();
   const close = ()=>{ ov.remove(); if(onClose) onClose(); };
@@ -2337,24 +2338,26 @@ function gcResizePhoto(file){
 function openPartsModal(onClose){
   const ov = document.createElement('div'); ov.className = 'modal-overlay';
   ov.innerHTML = `
-    <div class="modal-panel" role="dialog" aria-label="Profils des parts">
-      <div class="modal-head"><h3>Profils des parts</h3></div>
+    <div class="modal-panel" role="dialog" aria-label="Participants">
+      <div class="modal-head"><h3>Participants</h3></div>
       <div class="modal-body" id="gp-list"></div>
-      <div class="modal-foot"><button type="button" id="gp-add">+ Ajouter un profil</button><button type="button" id="gp-done" class="primary">Terminer</button></div>
+      <div class="modal-foot"><button type="button" id="gp-add">+ Ajouter un participant</button><button type="button" id="gp-done" class="primary">Terminer</button></div>
       <input type="file" id="gp-file" accept="image/*" style="display:none;">
     </div>`;
   document.body.appendChild(ov);
   const listEl = ov.querySelector('#gp-list'), file = ov.querySelector('#gp-file');
-  let photoFor = null; const newIds = [];
+  let photoFor = null, showSleep = false; const newIds = [];
+  const vis = ()=> showSleep ? groupchat.parts : groupchat.parts.filter(p=>!p.asleep);
   function draw(focusId, kind){
-    const ps = groupchat.parts;
-    if(!ps.length){ listEl.innerHTML = `<p class="emb-empty">Aucun profil. Ajoutez une première part : nom, couleur, photo.</p>`; return; }
+    const ps = vis(), nSleep = groupchat.parts.filter(p=>p.asleep).length;
+    const toggle = nSleep ? `<button type="button" class="gp-sleep-toggle" data-togglesleep>${showSleep ? 'Masquer les éléments en veille' : 'Afficher les éléments en veille ('+nSleep+')'}</button>` : '';
+    if(!ps.length){ listEl.innerHTML = `<p class="emb-empty">${groupchat.parts.length ? 'Aucun participant affiché.' : 'Aucun participant. Ajoutez-en un : nom, couleur, photo.'}</p>` + toggle; return; }
     listEl.innerHTML = ps.map((p,i)=>`
       <div class="gp-row${p.asleep?' asleep':''}" data-id="${p.id}">
         <button type="button" class="gp-photo" data-photo="${p.id}" title="Choisir une photo">${gcAvatar(p,48)}<span class="gp-cam">📷</span></button>
         <div class="gp-main">
-          <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom de la part" maxlength="40">
-          ${p.asleep ? '<span class="gp-sleepbadge">☾ en veille : masquée au-dessus du champ de texte</span>' : ''}
+          <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom du participant" maxlength="40">
+          ${p.asleep ? '<span class="gp-sleepbadge">☾ en veille : masqué au-dessus du champ de texte</span>' : ''}
           <div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
             <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>
           <input type="text" class="gp-name gp-role" data-role="${p.id}" value="${escapeHtml(p.role||'')}" placeholder="Rôle (ex. : me protège de l'abandon)" maxlength="160">
@@ -2367,7 +2370,7 @@ function openPartsModal(onClose){
           <button type="button" data-sleep="${p.id}" title="${p.asleep?'Réafficher':'Mettre en veille'}">${p.asleep?'☀':'☾'}</button>
           <button type="button" data-delpart="${p.id}" title="Supprimer">✕</button>
         </div>
-      </div>`).join('');
+      </div>`).join('') + toggle;
     if(focusId){ const t = listEl.querySelector(`[data-${kind||'name'}="${focusId}"]`); if(t){ t.focus(); if(!kind) t.select(); t.scrollIntoView({block:'nearest'}); } }
   }
   draw();
@@ -2399,7 +2402,11 @@ function openPartsModal(onClose){
     const rt = t.closest('[data-rmtag]'); if(rt){ const [id,i] = rt.dataset.rmtag.split('|'); const p = gcPart(id); if(p){ p.drifts.splice(+i,1); saveGC(); draw(); } return; }
     const ph = t.closest('[data-photo]'); if(ph){ photoFor = ph.dataset.photo; file.value=''; file.click(); return; }
     const rm = t.closest('[data-rmphoto]'); if(rm){ const p = gcPart(rm.dataset.rmphoto); if(p){ p.photo = null; saveGC(); draw(); } return; }
-    const mv = (id,dir)=>{ const ps = groupchat.parts, i = ps.findIndex(x=>x.id===id), j = i+dir; if(i<0||j<0||j>=ps.length) return; [ps[i],ps[j]] = [ps[j],ps[i]]; saveGC(); draw(); };
+    const tg = t.closest('[data-togglesleep]'); if(tg){ showSleep = !showSleep; draw(); return; }
+    const mv = (id,dir)=>{ /* on échange avec le voisin visible (les participants en veille masqués ne comptent pas) */
+      const v = vis(), vi = v.findIndex(x=>x.id===id), nb = v[vi+dir]; if(vi<0 || !nb) return;
+      const ps = groupchat.parts, i = ps.findIndex(x=>x.id===id), j = ps.findIndex(x=>x.id===nb.id);
+      [ps[i],ps[j]] = [ps[j],ps[i]]; saveGC(); draw(); };
     const up = t.closest('[data-up]'); if(up){ mv(up.dataset.up,-1); return; }
     const dn = t.closest('[data-down]'); if(dn){ mv(dn.dataset.down,1); return; }
     const sl = t.closest('[data-sleep]'); if(sl){ const p = gcPart(sl.dataset.sleep); if(p){ p.asleep = !p.asleep; saveGC(); draw(); } return; }
@@ -2420,7 +2427,7 @@ function openPartsModal(onClose){
     catch(e){ alert('Impossible de lire cette image.'); }
   });
   ov.querySelector('#gp-add').addEventListener('click', ()=>{
-    const p = {id:gcNewId(), name:'Nouvelle part', color:GC_PALETTE[groupchat.parts.length % GC_PALETTE.length], photo:null, role:'', drifts:[]};
+    const p = {id:gcNewId(), name:'Nouveau participant', color:GC_PALETTE[groupchat.parts.length % GC_PALETTE.length], photo:null, role:'', drifts:[]};
     groupchat.parts.push(p); newIds.push(p.id); saveGC(); draw(p.id);
     listEl.scrollTop = listEl.scrollHeight;
   });
@@ -4415,7 +4422,7 @@ function renderAccountPanel(){
     `;
     const sInfo = panel.querySelector('#sync-info'), sBtn = panel.querySelector('#sync-now');
     const sRender = (extra)=>{
-      sInfo.innerHTML = `Version du site : ${APP_BUILD}<br>Sur cet appareil : ${groupchat.messages.length} messages · ${groupchat.parts.length} profils · ${traumas.length} souvenirs`
+      sInfo.innerHTML = `Version du site : ${APP_BUILD}<br>Sur cet appareil : ${groupchat.messages.length} messages · ${groupchat.parts.length} participants · ${traumas.length} souvenirs`
         + (lastSyncErrorMsg ? `<br><span style="color:#c0554a">Dernière erreur : ${escapeHtml(lastSyncErrorMsg)}</span>` : '') + (extra ? '<br>'+extra : '');
     };
     sRender();
@@ -4428,13 +4435,13 @@ function renderAccountPanel(){
         if(row){
           const c = JSON.parse(await decryptWithDEK(vault.dek, row.data_iv, row.ciphertext));
           const cg = c.groupchat || {};
-          cloudTxt = `En ligne : ${(cg.messages||[]).length} messages · ${(cg.parts||[]).length} profils · ${(c.traumas||[]).length} souvenirs (modifié le ${new Date(row.updated_at).toLocaleString('fr-FR')})`;
+          cloudTxt = `En ligne : ${(cg.messages||[]).length} messages · ${(cg.parts||[]).length} participants · ${(c.traumas||[]).length} souvenirs (modifié le ${new Date(row.updated_at).toLocaleString('fr-FR')})`;
         }
         await vaultMergeFromCloud(true);
         dirtyVer++; try{ localStorage.setItem(LS_DIRTY,'1'); }catch(e){}
         await vaultPush();
         refreshAfterSync();
-        sRender(cloudTxt + '<br>' + (lastSyncError ? 'Envoi : échec' : 'Après fusion, envoi réussi : ' + groupchat.messages.length + ' messages · ' + groupchat.parts.length + ' profils'));
+        sRender(cloudTxt + '<br>' + (lastSyncError ? 'Envoi : échec' : 'Après fusion, envoi réussi : ' + groupchat.messages.length + ' messages · ' + groupchat.parts.length + ' participants'));
       }catch(e){
         sRender('Erreur : ' + escapeHtml(String((e && (e.message || e.details || e.code)) || e)));
       }
