@@ -890,10 +890,13 @@ function vaultReady(){ return !!(supa && vault.dek && vault.userId); }
 let lastSyncError = false;
 
 let syncTimer = null;
+const LS_DIRTY = 'soloemdr_dirty', LS_SEEN = 'soloemdr_cloud_seen';
+let dirtyVer = 0;
 function scheduleSync(){
+  if(vault.userId){ dirtyVer++; try{ localStorage.setItem(LS_DIRTY,'1'); }catch(e){} } /* changement pas encore envoyé */
   if(!vaultReady()) return;
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(vaultPush, 1000);
+  syncTimer = setTimeout(()=>{ syncTimer = null; vaultPush(); }, 1000);
 }
 /* Un changement peut rester "en attente" jusqu'à 1s (debounce) avant d'être
    réellement envoyé — si l'onglet se ferme ou passe en arrière-plan pendant
@@ -903,13 +906,122 @@ function flushPendingSync(){
 }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushPendingSync(); });
 window.addEventListener('pagehide', flushPendingSync);
+/* ---- synchronisation entre appareils ----
+   Avant, un appareil n'allait jamais relire le coffre après la connexion : il ne faisait que
+   l'écraser avec sa propre version. On suit désormais la dernière version du coffre vue par cet
+   appareil (LS_SEEN) ; si un autre appareil a écrit entre-temps, on la relit — en la remplaçant si
+   cet appareil n'a rien en attente, en FUSIONNANT (union par identifiant) sinon, jamais en écrasant. */
+function seenMs(){ const v = localStorage.getItem(LS_SEEN); return v ? +v : null; }
+function setSeen(iso){ try{ const t = Date.parse(iso); if(t) localStorage.setItem(LS_SEEN, String(t)); }catch(e){} }
+function currentPayloadObj(){ return {traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems, groupchat}; }
+function mergeById(local, cloud){
+  const key = x=> (x && x.id!==undefined) ? 'id:'+x.id : 'j:'+JSON.stringify(x);
+  const out = Array.isArray(local) ? local.slice() : [], have = new Set(out.map(key));
+  (Array.isArray(cloud) ? cloud : []).forEach(x=>{ if(!have.has(key(x))){ out.push(x); have.add(key(x)); } });
+  return out;
+}
+function mergeCloudInto(c){
+  traumas = mergeById(traumas, c.traumas); folders = mergeById(folders, c.folders); recentTraumas = mergeById(recentTraumas, c.recentTraumas);
+  if(Array.isArray(c.embodiment)) embodimentItems = mergeById(embodimentItems, c.embodiment);
+  if(Array.isArray(c.commandments)) rulesItems = mergeById(rulesItems, c.commandments);
+  if(Array.isArray(c.sosAffirmations)) sosAffirmations = sosAffirmations.concat(c.sosAffirmations.filter(x=> !sosAffirmations.includes(x)));
+  const cg = gcFix(c.groupchat);
+  if(cg){
+    groupchat.parts = mergeById(groupchat.parts, cg.parts);
+    const byId = new Map(groupchat.messages.map(m=>[m.id, m]));
+    cg.messages.forEach(m=>{
+      const l = byId.get(m.id);
+      if(!l){ groupchat.messages.push(m); byId.set(m.id, m); return; }
+      if(Array.isArray(m.reactions)){
+        const rs = (l.reactions = l.reactions || []);
+        m.reactions.forEach(r=>{ if(!rs.some(x=>x.e===r.e && x.by===r.by)) rs.push(r); });
+      }
+    });
+    groupchat.messages.sort((x,y)=> (x.ts||0)-(y.ts||0));
+  }
+  try{
+    localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas)); localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
+    localStorage.setItem(LS_RECENT_TRAUMAS, JSON.stringify(recentTraumas)); localStorage.setItem(LS_EMBODIMENT, JSON.stringify(embodimentItems));
+    localStorage.setItem(LS_RULES, JSON.stringify(rulesItems)); localStorage.setItem(LS_SOS_AFF, JSON.stringify(sosAffirmations));
+    localStorage.setItem(LS_GC, JSON.stringify(groupchat));
+  }catch(e){}
+}
+async function vaultFetchHead(){
+  const {data, error} = await supa.from('vaults').select('updated_at').eq('user_id', vault.userId).maybeSingle();
+  if(error) throw error;
+  return data;
+}
+async function vaultMergeFromCloud(forceMerge){
+  const {data:row, error} = await supa.from('vaults').select('data_iv,ciphertext,updated_at').eq('user_id', vault.userId).maybeSingle();
+  if(error) throw error;
+  if(!row) return null;
+  const seen = seenMs(), dirty = !!localStorage.getItem(LS_DIRTY);
+  if(!forceMerge && seen!==null && !dirty) await vaultPull(row);
+  else mergeCloudInto(JSON.parse(await decryptWithDEK(vault.dek, row.data_iv, row.ciphertext)));
+  setSeen(row.updated_at);
+  return row;
+}
+const SAFE_REFRESH = /^(home|library|embodiment|rules|groupchat|recentlibrary|folder_.*)$/;
+function refreshAfterSync(){
+  const a = document.activeElement;
+  if(SAFE_REFRESH.test(currentPhase||'') && currentFn && !document.querySelector('.modal-overlay') && !(a && a.matches && a.matches('input,textarea'))){
+    try{ currentFn(); }catch(e){}
+  }
+}
+let syncInBusy = false;
+async function vaultSyncIn(){
+  if(!vaultReady() || syncInBusy || syncTimer) return false;
+  syncInBusy = true;
+  try{
+    const head = await vaultFetchHead();
+    if(!head) return false;
+    const seen = seenMs();
+    if(seen!==null && Date.parse(head.updated_at)===seen){ if(localStorage.getItem(LS_DIRTY)) scheduleSync(); return false; }
+    const before = JSON.stringify(currentPayloadObj());
+    const dirty = !!localStorage.getItem(LS_DIRTY);
+    await vaultMergeFromCloud(false);
+    if(dirty || seen===null) scheduleSync(); /* renvoie la version fusionnée */
+    const changed = JSON.stringify(currentPayloadObj()) !== before;
+    if(changed) refreshAfterSync();
+    return changed;
+  }catch(e){ return false; }
+  finally{ syncInBusy = false; }
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') vaultSyncIn(); });
+window.addEventListener('focus', ()=>{ vaultSyncIn(); });
+setInterval(()=>{ if(document.visibilityState==='visible') vaultSyncIn(); }, 60000);
+
 async function vaultPush(){
   if(!vaultReady()) return;
+  const v = dirtyVer;
   try{
-    const payload = JSON.stringify({traumas, folders, settings, recentTraumas, embodiment: embodimentItems, sosAffirmations, commandments: rulesItems, groupchat});
-    const {ivB64, ctB64} = await encryptWithDEK(vault.dek, payload);
-    const {error} = await supa.from('vaults').update({data_iv:ivB64, ciphertext:ctB64, updated_at:new Date().toISOString()}).eq('user_id', vault.userId);
-    if(error) throw error;
+    let done = false;
+    for(let attempt=0; attempt<3 && !done; attempt++){
+      const head = await vaultFetchHead();
+      if(!head) throw new Error('coffre introuvable');
+      let guard = head.updated_at;
+      if(seenMs()===null || Date.parse(head.updated_at)!==seenMs()){
+        /* un autre appareil a écrit depuis notre dernière lecture : on fusionne avant d'envoyer */
+        const row = await vaultMergeFromCloud(true);
+        if(row){ guard = row.updated_at; refreshAfterSync(); }
+      }
+      const {ivB64, ctB64} = await encryptWithDEK(vault.dek, JSON.stringify(currentPayloadObj()));
+      const ts = new Date().toISOString();
+      const upd = {data_iv:ivB64, ciphertext:ctB64, updated_at:ts};
+      const {data, error} = await supa.from('vaults').update(upd).eq('user_id', vault.userId).eq('updated_at', guard).select('updated_at');
+      if(error) throw error;
+      if(data && data.length){ setSeen(ts); done = true; break; }
+      /* 0 ligne : soit quelqu'un a écrit juste entre-temps (on recommence), soit le filtre n'a pas
+         correspondu alors que rien n'a changé (on envoie alors sans condition) */
+      const h2 = await vaultFetchHead();
+      if(h2 && Date.parse(h2.updated_at)===Date.parse(guard)){
+        const {error:e2} = await supa.from('vaults').update(upd).eq('user_id', vault.userId);
+        if(e2) throw e2;
+        setSeen(ts); done = true;
+      }
+    }
+    if(!done) throw new Error('conflit de synchronisation');
+    if(v===dirtyVer){ try{ localStorage.removeItem(LS_DIRTY); }catch(e){} }
     lastSyncError = false;
   }catch(e){
     lastSyncError = true;
@@ -926,6 +1038,8 @@ async function vaultPull(row){
   if(Array.isArray(parsed.commandments)){ rulesItems = parsed.commandments; localStorage.setItem(LS_RULES, JSON.stringify(rulesItems)); }
   if(Array.isArray(parsed.sosAffirmations)){ sosAffirmations = parsed.sosAffirmations; localStorage.setItem(LS_SOS_AFF, JSON.stringify(sosAffirmations)); }
   settings = Object.assign(settings, parsed.settings||{});
+  if(row.updated_at) setSeen(row.updated_at);
+  try{ localStorage.removeItem(LS_DIRTY); }catch(e){}
   localStorage.setItem(LS_TRAUMAS, JSON.stringify(traumas));
   localStorage.setItem(LS_FOLDERS, JSON.stringify(folders));
   localStorage.setItem(LS_RECENT_TRAUMAS, JSON.stringify(recentTraumas));
@@ -986,7 +1100,7 @@ async function vaultLogin(email, password){
   return {conflict:false};
 }
 
-async function vaultResolveKeepLocal(){ await vaultPush(); localStorage.setItem(LS_SYNCED, '1'); }
+async function vaultResolveKeepLocal(){ try{ const h = await vaultFetchHead(); if(h) setSeen(h.updated_at); }catch(e){} await vaultPush(); localStorage.setItem(LS_SYNCED, '1'); }
 async function vaultResolveUseCloud(row){ await vaultPull(row); localStorage.setItem(LS_SYNCED, '1'); }
 
 async function vaultLogout(){
@@ -999,6 +1113,7 @@ async function vaultLogout(){
   traumas = []; folders = []; recentTraumas = []; embodimentItems = []; sosAffirmations = []; rulesItems = []; groupchat = {parts:[], messages:[]};
   localStorage.removeItem(LS_RULES);
   localStorage.removeItem(LS_GC);
+  localStorage.removeItem(LS_SEEN); localStorage.removeItem(LS_DIRTY);
   localStorage.removeItem(LS_EMBODIMENT);
   localStorage.removeItem(LS_SOS_AFF);
   localStorage.removeItem(LS_TRAUMAS);
@@ -1167,6 +1282,7 @@ let vaultRestoreDone = false, pendingGateRerender = false;
 const vaultRestorePromise = restoreVaultFromCache().catch(()=> false).then(()=>{
   vaultRestoreDone = true;
   renderAccountPanel();
+  setTimeout(()=> vaultSyncIn(), 0);
   if(pendingGateRerender){ pendingGateRerender = false; if(currentFn) currentFn(); }
 });
 
