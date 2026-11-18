@@ -760,7 +760,13 @@ try{
 
 const cryptoEnc = new TextEncoder();
 const cryptoDec = new TextDecoder();
-function b64enc(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+/* par morceaux : `String.fromCharCode(...tout)` dépasse la pile d'appels (~65 000 octets sur Safari mobile)
+   dès que le coffre grossit, ce qui bloquait toute synchronisation */
+function b64enc(buf){
+  const b = new Uint8Array(buf); let s = '';
+  for(let i=0; i<b.length; i+=0x4000) s += String.fromCharCode.apply(null, b.subarray(i, i+0x4000));
+  return btoa(s);
+}
 function b64dec(str){ return Uint8Array.from(atob(str), c=>c.charCodeAt(0)); }
 function randBytes(n){ return crypto.getRandomValues(new Uint8Array(n)); }
 
