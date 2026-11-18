@@ -345,14 +345,16 @@
   .gd-l{ margin:6px 0 2px; font-size:12.5px; color:var(--ink-soft); text-align:left; }
   .gd-chips{ display:flex; flex-wrap:wrap; gap:6px; }
   .gd-tag{ background:var(--bg-soft); border:1.5px solid var(--line); color:var(--ink); border-radius:14px; padding:4px 12px; font-size:13px; cursor:pointer; }
-  .gd-tag.on{ border-color:#E0675A; background:color-mix(in srgb, #E0675A 28%, var(--bg-soft)); }
+  .gd-tag.on{ border-color:var(--teal-deep); background:color-mix(in srgb, var(--teal) 28%, var(--bg-soft)); }
   .gd-input{ width:100%; box-sizing:border-box; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:9px 12px; font-size:14px; font-family:inherit; }
   textarea.gd-input{ min-height:90px; resize:vertical; line-height:1.45; }
   .gp-tags{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
   .gp-dl{ font-size:11.5px; color:var(--ink-soft); }
-  .gp-tag{ display:inline-flex; align-items:center; gap:4px; background:color-mix(in srgb, #E0675A 22%, var(--bg-soft)); border:1px solid color-mix(in srgb, #E0675A 50%, var(--line)); border-radius:12px; padding:1px 4px 1px 10px; font-size:12.5px; }
+  .gp-tag{ display:inline-flex; align-items:center; gap:4px; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:12px; padding:1px 4px 1px 10px; font-size:12.5px; }
   .gp-tag.ro{ padding:1px 10px; }
   .gp-tag button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:11px; padding:2px 4px; }
+  .gp-tagadd{ width:24px; height:24px; border-radius:50%; border:1px dashed var(--line); background:none; color:var(--ink-soft); cursor:pointer; font-size:15px; line-height:1; padding:0; }
+  .gp-tagadd:hover{ color:var(--ink); border-color:var(--teal-deep); }
   .gp-tagin{ background:none; border:1px dashed var(--line); color:var(--ink); border-radius:12px; padding:2px 10px; font-size:12.5px; width:130px; font-family:inherit; }
   .gc-card-l{ margin:6px 0 0 !important; font-size:11.5px !important; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); }
   .gc-mention-box{ position:absolute; left:0; bottom:calc(100% - 4px); z-index:5; flex-direction:column; min-width:200px; max-width:min(320px,90%); max-height:200px; overflow:auto; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:4px; box-shadow:0 8px 22px rgba(0,0,0,.35); }
@@ -2328,7 +2330,7 @@ function openPartsModal(onClose){
     </div>`;
   document.body.appendChild(ov);
   const listEl = ov.querySelector('#gp-list');
-  let showSleep = false; const newIds = []; const openColor = new Set();
+  let showSleep = false, addingTag = null; const newIds = []; const openColor = new Set();
   const vis = ()=> showSleep ? groupchat.parts : groupchat.parts.filter(p=>!p.asleep);
   function draw(focusId, kind){
     const ps = vis(), nSleep = groupchat.parts.filter(p=>p.asleep).length;
@@ -2343,7 +2345,7 @@ function openPartsModal(onClose){
           ${openColor.has(p.id) ? `<div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
             <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>` : ''}
           <input type="text" class="gp-name gp-role" data-role="${p.id}" value="${escapeHtml(p.role||'')}" placeholder="Rôle (ex. : me protège de l'abandon)" maxlength="160">
-          <div class="gp-tags"><span class="gp-dl">Dérives</span>${(p.drifts||[]).map((t,i)=>`<span class="gp-tag">${escapeHtml(t)}<button type="button" data-rmtag="${p.id}|${i}" title="Retirer">✕</button></span>`).join('')}<input type="text" class="gp-tagin" data-tagin="${p.id}" placeholder="+ ajouter (Entrée)" maxlength="40"></div>
+          <div class="gp-tags"><span class="gp-dl">Dérives</span>${(p.drifts||[]).map((t,i)=>`<span class="gp-tag">${escapeHtml(t)}<button type="button" data-rmtag="${p.id}|${i}" title="Retirer">✕</button></span>`).join('')}${addingTag===p.id ? `<input type="text" class="gp-tagin" data-tagin="${p.id}" placeholder="Nouvelle dérive" maxlength="40">` : `<button type="button" class="gp-tagadd" data-addtag="${p.id}" title="Ajouter une dérive" aria-label="Ajouter une dérive">+</button>`}</div>
         </div>
         <div class="emb-row-actions">
           <button type="button" data-up="${p.id}" ${i===0?'disabled':''} title="Monter">↑</button>
@@ -2366,11 +2368,18 @@ function openPartsModal(onClose){
   const addTag = (id, val, refocus)=>{
     const p = gcPart(id), v = (val||'').trim().replace(/,+$/,'').trim(); if(!p || !v) return false;
     if(!p.drifts.some(t=>t.toLowerCase()===v.toLowerCase())){ p.drifts.push(v); saveGC(); }
+    if(!refocus) addingTag = null;
     draw(refocus ? id : undefined, refocus ? 'tagin' : undefined); return true;
   };
   listEl.addEventListener('keydown', e=>{
     const ti = e.target.closest('[data-tagin]');
-    if(ti && (e.key==='Enter' || e.key===',')){ e.preventDefault(); addTag(ti.dataset.tagin, ti.value, true); }
+    if(ti && (e.key==='Enter' || e.key===',')){ e.preventDefault(); if(ti.value.trim()) addTag(ti.dataset.tagin, ti.value, true); else { addingTag = null; draw(); } }
+    else if(ti && e.key==='Escape'){ e.stopPropagation(); addingTag = null; draw(); }
+  });
+  /* champ de saisie fermé quand on le quitte sans rien écrire */
+  listEl.addEventListener('focusout', e=>{
+    const ti = e.target.closest && e.target.closest('[data-tagin]'); if(!ti) return;
+    setTimeout(()=>{ if(addingTag===ti.dataset.tagin && ti.isConnected && !ti.value.trim()){ addingTag = null; draw(); } }, 160);
   });
   listEl.addEventListener('change', e=>{
     if(e.target.closest('[data-cpick]')){ draw(); return; }
@@ -2382,6 +2391,7 @@ function openPartsModal(onClose){
     if(col){ const [id,c] = col.dataset.color.split('|'); const p = gcPart(id); if(p){ p.color = c; saveGC(); draw(); } return; }
     const rt = t.closest('[data-rmtag]'); if(rt){ const [id,i] = rt.dataset.rmtag.split('|'); const p = gcPart(id); if(p){ p.drifts.splice(+i,1); saveGC(); draw(); } return; }
     const ct = t.closest('[data-colortoggle]'); if(ct){ const id = ct.dataset.colortoggle; if(openColor.has(id)) openColor.delete(id); else openColor.add(id); draw(); return; }
+    const at = t.closest('[data-addtag]'); if(at){ addingTag = at.dataset.addtag; draw(addingTag, 'tagin'); return; }
     const tg = t.closest('[data-togglesleep]'); if(tg){ showSleep = !showSleep; draw(); return; }
     const mv = (id,dir)=>{ /* on échange avec le voisin visible (les participants en veille masqués ne comptent pas) */
       const v = vis(), vi = v.findIndex(x=>x.id===id), nb = v[vi+dir]; if(vi<0 || !nb) return;
