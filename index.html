@@ -2318,23 +2318,6 @@ function openPartCard(id, onClose){
 }
 
 /* --- profils des parts --- */
-function gcResizePhoto(file){
-  return new Promise((resolve, reject)=>{
-    const url = URL.createObjectURL(file), img = new Image();
-    img.onload = ()=>{
-      try{
-        const N = 160, c = document.createElement('canvas'); c.width = c.height = N;
-        const x = c.getContext('2d'); x.fillStyle = '#16242C'; x.fillRect(0,0,N,N);
-        const side = Math.min(img.width, img.height);
-        x.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, N, N);
-        URL.revokeObjectURL(url);
-        resolve(c.toDataURL('image/jpeg', 0.82));
-      }catch(e){ reject(e); }
-    };
-    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('image')); };
-    img.src = url;
-  });
-}
 function openPartsModal(onClose){
   const ov = document.createElement('div'); ov.className = 'modal-overlay';
   ov.innerHTML = `
@@ -2342,11 +2325,10 @@ function openPartsModal(onClose){
       <div class="modal-head"><h3>Participants</h3></div>
       <div class="modal-body" id="gp-list"></div>
       <div class="modal-foot"><button type="button" id="gp-add">+ Ajouter un participant</button><button type="button" id="gp-done" class="primary">Terminer</button></div>
-      <input type="file" id="gp-file" accept="image/*" style="display:none;">
     </div>`;
   document.body.appendChild(ov);
-  const listEl = ov.querySelector('#gp-list'), file = ov.querySelector('#gp-file');
-  let photoFor = null, showSleep = false; const newIds = [];
+  const listEl = ov.querySelector('#gp-list');
+  let showSleep = false; const newIds = []; const openColor = new Set();
   const vis = ()=> showSleep ? groupchat.parts : groupchat.parts.filter(p=>!p.asleep);
   function draw(focusId, kind){
     const ps = vis(), nSleep = groupchat.parts.filter(p=>p.asleep).length;
@@ -2354,15 +2336,14 @@ function openPartsModal(onClose){
     if(!ps.length){ listEl.innerHTML = `<p class="emb-empty">${groupchat.parts.length ? 'Aucun participant affiché.' : 'Aucun participant. Ajoutez-en un : nom, couleur, photo.'}</p>` + toggle; return; }
     listEl.innerHTML = ps.map((p,i)=>`
       <div class="gp-row${p.asleep?' asleep':''}" data-id="${p.id}">
-        <button type="button" class="gp-photo" data-photo="${p.id}" title="Choisir une photo">${gcAvatar(p,48)}<span class="gp-cam">📷</span></button>
+        <button type="button" class="gp-photo" data-colortoggle="${p.id}" title="Choisir la couleur">${gcAvatar(p,48)}</button>
         <div class="gp-main">
           <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom du participant" maxlength="40">
           ${p.asleep ? '<span class="gp-sleepbadge">☾ en veille : masqué au-dessus du champ de texte</span>' : ''}
-          <div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
-            <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>
+          ${openColor.has(p.id) ? `<div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
+            <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>` : ''}
           <input type="text" class="gp-name gp-role" data-role="${p.id}" value="${escapeHtml(p.role||'')}" placeholder="Rôle (ex. : me protège de l'abandon)" maxlength="160">
           <div class="gp-tags"><span class="gp-dl">Dérives</span>${(p.drifts||[]).map((t,i)=>`<span class="gp-tag">${escapeHtml(t)}<button type="button" data-rmtag="${p.id}|${i}" title="Retirer">✕</button></span>`).join('')}<input type="text" class="gp-tagin" data-tagin="${p.id}" placeholder="+ ajouter (Entrée)" maxlength="40"></div>
-          ${p.photo ? `<button type="button" class="gp-rm" data-rmphoto="${p.id}">Retirer la photo</button>` : ''}
         </div>
         <div class="emb-row-actions">
           <button type="button" data-up="${p.id}" ${i===0?'disabled':''} title="Monter">↑</button>
@@ -2400,8 +2381,7 @@ function openPartsModal(onClose){
     const col = t.closest('[data-color]');
     if(col){ const [id,c] = col.dataset.color.split('|'); const p = gcPart(id); if(p){ p.color = c; saveGC(); draw(); } return; }
     const rt = t.closest('[data-rmtag]'); if(rt){ const [id,i] = rt.dataset.rmtag.split('|'); const p = gcPart(id); if(p){ p.drifts.splice(+i,1); saveGC(); draw(); } return; }
-    const ph = t.closest('[data-photo]'); if(ph){ photoFor = ph.dataset.photo; file.value=''; file.click(); return; }
-    const rm = t.closest('[data-rmphoto]'); if(rm){ const p = gcPart(rm.dataset.rmphoto); if(p){ p.photo = null; saveGC(); draw(); } return; }
+    const ct = t.closest('[data-colortoggle]'); if(ct){ const id = ct.dataset.colortoggle; if(openColor.has(id)) openColor.delete(id); else openColor.add(id); draw(); return; }
     const tg = t.closest('[data-togglesleep]'); if(tg){ showSleep = !showSleep; draw(); return; }
     const mv = (id,dir)=>{ /* on échange avec le voisin visible (les participants en veille masqués ne comptent pas) */
       const v = vis(), vi = v.findIndex(x=>x.id===id), nb = v[vi+dir]; if(vi<0 || !nb) return;
@@ -2419,12 +2399,6 @@ function openPartsModal(onClose){
       }
       groupchat.parts = groupchat.parts.filter(x=>x.id!==dl.dataset.delpart); saveGC(); draw();
     }
-  });
-  file.addEventListener('change', async ()=>{
-    const f = file.files[0]; const p = photoFor && gcPart(photoFor);
-    if(!f || !p) return;
-    try{ p.photo = await gcResizePhoto(f); saveGC(); draw(); }
-    catch(e){ alert('Impossible de lire cette image.'); }
   });
   ov.querySelector('#gp-add').addEventListener('click', ()=>{
     const p = {id:gcNewId(), name:'Nouveau participant', color:GC_PALETTE[groupchat.parts.length % GC_PALETTE.length], photo:null, role:'', drifts:[]};
