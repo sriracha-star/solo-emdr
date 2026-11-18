@@ -65,6 +65,7 @@
   #account-panel .sub{ margin:0 0 10px; font-size:12.5px; max-width:none; }
   #account-panel button{ width:100%; margin-top:0; }
   #account-panel button + button{ margin-top:8px; }
+  .sync-diag{ margin:6px 0 10px; } .sync-diag button{ width:100%; margin-bottom:4px; }
 
   #settings-panel{ position:fixed; top:56px; left:320px; z-index:60; width:290px; background:var(--surface); border:1px solid var(--line);
     border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); display:none; }
@@ -887,7 +888,8 @@ async function restoreVaultFromCache(){
 let vault = { dek:null, userId:null, email:null };
 const LS_SYNCED = 'soloemdr_synced_before';
 function vaultReady(){ return !!(supa && vault.dek && vault.userId); }
-let lastSyncError = false;
+let lastSyncError = false, lastSyncErrorMsg = '';
+const APP_BUILD = 'sync-v2 · 18 nov.';
 
 let syncTimer = null;
 const LS_DIRTY = 'soloemdr_dirty', LS_SEEN = 'soloemdr_cloud_seen';
@@ -1022,9 +1024,10 @@ async function vaultPush(){
     }
     if(!done) throw new Error('conflit de synchronisation');
     if(v===dirtyVer){ try{ localStorage.removeItem(LS_DIRTY); }catch(e){} }
-    lastSyncError = false;
+    lastSyncError = false; lastSyncErrorMsg = '';
   }catch(e){
     lastSyncError = true;
+    lastSyncErrorMsg = String((e && (e.message || e.details || e.code)) || e || 'erreur inconnue').slice(0,160);
   }
   updateConnDot();
 }
@@ -4400,9 +4403,37 @@ function renderAccountPanel(){
       <label class="sub" for="acc-firstname" style="display:block;margin:8px 0 3px;">Prénom (affiché dans Conversation)</label>
       <input type="text" id="acc-firstname" value="${escapeHtml(settings.firstName||'')}" placeholder="Votre prénom" maxlength="40" style="width:100%;box-sizing:border-box;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:13.5px;font-family:inherit;margin-bottom:8px;">
       ${lastSyncError ? `<p class="sub" style="color:#c0554a;">La dernière synchronisation a échoué. Vos changements récents ne sont peut-être pas enregistrés sur votre compte.</p>` : ''}
+      <div class="sync-diag"><p class="sub" id="sync-info" style="font-size:11.5px;line-height:1.5;"></p><button type="button" id="sync-now">Synchroniser maintenant</button></div>
       <button id="acc-panel-logout">Se déconnecter</button>
       ${accountBackupHtml()}
     `;
+    const sInfo = panel.querySelector('#sync-info'), sBtn = panel.querySelector('#sync-now');
+    const sRender = (extra)=>{
+      sInfo.innerHTML = `Version du site : ${APP_BUILD}<br>Sur cet appareil : ${groupchat.messages.length} messages · ${groupchat.parts.length} profils · ${traumas.length} souvenirs`
+        + (lastSyncErrorMsg ? `<br><span style="color:#c0554a">Dernière erreur : ${escapeHtml(lastSyncErrorMsg)}</span>` : '') + (extra ? '<br>'+extra : '');
+    };
+    sRender();
+    sBtn.addEventListener('click', async ()=>{
+      sBtn.disabled = true; sRender('Synchronisation…');
+      try{
+        const {data:row, error} = await supa.from('vaults').select('data_iv,ciphertext,updated_at').eq('user_id', vault.userId).maybeSingle();
+        if(error) throw error;
+        let cloudTxt = 'aucune version en ligne';
+        if(row){
+          const c = JSON.parse(await decryptWithDEK(vault.dek, row.data_iv, row.ciphertext));
+          const cg = c.groupchat || {};
+          cloudTxt = `En ligne : ${(cg.messages||[]).length} messages · ${(cg.parts||[]).length} profils · ${(c.traumas||[]).length} souvenirs (modifié le ${new Date(row.updated_at).toLocaleString('fr-FR')})`;
+        }
+        await vaultMergeFromCloud(true);
+        dirtyVer++; try{ localStorage.setItem(LS_DIRTY,'1'); }catch(e){}
+        await vaultPush();
+        refreshAfterSync();
+        sRender(cloudTxt + '<br>' + (lastSyncError ? 'Envoi : échec' : 'Après fusion, envoi réussi : ' + groupchat.messages.length + ' messages · ' + groupchat.parts.length + ' profils'));
+      }catch(e){
+        sRender('Erreur : ' + escapeHtml(String((e && (e.message || e.details || e.code)) || e)));
+      }
+      sBtn.disabled = false;
+    });
     const fn = panel.querySelector('#acc-firstname');
     fn.addEventListener('keydown', e=> e.stopPropagation());
     fn.addEventListener('input', ()=>{ settings.firstName = fn.value.trim(); saveSettings(); });
