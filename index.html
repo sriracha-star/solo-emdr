@@ -308,8 +308,15 @@
   .gc-row button{ flex:0 0 auto; width:42px; height:42px; border-radius:50%; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   #gc-send{ background:var(--teal); border-color:var(--teal); color:#fff; }
   #gc-shake{ color:var(--teal-deep); }
-  @media (max-width:560px){ .gc-head-actions button span{ display:none; } .gc-head h2{ font-size:19px; } }
+  @media (max-width:560px){ .gc-head-actions button span{ display:none; } .gc-head h2{ font-size:18px; } .gc-head-actions{ gap:4px; } .gc-head-actions button{ padding:6px 8px; } .gc-wrap{ padding:0 8px; } }
   .gc-compose{ position:relative; }
+  .gc-rule-label{ font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--teal-deep); margin-bottom:3px; }
+  .gc-rule-pick{ display:flex; gap:12px; align-items:flex-start; text-align:left; width:100%; background:var(--bg-soft); border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:10px 12px; cursor:pointer; font-size:14px; line-height:1.45; font-family:inherit; }
+  .gc-rule-pick:hover{ border-color:var(--teal-deep); } .gc-rule-pick b{ color:var(--teal-deep); min-width:22px; }
+  .gp-row.asleep{ opacity:.65; } .gp-sleepbadge{ font-size:11.5px; color:var(--ink-soft); }
+  .gc-hist-item-btn{ font-size:12px; padding:5px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-soft); color:var(--ink); cursor:pointer; flex:0 0 auto; align-self:center; }
+  .qb-time{ font-family:var(--font-display); font-size:38px; text-align:center; color:var(--teal-deep); margin:4px 0; }
+  @media (max-width:560px){ .gc-row{ gap:6px; } .gc-row button{ width:38px; height:38px; } .gc-row #gc-drift{ width:38px; } }
   .gc-join{ text-align:center; margin:10px 0; } .gc-join span{ font-size:12px; color:var(--ink-soft); background:var(--bg-soft); border-radius:10px; padding:4px 12px; }
   .gc-drift-wrap{ justify-content:center; margin:14px 0; }
   .gc-drift{ position:relative; width:min(88%,580px); text-align:center; border:2px solid var(--gcred,#E0675A); border-radius:14px; background:color-mix(in srgb, #E0675A 14%, var(--bg)); padding:10px 16px 8px; }
@@ -1545,6 +1552,7 @@ function gcAlertAnim(m){
   el.innerHTML = `<div class="gc-alert-box"><div class="gc-alert-ico">⚠</div><div class="gc-alert-t">Alerte dérive !</div><div class="gc-alert-s">${escapeHtml(tw.name)} · ${escapeHtml(m.tag)}</div></div>`;
   document.body.appendChild(el); setTimeout(()=> el.remove(), 2300);
 }
+function gcActive(){ return groupchat.parts.filter(p=>!p.asleep); }
 function gcNewId(){ return 'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function gcPart(id){ return groupchat.parts.find(p=>p.id===id) || null; }
 function gcMeName(){ return ((typeof settings!=='undefined' && settings.firstName)||'').trim() || 'Moi'; }
@@ -1630,13 +1638,15 @@ function renderGroupChat(){
   s.className = 'gc-view';
   document.body.classList.add('hide-l','hide-r');
   gcReplyTo = null; gcEditing = null; gcQuery = ''; gcLimit = 200;
-  if(gcSender!=='me' && !gcPart(gcSender)) gcSender = 'me';
+  if(gcSender!=='me' && (!gcPart(gcSender) || gcPart(gcSender).asleep)) gcSender = 'me';
   s.innerHTML = `
     <div class="gc-wrap fs">
       <div class="gc-head">
         <h2>Conversation</h2>
         <div class="gc-head-actions">
           <button type="button" id="gc-search-btn" title="Rechercher" aria-label="Rechercher"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+          <button type="button" id="gc-sleep-btn" title="Profils en veille" aria-label="Profils en veille" style="display:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg><span>En veille</span></button>
+          <button type="button" id="gc-bls-btn" title="BLS rapide (son uniquement)" aria-label="BLS rapide"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v-3a8 8 0 0116 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></svg><span>BLS</span></button>
           <button type="button" id="gc-hist-btn" title="Historique des consensus" aria-label="Historique des consensus">${GC_SHAKE(18)}<span>Consensus</span></button>
           <button type="button" id="gc-parts-btn" title="Profils des parts" aria-label="Profils des parts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M17 13.8c2.4 0 4 1.7 4 4.2"/></svg><span>Profils</span></button>
         </div>
@@ -1653,6 +1663,7 @@ function renderGroupChat(){
         <div class="gc-senders" id="gc-senders"></div>
         <div class="gc-row">
           <button type="button" id="gc-shake" title="Rédiger un message de consensus" aria-label="Message de consensus">${GC_SHAKE(22)}</button>
+          <button type="button" id="gc-rule" title="Rappeler un commandement" aria-label="Rappeler un commandement"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="5" cy="7" r="1.3" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="5" cy="17" r="1.3" fill="currentColor" stroke="none"/><path d="M10 7h11M10 12h11M10 17h11"/></svg></button>
           <button type="button" id="gc-drift" class="gc-drift-btn" title="Signaler une dérive" aria-label="Alerte dérive"><b>⚠</b></button>
           <textarea id="gc-text" rows="1"></textarea>
           <button type="button" id="gc-send" title="Envoyer" aria-label="Envoyer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-7-7-1z"/></svg></button>
@@ -1671,7 +1682,7 @@ function renderGroupChat(){
 
   function msgHtml(m, q){
     if(m.kind==='join'){ const jp = gcPart(m.from); return `<div class="gc-join" data-id="${m.id}"><span>${escapeHtml(jp ? jp.name : (m.name||'Une part'))} a rejoint la conversation</span></div>`; }
-    const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-react="${m.id}" title="Réagir">☺</button><button type="button" data-edit="${m.id}" title="Modifier">✎</button><button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
+    const acts = `<div class="gc-actions"><button type="button" data-reply="${m.id}" title="Répondre">↩</button><button type="button" data-react="${m.id}" title="Réagir">☺</button>${m.kind==='rule' ? '' : `<button type="button" data-edit="${m.id}" title="Modifier">✎</button>`}<button type="button" data-del="${m.id}" title="Supprimer">✕</button></div>`;
     const reacts = (()=>{
       const rs = m.reactions||[]; if(!rs.length) return '';
       const by = {}; rs.forEach(r=>{ (by[r.e] = by[r.e]||[]).push(r.by); });
@@ -1717,6 +1728,7 @@ function renderGroupChat(){
       ${w.me ? '' : `<span class="gc-av-btn" data-card="${m.from}" title="Voir le profil">${gcAvatar(w, 30)}</span>`}
       <div class="gc-bubble" style="--c:${c};--bc:${bg}">
         ${w.me ? '' : `<div class="gc-name" style="color:${c}" data-card="${m.from}">${escapeHtml(w.name)}</div>`}
+        ${m.kind==='rule' ? `<div class="gc-rule-label">Commandement n°${m.num}</div>` : ''}
         ${quote}
         <div class="gc-text">${gcHighlight(m.text, q)}</div>
         ${reacts}
@@ -1729,7 +1741,7 @@ function renderGroupChat(){
     const q = gcQuery.trim();
     const all = groupchat.messages;
     let list = all, more = false;
-    if(q){ list = all.filter(m=> m.kind!=='join' && (gcMatches(m.text||'',q).length || (m.tag && gcMatches(m.tag,q).length) || (m.kind==='msg' && gcMatches(gcWho(m.from).name,q).length))); }
+    if(q){ list = all.filter(m=> m.kind!=='join' && (gcMatches(m.text||'',q).length || (m.tag && gcMatches(m.tag,q).length) || ((m.kind==='msg' || m.kind==='rule') && gcMatches(gcWho(m.from).name,q).length))); }
     else if(all.length>gcLimit){ list = all.slice(all.length-gcLimit); more = true; }
     $q('#gc-count').textContent = q ? (list.length+' résultat'+(list.length>1?'s':'')) : '';
     const prevH = thread.scrollHeight, prevTop = thread.scrollTop;
@@ -1771,7 +1783,10 @@ function renderGroupChat(){
   }
 
   function drawSenders(){
-    const opts = [{id:'me', w:gcWho('me')}].concat(groupchat.parts.map(p=>({id:p.id, w:gcWho(p.id)})));
+    if(gcSender!=='me' && (!gcPart(gcSender) || gcPart(gcSender).asleep)) gcSender = 'me';
+    const sl = groupchat.parts.filter(p=>p.asleep).length, sb = $q('#gc-sleep-btn');
+    sb.style.display = sl ? '' : 'none'; sb.querySelector('span').textContent = 'En veille ('+sl+')';
+    const opts = [{id:'me', w:gcWho('me')}].concat(gcActive().map(p=>({id:p.id, w:gcWho(p.id)})));
     $q('#gc-senders').innerHTML = opts.map(o=>{
       const c = o.w.me ? 'var(--teal)' : o.w.color;
       return `<button type="button" class="gc-chip${gcSender===o.id?' on':''}" data-sender="${o.id}" style="--c:${c}" title="Écrire en tant que ${escapeHtml(o.w.name)}${gcPart(o.id)&&gcPart(o.id).role?' — '+escapeHtml(gcPart(o.id).role):''}">${gcAvatar(o.w,22)}<span>${escapeHtml(o.w.name)}</span></button>`;
@@ -1779,7 +1794,7 @@ function renderGroupChat(){
     const rpl = gcReplyTo && msgById(gcReplyTo);
     ta.placeholder = gcEditing ? 'Modifier le message…'
       : (rpl && rpl.kind==='drift' && rpl.target===gcSender) ? gcWho(gcSender).name+', explique pourquoi tu agis ainsi…'
-      : 'Écrire en tant que '+gcWho(gcSender).name+'…';
+      : (window.innerWidth<560 ? gcWho(gcSender).name+'…' : 'Écrire en tant que '+gcWho(gcSender).name+'…');
   }
   function drawReply(){
     const box = $q('#gc-reply');
@@ -1889,7 +1904,7 @@ function renderGroupChat(){
     const m = /(?:^|\s)@([^\s@]*(?:\s[^\s@]*)?)$/.exec(before);
     if(!m){ menClose(); return; }
     const frag = gcFold(m[1]).n;
-    const members = groupchat.parts.map(p=>({id:p.id, name:p.name, color:p.color, photo:p.photo})).concat([{id:'me', name:gcMeName(), color:null, photo:null}]);
+    const members = gcActive().map(p=>({id:p.id, name:p.name, color:p.color, photo:p.photo})).concat([{id:'me', name:gcMeName(), color:null, photo:null}]);
     const list = members.filter(p=>{
       const fn = gcFold(p.name).n;
       return !frag || fn.startsWith(frag) || fn.split(/\s+/).some(w=>w.startsWith(frag));
@@ -1922,6 +1937,9 @@ function renderGroupChat(){
   $q('#gc-shake').addEventListener('click', ()=> openConsensusModal(null));
   $q('#gc-drift').addEventListener('click', ()=> openDriftModal(null));
   $q('#gc-hist-btn').addEventListener('click', ()=> openConsensusHistory());
+  $q('#gc-sleep-btn').addEventListener('click', ()=> openSleepModal(()=>{ drawSenders(); drawThread(true); }));
+  $q('#gc-bls-btn').addEventListener('click', ()=> openQuickBls());
+  $q('#gc-rule').addEventListener('click', ()=> openRulePicker());
   $q('#gc-parts-btn').addEventListener('click', ()=> openPartsModal(()=>{ drawSenders(); drawThread(); toBottom(); }));
 
   const searchBox = $q('#gc-search');
@@ -1938,7 +1956,7 @@ function renderGroupChat(){
   function openConsensusModal(existing){
     const ov = document.createElement('div'); ov.className = 'modal-overlay';
     const lastCons = [...groupchat.messages].reverse().find(m=>m.kind==='consensus' && (!existing || m.ts < existing.ts));
-    const since = groupchat.messages.filter(m=> (m.kind==='msg' || m.kind==='drift') && (!lastCons || m.ts>lastCons.ts) && (!existing || m.ts<existing.ts));
+    const since = groupchat.messages.filter(m=> (m.kind==='msg' || m.kind==='drift' || m.kind==='rule') && (!lastCons || m.ts>lastCons.ts) && (!existing || m.ts<existing.ts));
     ov.innerHTML = `
       <div class="modal-panel" role="dialog" aria-label="Message de consensus">
         <div class="modal-head"><h3>${GC_SHAKE(16)} Message de consensus</h3></div>
@@ -1966,8 +1984,9 @@ function renderGroupChat(){
     cta.focus();
   }
   function openDriftModal(existing){
-    if(!groupchat.parts.length){ alert('Créez d’abord des profils avec le bouton « Profils ».'); return; }
-    let target = existing && gcPart(existing.target) ? existing.target : (groupchat.parts.find(p=>p.id!==gcSender)||groupchat.parts[0]).id;
+    if(!gcActive().length && !(existing && gcPart(existing.target))){ alert('Aucune part disponible : créez ou réveillez un profil avec les boutons « Profils » / « En veille ».'); return; }
+    let target = existing && gcPart(existing.target) ? existing.target : (gcActive().find(p=>p.id!==gcSender)||gcActive()[0]).id;
+    const pool = ()=> groupchat.parts.filter(p=>!p.asleep || p.id===target);
     let author = existing ? existing.from : (gcSender===target ? 'me' : gcSender);
     let tag = existing ? existing.tag : '';
     const ov = document.createElement('div'); ov.className = 'modal-overlay';
@@ -1989,11 +2008,11 @@ function renderGroupChat(){
     nt.value = ''; tx.value = existing ? existing.text : '';
     const chip = (attr, id, w, on)=> `<button type="button" class="gc-chip${on?' on':''}" ${attr}="${id}" style="--c:${w.color||'var(--teal)'}">${gcAvatar(w,22)}<span>${escapeHtml(w.name)}</span></button>`;
     function draw(){
-      el('#gd-target').innerHTML = groupchat.parts.map(p=> chip('data-t', p.id, gcWho(p.id), p.id===target)).join('');
+      el('#gd-target').innerHTML = pool().map(p=> chip('data-t', p.id, gcWho(p.id), p.id===target)).join('');
       const tp = gcPart(target), tags = (tp && tp.drifts) || [];
       el('#gd-tags').innerHTML = tags.length ? tags.map((t,i)=>`<button type="button" class="gd-tag${t===tag && !nt.value.trim()?' on':''}" data-tag="${i}">${escapeHtml(t)}</button>`).join('')
         : `<span class="sub" style="font-size:12.5px;">Aucune dérive enregistrée pour cette part : proposez-en une ci-dessous (elle sera ajoutée à son profil).</span>`;
-      el('#gd-author').innerHTML = [chip('data-a','me',gcWho('me'),author==='me')].concat(groupchat.parts.filter(p=>p.id!==target).map(p=> chip('data-a', p.id, gcWho(p.id), p.id===author))).join('');
+      el('#gd-author').innerHTML = [chip('data-a','me',gcWho('me'),author==='me')].concat(gcActive().filter(p=>p.id!==target).map(p=> chip('data-a', p.id, gcWho(p.id), p.id===author))).join('');
     }
     draw();
     ov.addEventListener('click', e=>{
@@ -2026,6 +2045,29 @@ function renderGroupChat(){
     });
     (existing ? tx : nt).focus();
   }
+  function openRulePicker(){
+    const rules = rulesItems.filter(x=> x.text.trim());
+    const ov = document.createElement('div'); ov.className = 'modal-overlay';
+    ov.innerHTML = `<div class="modal-panel" role="dialog" aria-label="Rappeler un commandement">
+      <div class="modal-head"><h3>Rappeler un commandement</h3></div>
+      <div class="modal-body">${rules.length ? `<p class="sub" style="margin:0;text-align:left;">Choisis la règle à citer dans la conversation (elle sera postée en ton nom).</p>`
+        + rules.map((r,i)=>`<button type="button" class="gc-rule-pick" data-r="${i}"><b>${i+1}</b><span>${escapeHtml(r.text).replace(/\n/g,'<br>')}</span></button>`).join('')
+        : `<p class="emb-empty">Aucun commandement pour l'instant. Ajoutez-les dans l'onglet Commandements.</p>`}</div>
+      <div class="modal-foot"><button type="button" id="gr-close" class="primary">Fermer</button></div></div>`;
+    document.body.appendChild(ov);
+    const close = ()=> ov.remove();
+    ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+    ov.addEventListener('click', e=>{
+      if(e.target===ov){ close(); return; }
+      const b = e.target.closest('[data-r]'); if(!b) return;
+      const i = +b.dataset.r;
+      groupchat.messages.push({id:gcNewId(), kind:'rule', from:'me', num:i+1, text:rules[i].text, replyTo:gcReplyTo||null, ts:Date.now()});
+      gcReplyTo = null; saveGC(); close();
+      if(gcQuery){ gcQuery=''; qInput.value=''; searchBox.style.display='none'; }
+      drawReply(); drawSenders(); drawThread(); toBottom();
+    });
+    ov.querySelector('#gr-close').addEventListener('click', close);
+  }
   function openConsensusHistory(){
     const ov = document.createElement('div'); ov.className = 'modal-overlay';
     const list = groupchat.messages.filter(m=>m.kind==='consensus').slice().reverse();
@@ -2050,6 +2092,80 @@ function renderGroupChat(){
   if(!vaultRestoreDone) vaultRestorePromise.then(()=>{ if(currentPhase==='groupchat') renderGroupChat(); });
 }
 
+/* --- profils en veille --- */
+function openSleepModal(onClose){
+  const ov = document.createElement('div'); ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal-panel" role="dialog" aria-label="Profils en veille" style="width:min(460px,100%);">
+    <div class="modal-head"><h3>☾ Profils en veille</h3></div><div class="modal-body" id="sl-list"></div>
+    <div class="modal-foot"><button type="button" id="sl-done" class="primary">Fermer</button></div></div>`;
+  document.body.appendChild(ov);
+  const list = ov.querySelector('#sl-list');
+  function draw(){
+    const ps = groupchat.parts.filter(p=>p.asleep);
+    list.innerHTML = ps.length ? ps.map(p=>`<div class="gp-row"><span>${gcAvatar(p,40)}</span><div class="gp-main"><b style="color:${p.color}">${escapeHtml(p.name)}</b>${p.role?`<span class="sub" style="font-size:12.5px;text-align:left;">${escapeHtml(p.role)}</span>`:''}</div><button type="button" class="gc-hist-item-btn" data-wake="${p.id}">☀ Réafficher</button></div>`).join('')
+      : `<p class="emb-empty">Aucun profil en veille.</p>`;
+  }
+  draw();
+  const close = ()=>{ ov.remove(); if(onClose) onClose(); };
+  list.addEventListener('click', e=>{ const b = e.target.closest('[data-wake]'); if(!b) return; const p = gcPart(b.dataset.wake); if(p){ p.asleep = false; saveGC(); draw(); } });
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  ov.querySelector('#sl-done').addEventListener('click', close);
+}
+
+/* --- BLS rapide : stimulation sonore seule, sans image --- */
+function openQuickBls(){
+  const ov = document.createElement('div'); ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal-panel" role="dialog" aria-label="BLS rapide" style="width:min(420px,100%);">
+    <div class="modal-head"><h3>🎧 BLS rapide · son</h3></div>
+    <div class="modal-body">
+      <p class="sub" style="margin:0;text-align:left;">Stimulation sonore alternée gauche / droite, sans image. Mets un casque ou des écouteurs.</p>
+      <div class="qb-time" id="qb-time">—</div>
+      <div class="control-group"><label>Vitesse : <span id="qb-speed-v"></span> passages/min</label><input type="range" id="qb-speed" min="10" max="70"></div>
+      <div class="control-group"><label>Volume : <span id="qb-vol-v"></span> %</label><input type="range" id="qb-vol" min="0" max="100"></div>
+      <div class="control-group"><label>Durée : <span id="qb-dur-v"></span> s</label><input type="range" id="qb-dur" min="20" max="180"></div>
+    </div>
+    <div class="modal-foot"><button type="button" id="qb-close">Fermer</button><button type="button" id="qb-go" class="primary">Démarrer</button></div></div>`;
+  document.body.appendChild(ov);
+  const q = id=> ov.querySelector(id);
+  q('#qb-speed').value = settings.speed; q('#qb-speed-v').textContent = settings.speed;
+  q('#qb-vol').value = Math.round(soundVolume()*100); q('#qb-vol-v').textContent = q('#qb-vol').value;
+  q('#qb-dur').value = settings.duration; q('#qb-dur-v').textContent = settings.duration;
+  let running = false, timer = null, tick = null, endAt = 0, side = 'L', next = 0;
+  const fmt = ms=>{ const t = Math.max(0,Math.ceil(ms/1000)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
+  function stop(done){
+    running = false; clearTimeout(tick); clearInterval(timer);
+    q('#qb-go').textContent = 'Démarrer';
+    q('#qb-time').textContent = done ? 'Terminé' : '—';
+  }
+  function schedule(){
+    if(!running) return;
+    const half = 60000/settings.speed/2, now = performance.now();
+    if(now >= endAt){ stop(true); return; }
+    playTick(side, true); if(settings.haptic && navigator.vibrate) navigator.vibrate(25);
+    side = side==='L' ? 'R' : 'L';
+    next += half; if(next < now - half) next = now + half; /* rattrape un retard (onglet en arrière-plan) */
+    tick = setTimeout(schedule, Math.max(0, next - performance.now()));
+  }
+  function start(){
+    ensureAudioCtx();
+    running = true; side = 'L'; endAt = performance.now() + settings.duration*1000; next = performance.now();
+    q('#qb-go').textContent = 'Arrêter';
+    timer = setInterval(()=>{ q('#qb-time').textContent = fmt(endAt - performance.now()); }, 250);
+    q('#qb-time').textContent = fmt(settings.duration*1000);
+    schedule();
+  }
+  q('#qb-go').addEventListener('click', ()=> running ? stop(false) : start());
+  q('#qb-speed').addEventListener('input', e=>{ settings.speed = +e.target.value; q('#qb-speed-v').textContent = settings.speed; saveSettings(); refreshSettingsPanelInputs(); });
+  q('#qb-vol').addEventListener('input', e=>{ settings.volume = +e.target.value/100; q('#qb-vol-v').textContent = e.target.value; saveSettings(); refreshSettingsPanelInputs(); });
+  q('#qb-dur').addEventListener('input', e=>{ settings.duration = +e.target.value; q('#qb-dur-v').textContent = settings.duration; saveSettings(); refreshSettingsPanelInputs();
+    if(running) endAt = performance.now() + settings.duration*1000; });
+  const close = ()=>{ stop(false); ov.remove(); };
+  ov.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Escape') close(); });
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  q('#qb-close').addEventListener('click', close);
+}
+
 /* --- fiche d'une part --- */
 function openPartCard(id, onClose){
   const p = gcPart(id); if(!p) return;
@@ -2064,7 +2180,7 @@ function openPartCard(id, onClose){
         <p class="gc-card-l">Dérives</p>
         ${(p.drifts||[]).length ? `<div class="gp-tags">${p.drifts.map(t=>`<span class="gp-tag ro">${escapeHtml(t)}</span>`).join('')}</div>` : '<p><span class="sub">Aucune dérive enregistrée.</span></p>'}
       </div>
-      <div class="modal-foot"><button type="button" id="gcard-edit">Modifier</button><button type="button" id="gcard-done" class="primary">Fermer</button></div>
+      <div class="modal-foot"><button type="button" id="gcard-edit">Modifier</button><button type="button" id="gcard-sleep">${p.asleep?'☀ Réafficher':'☾ Mettre en veille'}</button><button type="button" id="gcard-done" class="primary">Fermer</button></div>
     </div>`;
   document.body.appendChild(ov);
   const close = ()=>{ ov.remove(); if(onClose) onClose(); };
@@ -2072,6 +2188,7 @@ function openPartCard(id, onClose){
   ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
   ov.querySelector('#gcard-done').addEventListener('click', close);
   ov.querySelector('#gcard-edit').addEventListener('click', ()=>{ ov.remove(); openPartsModal(onClose); });
+  ov.querySelector('#gcard-sleep').addEventListener('click', ()=>{ p.asleep = !p.asleep; saveGC(); close(); });
 }
 
 /* --- profils des parts --- */
@@ -2108,10 +2225,11 @@ function openPartsModal(onClose){
     const ps = groupchat.parts;
     if(!ps.length){ listEl.innerHTML = `<p class="emb-empty">Aucun profil. Ajoutez une première part : nom, couleur, photo.</p>`; return; }
     listEl.innerHTML = ps.map((p,i)=>`
-      <div class="gp-row" data-id="${p.id}">
+      <div class="gp-row${p.asleep?' asleep':''}" data-id="${p.id}">
         <button type="button" class="gp-photo" data-photo="${p.id}" title="Choisir une photo">${gcAvatar(p,48)}<span class="gp-cam">📷</span></button>
         <div class="gp-main">
           <input type="text" class="gp-name" data-name="${p.id}" value="${escapeHtml(p.name)}" placeholder="Nom de la part" maxlength="40">
+          ${p.asleep ? '<span class="gp-sleepbadge">☾ en veille : masquée au-dessus du champ de texte</span>' : ''}
           <div class="gp-colors">${GC_PALETTE.map(c=>`<button type="button" class="gp-sw${p.color.toLowerCase()===c.toLowerCase()?' on':''}" data-color="${p.id}|${c}" style="background:${c}" title="${c}"></button>`).join('')}
             <input type="color" class="gp-cpick" data-cpick="${p.id}" value="${/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#888888'}" title="Autre couleur"></div>
           <input type="text" class="gp-name gp-role" data-role="${p.id}" value="${escapeHtml(p.role||'')}" placeholder="Rôle (ex. : me protège de l'abandon)" maxlength="160">
@@ -2121,6 +2239,7 @@ function openPartsModal(onClose){
         <div class="emb-row-actions">
           <button type="button" data-up="${p.id}" ${i===0?'disabled':''} title="Monter">↑</button>
           <button type="button" data-down="${p.id}" ${i===ps.length-1?'disabled':''} title="Descendre">↓</button>
+          <button type="button" data-sleep="${p.id}" title="${p.asleep?'Réafficher':'Mettre en veille'}">${p.asleep?'☀':'☾'}</button>
           <button type="button" data-delpart="${p.id}" title="Supprimer">✕</button>
         </div>
       </div>`).join('');
@@ -2158,6 +2277,7 @@ function openPartsModal(onClose){
     const mv = (id,dir)=>{ const ps = groupchat.parts, i = ps.findIndex(x=>x.id===id), j = i+dir; if(i<0||j<0||j>=ps.length) return; [ps[i],ps[j]] = [ps[j],ps[i]]; saveGC(); draw(); };
     const up = t.closest('[data-up]'); if(up){ mv(up.dataset.up,-1); return; }
     const dn = t.closest('[data-down]'); if(dn){ mv(dn.dataset.down,1); return; }
+    const sl = t.closest('[data-sleep]'); if(sl){ const p = gcPart(sl.dataset.sleep); if(p){ p.asleep = !p.asleep; saveGC(); draw(); } return; }
     const dl = t.closest('[data-delpart]');
     if(dl){
       if(!dl.classList.contains('armed')){
